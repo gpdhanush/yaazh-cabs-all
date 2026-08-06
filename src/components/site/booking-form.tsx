@@ -37,7 +37,7 @@ function FieldShell({
 }: {
   label: string;
   filled: boolean;
-  error?: string;
+  error?: string | undefined;
   children: React.ReactNode;
 }) {
   return (
@@ -88,7 +88,7 @@ function SearchSelect({
   onChange: (v: string) => void;
   options: string[];
   icon?: React.ReactNode;
-  error?: string;
+  error?: string | undefined;
   searchable?: boolean;
 }) {
   const [open, setOpen] = useState(false);
@@ -135,6 +135,14 @@ function SearchSelect({
   );
 }
 
+type FormErrors = {
+  pickup?: string;
+  drop?: string;
+  date?: string;
+  time?: string;
+  vehicle?: string;
+};
+
 export function BookingForm() {
   const [pickup, setPickup] = useState("");
   const [drop, setDrop] = useState("");
@@ -142,7 +150,7 @@ export function BookingForm() {
   const [time, setTime] = useState("");
   const [vehicle, setVehicle] = useState("");
   const [trip, setTrip] = useState("One Way");
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [errors, setErrors] = useState<FormErrors>({});
   const [loading, setLoading] = useState(false);
   const [dateOpen, setDateOpen] = useState(false);
 
@@ -154,7 +162,7 @@ export function BookingForm() {
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
-    const next: Record<string, string> = {};
+    const next: FormErrors = {};
     if (!pickup) next.pickup = "Pickup location is required";
     if (!drop) next.drop = "Drop location is required";
     if (pickup && drop && pickup === drop) next.drop = "Drop must differ from pickup";
