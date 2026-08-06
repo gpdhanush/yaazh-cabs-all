@@ -33,11 +33,13 @@ function FieldShell({
   label,
   filled,
   error,
+  hasIcon,
   children,
 }: {
   label: string;
   filled: boolean;
   error?: string | undefined;
+  hasIcon?: boolean;
   children: React.ReactNode;
 }) {
   return (
@@ -50,8 +52,10 @@ function FieldShell({
       >
         <span
           className={cn(
-            "pointer-events-none absolute left-3 text-muted-foreground transition-all duration-300",
-            filled ? "top-1.5 text-[10px] uppercase tracking-[0.18em]" : "top-4 text-sm",
+            "pointer-events-none absolute text-muted-foreground transition-all duration-300",
+            filled
+              ? "left-3 top-1.5 text-[10px] uppercase tracking-[0.18em]"
+              : cn("top-4 text-sm", hasIcon ? "left-9" : "left-3"),
           )}
         >
           {label}
@@ -93,7 +97,7 @@ function SearchSelect({
 }) {
   const [open, setOpen] = useState(false);
   return (
-    <FieldShell label={label} filled={Boolean(value)} error={error}>
+    <FieldShell label={label} filled={Boolean(value)} error={error} hasIcon={Boolean(icon)}>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <button
@@ -234,7 +238,7 @@ export function BookingForm() {
           icon={<Navigation className="size-4 text-primary" />}
         />
 
-        <FieldShell label="Pickup date" filled={Boolean(date)} error={errors.date}>
+        <FieldShell label="Pickup date" filled={Boolean(date)} error={errors.date} hasIcon>
           <Popover open={dateOpen} onOpenChange={setDateOpen}>
             <PopoverTrigger asChild>
               <button
