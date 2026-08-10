@@ -2,22 +2,38 @@
 
 import { useEffect, useState } from "react";
 import { Menu, Phone, X } from "lucide-react";
-import { Link } from "@tanstack/react-router";
+import { Link, useRouterState } from "@tanstack/react-router";
+import { BrandLogo } from "@/components/site/brand-logo";
+import { ThemeToggle } from "@/components/site/theme-toggle";
 import { cn } from "@/lib/utils";
 import { PHONE_PRIMARY } from "@/lib/site-data";
 
 const links = [
-  { label: "Services", href: "#services" },
-  { label: "Routes", href: "#routes" },
-  { label: "Fleet", href: "#fleet" },
-  { label: "Fare", href: "#fare" },
-  { label: "Gallery", href: "#gallery" },
-  { label: "FAQ", href: "#faq" },
+  { label: "Services", href: "#services", id: "services" },
+  { label: "Routes", href: "#routes", id: "routes" },
+  { label: "Fleet", href: "#fleet", id: "fleet" },
+  { label: "Fare", href: "#fare", id: "fare" },
+  { label: "Gallery", href: "#gallery", id: "gallery" },
+  { label: "Contact", href: "#contact", id: "contact" },
+  { label: "FAQ", href: "#faq", id: "faq" },
 ];
 
+function navLinkClass(active: boolean) {
+  return cn(
+    "relative text-sm font-medium transition-colors",
+    active
+      ? "text-brand after:absolute after:inset-x-0 after:-bottom-1 after:h-0.5 after:rounded-full after:bg-primary"
+      : "text-body hover:text-foreground",
+  );
+}
+
 export function SiteNav() {
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [solid, setSolid] = useState(false);
   const [open, setOpen] = useState(false);
+  const [activeHash, setActiveHash] = useState("");
+  const onHome = pathname === "/";
+  const onStatus = pathname.startsWith("/status");
 
   useEffect(() => {
     const onScroll = () => setSolid(window.scrollY > 40);
@@ -26,42 +42,88 @@ export function SiteNav() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  useEffect(() => {
+    if (!onHome) {
+      setActiveHash("");
+      return;
+    }
+
+    const syncFromHash = () => {
+      const hash = window.location.hash.replace("#", "");
+      if (hash && links.some((l) => l.id === hash)) setActiveHash(hash);
+    };
+    syncFromHash();
+
+    const sections = links
+      .map((l) => document.getElementById(l.id))
+      .filter((el): el is HTMLElement => Boolean(el));
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((e) => e.isIntersecting)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio);
+        const top = visible[0];
+        if (top?.target?.id) setActiveHash(top.target.id);
+      },
+      { rootMargin: "-30% 0px -55% 0px", threshold: [0.1, 0.25, 0.5] },
+    );
+
+    sections.forEach((el) => observer.observe(el));
+    window.addEventListener("hashchange", syncFromHash);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("hashchange", syncFromHash);
+    };
+  }, [onHome]);
+
   return (
-    <header className={cn("fixed inset-x-0 top-0 z-50", solid ? "glass py-2" : "bg-transparent py-3 md:py-4")}>
+    <header
+      className={cn(
+        "fixed inset-x-0 top-0 z-50 border-b transition-[background-color,box-shadow,padding] duration-200",
+        solid
+          ? "border-border bg-surface/95 py-2 shadow-sm backdrop-blur-md"
+          : "border-transparent bg-surface/90 py-3 backdrop-blur-sm md:py-4",
+      )}
+    >
       <nav className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 md:px-8">
-        <a href="#top" className="flex items-center gap-2.5">
-          <span className="grid size-9 shrink-0 place-items-center rounded-full bg-[image:var(--gradient-gold)] font-display text-base font-extrabold text-primary-foreground md:size-10 md:text-lg">
-            Y
-          </span>
-          <span className="leading-none">
-            <span className="block font-display text-base font-extrabold tracking-tight md:text-lg">
-              YAAZH <span className="text-gradient-gold">CABS</span>
-            </span>
-            <span className="hidden text-[10px] uppercase tracking-[0.24em] text-muted-foreground sm:block">
-              Safe journey, every time
-            </span>
-          </span>
+        <a href="/#top" className="flex items-center" aria-label="Yaazh Cabs home">
+          <BrandLogo variant="nav" />
         </a>
 
         <ul className="hidden items-center gap-7 lg:flex">
-          {links.map((l) => (
-            <li key={l.href}>
-              <a href={l.href} className="text-sm text-muted-foreground hover:text-foreground">
-                {l.label}
-              </a>
-            </li>
-          ))}
+          {links.map((l) => {
+            const active = onHome && activeHash === l.id;
+            return (
+              <li key={l.href}>
+                <a
+                  href={onHome ? l.href : `/${l.href}`}
+                  aria-current={active ? "page" : undefined}
+                  onClick={() => setActiveHash(l.id)}
+                  className={navLinkClass(active)}
+                >
+                  {l.label}
+                </a>
+              </li>
+            );
+          })}
           <li>
-            <Link to="/status" search={{ ref: "" }} className="text-sm text-muted-foreground hover:text-foreground">
+            <Link
+              to="/status"
+              search={{ ref: "" }}
+              aria-current={onStatus ? "page" : undefined}
+              className={navLinkClass(onStatus)}
+            >
               Track booking
             </Link>
           </li>
         </ul>
 
         <div className="flex items-center gap-2">
+          <ThemeToggle />
           <a
             href={`tel:+91${PHONE_PRIMARY.replace(/\s/g, "")}`}
-            className="hidden items-center gap-2 rounded-full bg-[image:var(--gradient-gold)] px-4 py-2.5 text-sm font-semibold text-primary-foreground gold-ring sm:inline-flex"
+            className="hidden items-center gap-2 rounded-full bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground gold-ring sm:inline-flex"
           >
             <Phone className="size-4" />
             {PHONE_PRIMARY}
@@ -69,7 +131,7 @@ export function SiteNav() {
           <a
             href={`tel:+91${PHONE_PRIMARY.replace(/\s/g, "")}`}
             aria-label="Call Yaazh Cabs"
-            className="grid size-10 place-items-center rounded-full bg-[image:var(--gradient-gold)] text-primary-foreground sm:hidden"
+            className="grid size-10 place-items-center rounded-full bg-primary text-primary-foreground sm:hidden"
           >
             <Phone className="size-4" />
           </a>
@@ -85,24 +147,38 @@ export function SiteNav() {
       </nav>
 
       {open && (
-        <ul className="mx-4 mt-3 rounded-xl glass px-5 lg:hidden">
-          {links.map((l) => (
-            <li key={l.href} className="border-b border-border/60">
-              <a
-                href={l.href}
-                onClick={() => setOpen(false)}
-                className="block py-3 text-sm text-muted-foreground"
-              >
-                {l.label}
-              </a>
-            </li>
-          ))}
+        <ul className="mx-4 mt-3 rounded-xl border border-border bg-surface px-5 shadow-sm lg:hidden">
+          {links.map((l) => {
+            const active = onHome && activeHash === l.id;
+            return (
+              <li key={l.href} className="border-b border-border/60">
+                <a
+                  href={onHome ? l.href : `/${l.href}`}
+                  aria-current={active ? "page" : undefined}
+                  onClick={() => {
+                    setActiveHash(l.id);
+                    setOpen(false);
+                  }}
+                  className={cn(
+                    "block py-3 text-sm font-medium",
+                    active ? "text-brand" : "text-body",
+                  )}
+                >
+                  {l.label}
+                </a>
+              </li>
+            );
+          })}
           <li>
             <Link
               to="/status"
               search={{ ref: "" }}
               onClick={() => setOpen(false)}
-              className="block py-3 text-sm text-primary"
+              aria-current={onStatus ? "page" : undefined}
+              className={cn(
+                "block py-3 text-sm font-semibold",
+                onStatus ? "text-brand" : "text-secondary",
+              )}
             >
               Track booking
             </Link>

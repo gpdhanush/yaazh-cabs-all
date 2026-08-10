@@ -15,6 +15,9 @@ Facts you can use:
 Style: warm, brief (2-4 sentences), plain English, rupee amounts in ₹. Give fare estimates when asked, and state they are indicative.
 If the user wants to talk to a person, confirm a booking, or asks something you don't know, tell them to tap the "Chat on WhatsApp" button or call 93600 55761. Never invent driver names, availability or exact arrival times.`;
 
+const FALLBACK_REPLY =
+  "Our AI assistant isn't connected right now. Please tap Chat on WhatsApp or call 93600 55761 — we're happy to help with your booking.";
+
 export const Route = createFileRoute("/api/chat")({
   server: {
     handlers: {
@@ -30,19 +33,22 @@ export const Route = createFileRoute("/api/chat")({
           .slice(-14)
           .map((m) => ({ role: m.role, content: m.content.slice(0, 2000) }));
 
-        const key = process.env["LOVABLE_API_KEY"];
+        const key = process.env["AI_API_KEY"] || process.env["OPENAI_API_KEY"];
         if (!key) {
-          return Response.json({ error: "AI is not configured" }, { status: 500 });
+          return Response.json({ reply: FALLBACK_REPLY });
         }
 
-        const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        const base = (process.env["AI_BASE_URL"] || "https://api.openai.com/v1").replace(/\/$/, "");
+        const model = process.env["AI_MODEL"] || "gpt-4o-mini";
+
+        const res = await fetch(`${base}/chat/completions`, {
           method: "POST",
           headers: {
             Authorization: `Bearer ${key}`,
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            model: "google/gemini-3.6-flash",
+            model,
             messages: [{ role: "system", content: SYSTEM_PROMPT }, ...messages],
           }),
         });
@@ -51,9 +57,12 @@ export const Route = createFileRoute("/api/chat")({
           const text = await res.text();
           console.error(`AI gateway error [${res.status}]: ${text}`);
           if (res.status === 429) {
-            return Response.json({ error: "Too many messages right now. Please try again in a minute." }, { status: 429 });
+            return Response.json(
+              { error: "Too many messages right now. Please try again in a minute." },
+              { status: 429 },
+            );
           }
-          return Response.json({ error: "Assistant is unavailable right now." }, { status: 502 });
+          return Response.json({ reply: FALLBACK_REPLY });
         }
 
         const data = (await res.json()) as {
@@ -61,7 +70,7 @@ export const Route = createFileRoute("/api/chat")({
         };
         const reply = data.choices?.[0]?.message?.content?.trim();
         return Response.json({
-          reply: reply || "Sorry, I couldn't answer that. Please tap Chat on WhatsApp and our team will help.",
+          reply: reply || FALLBACK_REPLY,
         });
       },
     },

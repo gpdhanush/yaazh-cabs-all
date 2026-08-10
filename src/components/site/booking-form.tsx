@@ -28,8 +28,9 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
+import { LocationField } from "@/components/site/location-field";
 import { cn } from "@/lib/utils";
-import { places, tripTypes, vehicles, ADMIN_WHATSAPP, ADMIN_EMAIL } from "@/lib/site-data";
+import { tripTypes, vehicles, pickupPlaces, BOOKING_FARE_NOTE, ADMIN_WHATSAPP, ADMIN_EMAIL } from "@/lib/site-data";
 import { makeRef, saveBooking, type Booking } from "@/lib/bookings";
 
 const times = Array.from({ length: 48 }, (_, i) => {
@@ -42,40 +43,34 @@ const times = Array.from({ length: 48 }, (_, i) => {
 
 const vehicleOptions = vehicles.map((v) => `${v.name} — ₹${v.perKm}/km`);
 
-function FieldShell({
+function Field({
   label,
-  filled,
   error,
-  hasIcon,
+  icon,
   children,
 }: {
   label: string;
-  filled: boolean;
   error?: string | undefined;
-  hasIcon?: boolean;
+  icon?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
     <div className="w-full">
       <div
         className={cn(
-          "group relative rounded-[5px] border bg-surface-2/40 px-3 pb-2 pt-5",
-          error ? "border-destructive/70" : "border-border hover:border-primary/50",
+          "rounded-xl border bg-background px-3.5 py-2.5 transition-colors",
+          error ? "border-error" : "border-border focus-within:border-brand focus-within:ring-2 focus-within:ring-brand/20",
         )}
       >
-        <span
-          className={cn(
-            "pointer-events-none absolute text-muted-foreground",
-            filled
-              ? "left-3 top-1.5 text-[10px] uppercase tracking-[0.18em]"
-              : cn("top-4 text-sm", hasIcon ? "left-9" : "left-3"),
-          )}
-        >
+        <label className="block text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
           {label}
-        </span>
-        {children}
+        </label>
+        <div className="mt-1 flex items-center gap-2">
+          {icon ? <span className="shrink-0 text-brand [&_svg]:size-4">{icon}</span> : null}
+          <div className="min-w-0 flex-1">{children}</div>
+        </div>
       </div>
-      {error && <p className="mt-1 text-xs text-destructive">{error}</p>}
+      {error ? <p className="mt-1 text-xs text-error">{error}</p> : null}
     </div>
   );
 }
@@ -100,24 +95,21 @@ function TextField({
   maxLength?: number;
 }) {
   return (
-    <FieldShell label={label} filled={Boolean(value)} error={error} hasIcon={Boolean(icon)}>
-      <div className="flex items-center gap-2">
-        {icon}
-        <input
-          type={type}
-          inputMode={inputMode ?? "text"}
-          maxLength={maxLength ?? 80}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className="w-full bg-transparent text-sm text-foreground outline-none placeholder:text-transparent"
-          aria-label={label}
-        />
-      </div>
-    </FieldShell>
+    <Field label={label} error={error} icon={icon}>
+      <input
+        type={type}
+        inputMode={inputMode ?? "text"}
+        maxLength={maxLength ?? 80}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full bg-transparent text-sm font-medium text-foreground outline-none placeholder:text-muted-foreground"
+        aria-label={label}
+      />
+    </Field>
   );
 }
 
-function SearchSelect({
+function SelectField({
   label,
   value,
   onChange,
@@ -136,16 +128,15 @@ function SearchSelect({
 }) {
   const [open, setOpen] = useState(false);
   return (
-    <FieldShell label={label} filled={Boolean(value)} error={error} hasIcon={Boolean(icon)}>
+    <Field label={label} error={error} icon={icon}>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <button
             type="button"
-            className="flex w-full items-center justify-between gap-2 text-left text-sm text-foreground outline-none"
+            className="flex w-full items-center justify-between gap-2 text-left text-sm font-medium text-foreground outline-none"
           >
-            <span className="flex min-w-0 items-center gap-2">
-              {icon}
-              <span className="truncate">{value || "\u00a0"}</span>
+            <span className={cn("truncate", !value && "font-normal text-muted-foreground")}>
+              {value || "Select"}
             </span>
             <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
           </button>
@@ -177,7 +168,7 @@ function SearchSelect({
           </Command>
         </PopoverContent>
       </Popover>
-    </FieldShell>
+    </Field>
   );
 }
 
@@ -202,6 +193,7 @@ function buildMessage(b: Booking) {
     `Date & time: ${b.date}, ${b.time}`,
     `Vehicle: ${b.vehicle} (₹${b.perKm}/km)`,
     `Approx fare: ₹${b.estimate.toLocaleString("en-IN")}`,
+    BOOKING_FARE_NOTE,
   ].join("\n");
 }
 
@@ -232,9 +224,9 @@ export function BookingForm() {
     if (!name.trim()) next.name = "Your name is required";
     if (!cleanMobile) next.mobile = "Mobile number is required";
     else if (!/^[6-9]\d{9}$/.test(cleanMobile)) next.mobile = "Enter a valid 10-digit mobile number";
-    if (!pickup) next.pickup = "Pickup location is required";
-    if (!drop) next.drop = "Drop location is required";
-    if (pickup && drop && pickup === drop) next.drop = "Drop must differ from pickup";
+    if (!pickup.trim()) next.pickup = "Pickup location is required";
+    if (!drop.trim()) next.drop = "Drop location is required";
+    if (pickup && drop && pickup.trim() === drop.trim()) next.drop = "Drop must differ from pickup";
     if (!date) next.date = "Choose a pickup date";
     if (!time) next.time = "Pickup time is mandatory";
     if (!vehicle) next.vehicle = "Select a vehicle";
@@ -246,8 +238,8 @@ export function BookingForm() {
       ref: makeRef(),
       name: name.trim(),
       mobile: cleanMobile,
-      pickup,
-      drop,
+      pickup: pickup.trim(),
+      drop: drop.trim(),
       date: date ? format(date, "dd MMM yyyy") : "",
       time,
       vehicle: picked.name,
@@ -280,13 +272,14 @@ export function BookingForm() {
     )}&body=${encodeURIComponent(`${buildMessage(done)}\n\nPlease send a confirmation copy to the customer.`)}`;
 
     return (
-      <div className="glass w-full rounded-2xl p-5 md:p-6">
-        <p className="font-display text-sm font-semibold uppercase tracking-[0.22em] text-primary">
-          Booking sent
-        </p>
-        <p className="mt-3 font-display text-2xl font-extrabold text-gradient-gold">{done.ref}</p>
-        <p className="mt-2 text-sm text-muted-foreground">
+      <div className="w-full rounded-2xl border border-border bg-card p-5 shadow-sm md:p-6">
+        <p className="text-sm font-semibold uppercase tracking-[0.18em] text-success">Booking sent</p>
+        <p className="mt-3 font-data text-2xl font-semibold text-foreground">{done.ref}</p>
+        <p className="mt-2 text-sm text-body">
           {done.trip} · {done.pickup} → {done.drop} · {done.date}, {done.time} · {done.vehicle}
+        </p>
+        <p className="mt-3 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-xs text-warning">
+          {BOOKING_FARE_NOTE}
         </p>
 
         <div className="mt-5 grid gap-2 sm:grid-cols-2">
@@ -294,13 +287,13 @@ export function BookingForm() {
             href={waHref}
             target="_blank"
             rel="noopener"
-            className="inline-flex items-center justify-center gap-2 rounded-[5px] bg-[image:var(--gradient-gold)] px-4 py-3 text-xs font-bold uppercase tracking-[0.12em] text-primary-foreground"
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-xs font-semibold uppercase tracking-[0.12em] text-primary-foreground"
           >
             <MessageCircle className="size-4" /> Resend on WhatsApp
           </a>
           <a
             href={mailHref}
-            className="inline-flex items-center justify-center gap-2 rounded-[5px] border border-border px-4 py-3 text-xs font-semibold uppercase tracking-[0.12em] text-foreground"
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-secondary px-4 py-3 text-xs font-medium uppercase tracking-[0.12em] text-secondary-foreground"
           >
             <Mail className="size-4 text-primary" /> Email a copy
           </a>
@@ -309,7 +302,7 @@ export function BookingForm() {
         <Link
           to="/status"
           search={{ ref: done.ref }}
-          className="mt-3 block rounded-[5px] border border-primary/40 bg-primary/10 px-4 py-3 text-center text-xs font-semibold uppercase tracking-[0.12em] text-primary"
+          className="mt-3 block rounded-xl border border-success/40 bg-success/10 px-4 py-3 text-center text-xs font-semibold uppercase tracking-[0.12em] text-success"
         >
           Track booking status
         </Link>
@@ -317,7 +310,7 @@ export function BookingForm() {
         <button
           type="button"
           onClick={() => setDone(null)}
-          className="mt-4 w-full text-xs text-muted-foreground underline underline-offset-4"
+          className="mt-4 w-full text-xs font-normal text-muted-foreground underline underline-offset-4"
         >
           Book another ride
         </button>
@@ -326,12 +319,18 @@ export function BookingForm() {
   }
 
   return (
-    <form onSubmit={submit} className="glass w-full rounded-2xl p-4 sm:p-5 md:p-6">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-        <p className="font-display text-sm font-semibold uppercase tracking-[0.22em] text-primary">
-          Book your ride
-        </p>
-        <span className="rounded-full border border-border px-3 py-1 text-[10px] text-muted-foreground sm:text-[11px]">
+    <form
+      onSubmit={submit}
+      className="w-full rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-5 md:p-6"
+    >
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <p className="text-sm font-semibold uppercase tracking-[0.16em] text-foreground">
+            Book your ride
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground">Fill details — we confirm on WhatsApp</p>
+        </div>
+        <span className="rounded-full border border-success/30 bg-success/10 px-3 py-1 text-[10px] font-medium text-success sm:text-[11px]">
           24×7 · Instant confirmation
         </span>
       </div>
@@ -343,10 +342,10 @@ export function BookingForm() {
             type="button"
             onClick={() => setTrip(t)}
             className={cn(
-              "rounded-full border px-3.5 py-1.5 text-xs",
+              "rounded-full border px-3.5 py-1.5 text-xs font-medium",
               trip === t
-                ? "border-primary bg-primary/15 text-primary"
-                : "border-border text-muted-foreground hover:border-primary/40 hover:text-foreground",
+                ? "border-brand bg-primary text-primary-foreground"
+                : "border-border bg-background text-body hover:border-brand/50 hover:text-foreground",
             )}
           >
             {t}
@@ -355,13 +354,7 @@ export function BookingForm() {
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2">
-        <TextField
-          label="Your name"
-          value={name}
-          onChange={setName}
-          error={errors.name}
-          icon={<User className="size-4 shrink-0 text-primary" />}
-        />
+        <TextField label="Your name" value={name} onChange={setName} error={errors.name} icon={<User />} />
         <TextField
           label="Mobile number"
           value={mobile}
@@ -370,36 +363,35 @@ export function BookingForm() {
           type="tel"
           inputMode="tel"
           maxLength={12}
-          icon={<Phone className="size-4 shrink-0 text-primary" />}
+          icon={<Phone />}
         />
 
-        <SearchSelect
-          label="Pickup"
+        <LocationField
+          label="Pickup location"
           value={pickup}
           onChange={setPickup}
-          options={places}
           error={errors.pickup}
-          icon={<MapPin className="size-4 text-primary" />}
+          icon={<MapPin />}
+          fixedOptions={pickupPlaces}
+          placeholder="Select pickup point"
         />
-        <SearchSelect
-          label="Drop"
+        <LocationField
+          label="Drop location"
           value={drop}
           onChange={setDrop}
-          options={places}
           error={errors.drop}
-          icon={<Navigation className="size-4 text-primary" />}
+          icon={<Navigation />}
         />
 
-        <FieldShell label="Pickup date" filled={Boolean(date)} error={errors.date} hasIcon>
+        <Field label="Pickup date" error={errors.date} icon={<CalendarDays />}>
           <Popover open={dateOpen} onOpenChange={setDateOpen}>
             <PopoverTrigger asChild>
               <button
                 type="button"
-                className="flex w-full items-center justify-between gap-2 text-left text-sm outline-none"
+                className="flex w-full items-center justify-between gap-2 text-left text-sm font-medium outline-none"
               >
-                <span className="flex items-center gap-2">
-                  <CalendarDays className="size-4 text-primary" />
-                  {date ? format(date, "dd MMM yyyy") : "\u00a0"}
+                <span className={cn(!date && "font-normal text-muted-foreground")}>
+                  {date ? format(date, "dd MMM yyyy") : "Choose date"}
                 </span>
                 <ChevronDown className="size-4 text-muted-foreground" />
               </button>
@@ -417,18 +409,18 @@ export function BookingForm() {
               />
             </PopoverContent>
           </Popover>
-        </FieldShell>
+        </Field>
 
-        <SearchSelect
+        <SelectField
           label="Pickup time *"
           value={time}
           onChange={setTime}
           options={times}
           error={errors.time}
-          icon={<Clock className="size-4 text-primary" />}
+          icon={<Clock />}
         />
 
-        <SearchSelect
+        <SelectField
           label="Vehicle & rate"
           value={vehicle}
           onChange={setVehicle}
@@ -436,7 +428,7 @@ export function BookingForm() {
           error={errors.vehicle}
           searchable={false}
         />
-        <SearchSelect
+        <SelectField
           label="Trip type"
           value={trip}
           onChange={setTrip}
@@ -448,7 +440,7 @@ export function BookingForm() {
       <button
         type="submit"
         disabled={loading}
-        className="mt-5 flex w-full items-center justify-center gap-2 rounded-[5px] bg-[image:var(--gradient-gold)] px-6 py-3.5 font-display text-sm font-bold uppercase tracking-[0.14em] text-primary-foreground gold-ring disabled:opacity-80"
+        className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-6 py-3.5 text-sm font-semibold uppercase tracking-[0.12em] text-primary-foreground gold-ring hover:bg-primary-dark disabled:opacity-80"
       >
         {loading ? (
           <>
@@ -461,8 +453,11 @@ export function BookingForm() {
         )}
       </button>
 
-      <p className="mt-3 text-center text-[11px] text-muted-foreground">
-        Your booking is sent to our admin on WhatsApp instantly.
+      <p className="mt-3 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-center text-[11px] font-medium text-warning">
+        {BOOKING_FARE_NOTE}
+      </p>
+      <p className="mt-2 text-center text-[11px] font-normal text-muted-foreground">
+        Pickup from Udumalpet, Coimbatore, Tiruppur, Palani &amp; nearby district. Drop anywhere.
       </p>
     </form>
   );

@@ -25,9 +25,9 @@ export function Services() {
   return (
     <section id="services" className="py-16 md:py-28">
       <div className="mx-auto max-w-7xl px-5 md:px-8">
-        <p className="text-[10px] uppercase tracking-[0.28em] text-primary sm:text-[11px]">Our services</p>
-        <h2 className="mt-3 max-w-2xl font-display text-3xl font-extrabold sm:text-4xl md:text-5xl">
-          Every kind of journey, <span className="text-gradient-gold">one standard</span>
+        <p className="text-[10px] uppercase tracking-[0.28em] text-brand sm:text-[11px]">Our services</p>
+        <h2 className="mt-3 max-w-2xl font-display text-3xl font-bold sm:text-4xl md:text-5xl">
+          Every kind of journey, <span className="text-brand">one standard</span>
         </h2>
 
         <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -36,9 +36,9 @@ export function Services() {
             return (
               <article
                 key={s.title}
-                className="h-full rounded-2xl border border-border bg-card/70 p-6 hover:border-primary/40"
+                className="h-full rounded-2xl border border-border bg-card/70 p-6 hover:border-brand/40"
               >
-                <span className="grid size-12 place-items-center rounded-xl border border-primary/30 bg-primary/10 text-primary">
+                <span className="grid size-12 place-items-center rounded-xl border border-primary/40 bg-primary/15 text-brand">
                   <Icon className="size-5" />
                 </span>
                 <h3 className="mt-5 text-lg font-bold sm:text-xl">{s.title}</h3>

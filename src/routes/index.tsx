@@ -1,7 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { SiteNav } from "@/components/site/nav";
 import { Hero } from "@/components/site/hero";
-import { Partners } from "@/components/site/partners";
 import { Services } from "@/components/site/services";
 import { PopularRoutes } from "@/components/site/routes-scroll";
 import { Fleet } from "@/components/site/fleet";
@@ -10,6 +9,7 @@ import { BookingProcess } from "@/components/site/booking-process";
 import { Stats } from "@/components/site/stats";
 import { Testimonials } from "@/components/site/testimonials";
 import { Gallery } from "@/components/site/gallery";
+import { Contact } from "@/components/site/contact";
 import { FAQ, faqJsonLd } from "@/components/site/faq";
 import { SiteFooter } from "@/components/site/footer";
 import { ChatWidget } from "@/components/site/chat-widget";
@@ -18,7 +18,7 @@ import { Toaster } from "@/components/ui/sonner";
 const title = "Yaazh Cabs Udumalpet | Airport, Outstation & Tour Taxi";
 const description =
   "Book chauffeur-driven sedans, Ertiga, Innova, SUV and tempo traveller cabs in Udumalpet. Airport transfers, one-way, round trip and Ooty–Kodaikanal tour packages, 24×7.";
-const url = "https://luxe-motion-ride.lovable.app/";
+const url = "https://yaazhcabs.in/";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -44,8 +44,21 @@ export const Route = createFileRoute("/")({
           name: "Yaazh Cabs",
           areaServed: "Udumalpet, Tamil Nadu",
           telephone: "+919360055761",
+          email: "hello@yaazhcabs.in",
           slogan: "Safe journey, every time",
           url,
+          address: {
+            "@type": "PostalAddress",
+            addressLocality: "Udumalpet",
+            addressRegion: "Tamil Nadu",
+            postalCode: "642126",
+            addressCountry: "IN",
+          },
+          geo: {
+            "@type": "GeoCoordinates",
+            latitude: 10.551642,
+            longitude: 77.306707,
+          },
         }),
       },
       { type: "application/ld+json", children: JSON.stringify(faqJsonLd) },
@@ -59,7 +72,6 @@ function Index() {
     <main id="top" className="relative">
       <SiteNav />
       <Hero />
-      <Partners />
       <Services />
       <PopularRoutes />
       <Fleet />
@@ -68,6 +80,7 @@ function Index() {
       <Stats />
       <Testimonials />
       <Gallery />
+      <Contact />
       <FAQ />
       <SiteFooter />
       <ChatWidget />

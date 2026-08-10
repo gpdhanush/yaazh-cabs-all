@@ -3,7 +3,9 @@
 # 21st.dev Premium Animation & UI Prompt for Yaazh Cabs
 
 
-
+cd /Users/naethra/Desktop/Projects/gp/yaaz/yaazh-web
+cp .env.example .env.local
+npm run dev
 ## Objective
 
 
@@ -875,16 +877,6 @@ Use
 
 
 Build an award-winning luxury taxi booking website using the best production-ready components from **21st.dev**. Prioritize **Container Scroll Hero**, **Spotlight Cards**, **Horizontal Scroll Route Cards**, **Premium Fleet Cards**, **Radial Orbital Timeline**, **Animated Counters**, **Testimonials Columns**, **Masonry Gallery**, and **Motion Footer**. Use Tailwind CSS, Framer Motion, and Lenis Smooth Scroll. Every section should have unique scroll-triggered animations, glassmorphism, magnetic buttons, subtle 3D hover effects, parallax backgrounds, and smooth page transitions. The website must feel handcrafted by a senior UI/UX designer and frontend engineer, delivering an Apple-quality experience rather than a generic taxi booking template.
-
-This project was built with [Lovable](https://lovable.dev).
-
-## Build with Lovable
-
-Continue developing this project in the [Lovable editor](https://lovable.dev/projects/94fd570a-d423-4956-99e5-bee49da77ad7).
-
-- **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: every change made in Lovable is committed straight to this repository.
-- **Full ownership**: this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
 
 ## Development
 

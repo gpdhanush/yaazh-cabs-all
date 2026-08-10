@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import type {} from "@tanstack/react-start";
 
-const BASE_URL = "https://luxe-motion-ride.lovable.app";
+const BASE_URL = "https://yaazhcabs.in";
 
 const entries = [
   { path: "/", changefreq: "weekly", priority: "1.0" },

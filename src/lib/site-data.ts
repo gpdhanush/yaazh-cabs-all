@@ -67,6 +67,44 @@ export const vehicles: Vehicle[] = [
   },
 ];
 
+/** Shown on booking form, WhatsApp message & fare cards */
+export const BOOKING_FARE_NOTE = "Note: Toll, parking & permit charges are extra and billed at actuals.";
+
+/** Fixed pickup points — service starts from these areas only */
+export const pickupPlaces = [
+  "Udumalpet",
+  "Coimbatore",
+  "Tiruppur",
+  "Palani",
+  "Pollachi",
+  "Dharapuram",
+  "Madathukulam",
+  "Anaimalai",
+  "Amaravathi",
+];
+
+export type PopularRoute = {
+  from: string;
+  to: string;
+  price: number;
+  km?: number;
+  mins?: string;
+  tag?: string;
+};
+
+/** One-way special fares from Udumalpet (as per Yaazh Cabs rate card) */
+export const popularOneWayRoutes: PopularRoute[] = [
+  { from: "Udumalpet", to: "Palani", price: 1500, km: 55, mins: "1 hr 5 min", tag: "Temple town" },
+  { from: "Udumalpet", to: "Coimbatore", price: 2700, km: 68, mins: "1 hr 20 min", tag: "City ride" },
+  { from: "Udumalpet", to: "Madurai", price: 3600, km: 165, mins: "3 hr", tag: "One way" },
+  { from: "Udumalpet", to: "Dindigul", price: 2900, km: 120, mins: "2 hr 15 min", tag: "One way" },
+  { from: "Udumalpet", to: "Munnar", price: 4000, km: 145, mins: "3 hr 30 min", tag: "Hill station" },
+  { from: "Udumalpet", to: "Theni", price: 3300, km: 130, mins: "2 hr 45 min", tag: "One way" },
+  { from: "Udumalpet", to: "Tiruppur", price: 2700, km: 95, mins: "2 hr", tag: "Knit city" },
+  { from: "Udumalpet", to: "Erode", price: 3000, km: 110, mins: "2 hr 15 min", tag: "One way" },
+  { from: "Udumalpet", to: "Karur", price: 3600, km: 140, mins: "2 hr 45 min", tag: "One way" },
+];
+
 export const places = [
   "Udumalpet",
   "Pollachi",
@@ -77,6 +115,9 @@ export const places = [
   "Munnar",
   "Madurai",
   "Tiruppur",
+  "Theni",
+  "Erode",
+  "Karur",
   "Coimbatore Airport",
   "Valparai",
   "Dindigul",
@@ -92,6 +133,15 @@ export const PHONE_SECONDARY = "63690 22364";
 
 export const ADMIN_WHATSAPP = "917845456609";
 export const ADMIN_EMAIL = "hello@yaazhcabs.in";
+
+export const BUSINESS_ADDRESS = "Udumalpet, Tiruppur District, Tamil Nadu 642126";
+export const BUSINESS_HOURS = "Open 24×7";
+
+/** Google Maps share link for Yaazh Cabs office / pickup point */
+export const MAPS_SHARE_URL = "https://maps.app.goo.gl/EUCRv1piSHwJybDD7?g_st=aw";
+export const MAP_LAT = 10.551642;
+export const MAP_LNG = 77.306707;
+export const MAP_EMBED_URL = `https://www.google.com/maps?q=${MAP_LAT},${MAP_LNG}&z=16&output=embed`;
 
 export const drivers = [
   { name: "Saravanan M.", phone: "93600 55761", car: "TN 39 BM 4412" },

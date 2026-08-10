@@ -40,9 +40,9 @@ export function FAQ() {
     <section id="faq" className="py-16 md:py-28">
       <div className="mx-auto max-w-3xl px-5 md:px-8">
         <div className="text-center">
-          <p className="text-[10px] uppercase tracking-[0.28em] text-primary sm:text-[11px]">FAQ</p>
-          <h2 className="mt-3 font-display text-3xl font-extrabold sm:text-4xl md:text-5xl">
-            Good to <span className="text-gradient-gold">know</span>
+          <p className="text-[10px] uppercase tracking-[0.28em] text-brand sm:text-[11px]">FAQ</p>
+          <h2 className="mt-3 font-display text-3xl font-bold sm:text-4xl md:text-5xl">
+            Good to <span className="text-brand">know</span>
           </h2>
         </div>
 
@@ -50,7 +50,7 @@ export function FAQ() {
           <Accordion type="single" collapsible className="w-full">
             {faqs.map((f, i) => (
               <AccordionItem key={f.q} value={`item-${i}`} className="border-border">
-                <AccordionTrigger className="text-left font-display text-base font-semibold hover:text-primary hover:no-underline">
+                <AccordionTrigger className="text-left font-display text-base font-semibold hover:text-brand hover:no-underline">
                   {f.q}
                 </AccordionTrigger>
                 <AccordionContent className="text-sm leading-relaxed text-muted-foreground">

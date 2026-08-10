@@ -5,13 +5,13 @@ import { SiteFooter } from "@/components/site/footer";
 import { ChatWidget } from "@/components/site/chat-widget";
 import { Toaster } from "@/components/ui/sonner";
 import { driverFor, findBooking, loadBookings, stagesFor, type Booking } from "@/lib/bookings";
-import { ADMIN_WHATSAPP, PHONE_PRIMARY } from "@/lib/site-data";
+import { ADMIN_WHATSAPP, PHONE_PRIMARY, BOOKING_FARE_NOTE } from "@/lib/site-data";
 import { cn } from "@/lib/utils";
 
 const title = "Track Your Booking | Yaazh Cabs Udumalpet";
 const description =
   "Check your Yaazh Cabs booking status — confirmation, driver assignment, cab number and pickup time updates using your booking reference or mobile number.";
-const url = "https://luxe-motion-ride.lovable.app/status";
+const url = "https://yaazhcabs.in/status";
 
 export const Route = createFileRoute("/status")({
   validateSearch: (s: Record<string, unknown>) => ({
@@ -70,7 +70,7 @@ function StatusPage() {
           </Link>
           <a
             href={`tel:+91${PHONE_PRIMARY.replace(/\s/g, "")}`}
-            className="inline-flex items-center gap-2 rounded-full bg-[image:var(--gradient-gold)] px-4 py-2 text-xs font-semibold text-primary-foreground"
+            className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground"
           >
             <Phone className="size-4" /> Call desk
           </a>
@@ -78,9 +78,9 @@ function StatusPage() {
       </header>
 
       <div className="mx-auto max-w-3xl px-5 py-10 md:px-8 md:py-16">
-        <p className="text-[11px] uppercase tracking-[0.3em] text-primary">Booking status</p>
-        <h1 className="mt-3 font-display text-3xl font-extrabold md:text-4xl">
-          Track your <span className="text-gradient-gold">pickup &amp; driver</span>
+        <p className="text-[11px] uppercase tracking-[0.3em] text-brand">Booking status</p>
+        <h1 className="mt-3 font-display text-3xl font-bold md:text-4xl">
+          Track your <span className="text-brand">pickup &amp; driver</span>
         </h1>
         <p className="mt-3 text-sm text-muted-foreground">
           Enter your booking reference (e.g. YC260810 1234) or the mobile number you booked with.
@@ -98,11 +98,11 @@ function StatusPage() {
             onChange={(e) => setQuery(e.target.value)}
             placeholder="YC2608101234 or 9360055761"
             aria-label="Booking reference or mobile number"
-            className="w-full rounded-[5px] border border-border bg-surface-2/40 px-4 py-3 text-sm outline-none focus:border-primary"
+            className="w-full rounded-[5px] border border-border bg-surface-2/40 px-4 py-3 text-sm outline-none focus:border-brand"
           />
           <button
             type="submit"
-            className="shrink-0 rounded-[5px] bg-[image:var(--gradient-gold)] px-6 py-3 font-display text-xs font-bold uppercase tracking-[0.14em] text-primary-foreground"
+            className="shrink-0 rounded-[5px] bg-primary px-6 py-3 text-xs font-semibold uppercase tracking-[0.12em] text-primary-foreground"
           >
             Check status
           </button>
@@ -114,7 +114,7 @@ function StatusPage() {
               <button
                 key={b.ref}
                 onClick={() => lookup(b.ref)}
-                className="rounded-full border border-border px-3 py-1.5 text-xs text-muted-foreground hover:border-primary/50 hover:text-foreground"
+                className="rounded-full border border-border px-3 py-1.5 text-xs text-muted-foreground hover:border-brand/50 hover:text-foreground"
               >
                 {b.ref}
               </button>
@@ -135,7 +135,7 @@ function StatusPage() {
               )}`}
               target="_blank"
               rel="noopener"
-              className="mt-4 inline-flex items-center gap-2 rounded-[5px] border border-primary/40 bg-primary/10 px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.12em] text-primary"
+              className="mt-4 inline-flex items-center gap-2 rounded-[5px] border border-brand/40 bg-brand/10 px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.12em] text-brand"
             >
               <MessageCircle className="size-4" /> Ask on WhatsApp
             </a>
@@ -164,9 +164,16 @@ function StatusCard({ booking, onRefresh }: { booking: Booking; onRefresh: () =>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <p className="text-[11px] uppercase tracking-[0.24em] text-muted-foreground">Reference</p>
-            <p className="font-display text-2xl font-extrabold text-gradient-gold">{booking.ref}</p>
+            <p className="font-data text-2xl font-semibold text-brand">{booking.ref}</p>
           </div>
-          <span className="rounded-full border border-primary/40 bg-primary/10 px-3 py-1.5 text-xs text-primary">
+          <span
+            className={cn(
+              "rounded-full border px-3 py-1.5 text-xs font-medium",
+              current?.key === "confirmed" || current?.key === "driver" || current?.key === "pickup"
+                ? "status-confirmed"
+                : "status-pending",
+            )}
+          >
             {current?.title ?? "Request received"}
           </span>
         </div>
@@ -179,6 +186,9 @@ function StatusCard({ booking, onRefresh }: { booking: Booking; onRefresh: () =>
           <Row label="Vehicle" value={`${booking.vehicle} · ₹${booking.perKm}/km`} />
           <Row label="Approx fare" value={`₹${booking.estimate.toLocaleString("en-IN")}`} />
         </dl>
+        <p className="mt-4 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-xs font-medium text-warning">
+          {BOOKING_FARE_NOTE}
+        </p>
       </div>
 
       <div className="rounded-2xl border border-border bg-card/70 p-5 sm:p-6">
@@ -195,7 +205,7 @@ function StatusCard({ booking, onRefresh }: { booking: Booking; onRefresh: () =>
           {stages.map((s) => (
             <li key={s.key} className="flex gap-3">
               {s.done ? (
-                <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-primary" />
+                <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-success" />
               ) : (
                 <Circle className="mt-0.5 size-5 shrink-0 text-muted-foreground/50" />
               )}
@@ -212,7 +222,7 @@ function StatusCard({ booking, onRefresh }: { booking: Booking; onRefresh: () =>
       </div>
 
       {assigned && (
-        <div className="rounded-2xl border border-primary/30 bg-primary/5 p-5 sm:p-6">
+        <div className="rounded-2xl border border-success/30 bg-success/5 p-5 sm:p-6">
           <h2 className="font-display text-lg font-bold">Your driver</h2>
           <p className="mt-2 text-sm text-muted-foreground">
             {driver.name} · {booking.vehicle} · {driver.car}
@@ -220,7 +230,7 @@ function StatusCard({ booking, onRefresh }: { booking: Booking; onRefresh: () =>
           <div className="mt-4 flex flex-col gap-2 sm:flex-row">
             <a
               href={`tel:+91${driver.phone.replace(/\s/g, "")}`}
-              className="inline-flex items-center justify-center gap-2 rounded-[5px] bg-[image:var(--gradient-gold)] px-4 py-3 text-xs font-bold uppercase tracking-[0.12em] text-primary-foreground"
+              className="inline-flex items-center justify-center gap-2 rounded-[5px] bg-primary px-4 py-3 text-xs font-semibold uppercase tracking-[0.12em] text-primary-foreground"
             >
               <Phone className="size-4" /> Call driver
             </a>
@@ -230,9 +240,9 @@ function StatusCard({ booking, onRefresh }: { booking: Booking; onRefresh: () =>
               )}`}
               target="_blank"
               rel="noopener"
-              className="inline-flex items-center justify-center gap-2 rounded-[5px] border border-border px-4 py-3 text-xs font-semibold uppercase tracking-[0.12em]"
+              className="inline-flex items-center justify-center gap-2 rounded-[5px] bg-secondary px-4 py-3 text-xs font-semibold uppercase tracking-[0.12em] text-secondary-foreground"
             >
-              <MessageCircle className="size-4 text-primary" /> Message desk
+              <MessageCircle className="size-4 text-brand" /> Message desk
             </a>
           </div>
         </div>
