@@ -15,7 +15,7 @@ const url = "https://luxe-motion-ride.lovable.app/status";
 
 export const Route = createFileRoute("/status")({
   validateSearch: (s: Record<string, unknown>) => ({
-    ref: typeof s.ref === "string" ? s.ref : "",
+    ref: typeof s['ref'] === "string" ? (s['ref'] as string) : "",
   }),
   head: () => ({
     meta: [
