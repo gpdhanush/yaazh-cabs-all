@@ -1,7 +1,5 @@
 "use client";
 
-import { Reveal } from "./motion-primitives";
-
 const partners = [
   "TCS Coimbatore",
   "Bosch",
@@ -14,25 +12,22 @@ const partners = [
 ];
 
 export function Partners() {
-  const row = [...partners, ...partners];
   return (
     <section className="border-y border-border/70 bg-surface/40 py-10">
-      <Reveal className="mx-auto max-w-7xl px-5 md:px-8">
-        <p className="mb-6 text-center text-[11px] uppercase tracking-[0.32em] text-muted-foreground">
+      <div className="mx-auto max-w-7xl px-5 md:px-8">
+        <p className="mb-6 text-center text-[10px] uppercase tracking-[0.28em] text-muted-foreground sm:text-[11px] sm:tracking-[0.32em]">
           Trusted by teams &amp; travellers
         </p>
-      </Reveal>
-      <div className="group marquee-mask overflow-hidden">
-        <div className="animate-marquee flex w-max items-center gap-14 group-hover:[animation-play-state:paused]">
-          {row.map((p, i) => (
-            <span
-              key={`${p}-${i}`}
-              className="whitespace-nowrap font-display text-lg font-semibold text-muted-foreground/70 transition-colors duration-300 hover:text-primary md:text-2xl"
+        <ul className="grid grid-cols-2 gap-x-6 gap-y-4 text-center sm:grid-cols-4">
+          {partners.map((p) => (
+            <li
+              key={p}
+              className="font-display text-sm font-semibold text-muted-foreground/80 md:text-lg"
             >
               {p}
-            </span>
+            </li>
           ))}
-        </div>
+        </ul>
       </div>
     </section>
   );
