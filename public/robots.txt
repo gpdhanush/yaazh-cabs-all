@@ -12,3 +12,5 @@ Allow: /
 
 User-agent: *
 Allow: /
+
+Sitemap: https://luxe-motion-ride.lovable.app/sitemap.xml
