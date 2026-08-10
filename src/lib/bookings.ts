@@ -52,7 +52,7 @@ export type Stage = {
   title: string;
   body: string;
   done: boolean;
-  at?: string;
+  at?: string | undefined;
 };
 
 export function driverFor(b: Booking) {
