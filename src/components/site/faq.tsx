@@ -37,16 +37,16 @@ const faqs = [
 
 export function FAQ() {
   return (
-    <section id="faq" className="py-24 md:py-32">
+    <section id="faq" className="py-16 md:py-28">
       <div className="mx-auto max-w-3xl px-5 md:px-8">
-        <Reveal className="text-center">
-          <p className="text-[11px] uppercase tracking-[0.32em] text-primary">FAQ</p>
-          <h2 className="mt-4 font-display text-4xl font-extrabold md:text-5xl">
+        <div className="text-center">
+          <p className="text-[10px] uppercase tracking-[0.28em] text-primary sm:text-[11px]">FAQ</p>
+          <h2 className="mt-3 font-display text-3xl font-extrabold sm:text-4xl md:text-5xl">
             Good to <span className="text-gradient-gold">know</span>
           </h2>
-        </Reveal>
+        </div>
 
-        <Reveal delay={0.1} className="mt-12">
+        <div className="mt-10">
           <Accordion type="single" collapsible className="w-full">
             {faqs.map((f, i) => (
               <AccordionItem key={f.q} value={`item-${i}`} className="border-border">
@@ -59,7 +59,7 @@ export function FAQ() {
               </AccordionItem>
             ))}
           </Accordion>
-        </Reveal>
+        </div>
       </div>
     </section>
   );
