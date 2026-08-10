@@ -89,3 +89,13 @@ export const tripTypes = ["One Way", "Round Trip", "Local Rental", "Airport Tran
 
 export const PHONE_PRIMARY = "93600 55761";
 export const PHONE_SECONDARY = "63690 22364";
+
+export const ADMIN_WHATSAPP = "917845456609";
+export const ADMIN_EMAIL = "hello@yaazhcabs.in";
+
+export const drivers = [
+  { name: "Saravanan M.", phone: "93600 55761", car: "TN 39 BM 4412" },
+  { name: "Karthik R.", phone: "63690 22364", car: "TN 39 CQ 7781" },
+  { name: "Vignesh S.", phone: "93600 55761", car: "TN 39 AZ 2093" },
+  { name: "Mohan Raj", phone: "63690 22364", car: "TN 39 DK 5560" },
+];
