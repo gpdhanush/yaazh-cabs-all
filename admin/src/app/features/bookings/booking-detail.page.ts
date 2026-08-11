@@ -8,6 +8,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { AdminApiService } from '../../core/api/admin-api.service';
 import { Booking, BookingPayment } from '../../core/api/api.types';
 import { canAssignDriver, statusLabel, statusTone } from '../../shared/status-chip';
+import { YaModalPortalDirective } from '../../shared/ya-modal-portal.directive';
 
 @Component({
   selector: 'app-booking-detail-page',
@@ -20,6 +21,7 @@ import { canAssignDriver, statusLabel, statusTone } from '../../shared/status-ch
     MatButtonModule,
     MatIconModule,
     MatSnackBarModule,
+    YaModalPortalDirective,
   ],
   template: `
     <div class="page-wrap space-y-5">
@@ -218,25 +220,31 @@ import { canAssignDriver, statusLabel, statusTone } from '../../shared/status-ch
                   <dd>₹{{ inv.balance_amount }}</dd>
                 </div>
               </dl>
-              <div class="bk-detail-hero__actions" style="border-top: 0; padding-top: 0.75rem; margin-top: 0.5rem">
-                <button
-                  mat-flat-button
-                  class="ya-btn-primary bk-btn"
-                  type="button"
-                  [disabled]="busy() || !b.customer_email"
-                  (click)="resendInvoice()"
-                >
-                  {{ busy() ? 'Sending…' : 'Resend invoice email' }}
-                </button>
-              </div>
-              @if (!b.customer_email) {
-                <p class="bk-panel__hint">No customer email on this booking — invoice cannot be sent.</p>
-              }
             } @else {
               <p class="bk-panel__hint">
-                Invoice is created when the booking is confirmed. Confirm the trip to issue and email it.
+                No invoice yet. View or send to generate one for this booking.
               </p>
             }
+            <div class="bk-detail-hero__actions" style="border-top: 0; padding-top: 0.75rem; margin-top: 0.5rem">
+              <button
+                mat-stroked-button
+                class="ya-btn-ghost bk-btn"
+                type="button"
+                [disabled]="busy()"
+                (click)="viewInvoice()"
+              >
+                {{ busy() ? 'Opening…' : 'View invoice' }}
+              </button>
+              <button
+                mat-flat-button
+                class="ya-btn-primary bk-btn"
+                type="button"
+                [disabled]="busy()"
+                (click)="openSendInvoice()"
+              >
+                Send invoice email
+              </button>
+            </div>
           </section>
 
           <section class="ya-page-card bk-panel">
@@ -346,6 +354,49 @@ import { canAssignDriver, statusLabel, statusTone } from '../../shared/status-ch
         <div class="skeleton h-48"></div>
       }
     </div>
+
+    @if (sendOpen()) {
+      <div class="ya-modal-overlay" yaModalPortal (click)="closeSendInvoice()" role="presentation">
+        <div
+          class="ya-confirm"
+          (click)="$event.stopPropagation()"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="ya-invoice-title"
+        >
+          <div class="ya-confirm__icon ya-confirm__icon--primary" aria-hidden="true">
+            <mat-icon>mail</mat-icon>
+          </div>
+          <h3 id="ya-invoice-title" class="ya-confirm__title">Send invoice email</h3>
+          <p class="ya-confirm__text">Enter the email address that should receive this booking invoice.</p>
+          <div class="ya-field" style="text-align: left; margin: 0.85rem 0 0.25rem">
+            <label for="invoice-email">Email</label>
+            <input
+              id="invoice-email"
+              class="ya-field__control"
+              type="email"
+              autocomplete="email"
+              [(ngModel)]="sendEmail"
+              placeholder="customer@email.com"
+            />
+          </div>
+          <div class="ya-confirm__footer">
+            <button mat-stroked-button class="ya-btn-ghost" type="button" (click)="closeSendInvoice()" [disabled]="busy()">
+              Cancel
+            </button>
+            <button
+              mat-flat-button
+              class="ya-btn-primary"
+              type="button"
+              [disabled]="busy() || !canSendInvoice()"
+              (click)="sendInvoice()"
+            >
+              {{ busy() ? 'Sending…' : 'Send' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    }
   `,
 })
 export class BookingDetailPage implements OnInit {
@@ -357,6 +408,8 @@ export class BookingDetailPage implements OnInit {
   readonly drivers = signal<Array<{ id: string; name: string; phone: string }>>([]);
   readonly error = signal<string | null>(null);
   readonly busy = signal(false);
+  readonly sendOpen = signal(false);
+  sendEmail = '';
   driverId = '';
   payAmount = '';
   payMethod = 'cash';
@@ -507,19 +560,54 @@ export class BookingDetailPage implements OnInit {
     });
   }
 
-  resendInvoice(): void {
+  viewInvoice(): void {
     const b = this.booking();
     if (!b) return;
     this.busy.set(true);
-    this.api.resendBookingInvoice(b.id).subscribe({
-      next: (inv) => {
+    this.api.downloadBookingInvoice(b.id).subscribe({
+      next: (blob) => {
         this.busy.set(false);
-        this.snack.open(`Invoice emailed to ${inv.email_to || b.customer_email}`, 'OK', { duration: 3000 });
+        const url = URL.createObjectURL(blob);
+        window.open(url, '_blank', 'noopener');
         this.load(b.id);
       },
       error: (err: unknown) => {
         this.busy.set(false);
-        this.snack.open(err instanceof Error ? err.message : 'Resend failed', 'Close');
+        this.snack.open(err instanceof Error ? err.message : 'Could not open invoice', 'Close');
+      },
+    });
+  }
+
+  openSendInvoice(): void {
+    const b = this.booking();
+    this.sendEmail = b?.customer_email?.trim() || '';
+    this.sendOpen.set(true);
+  }
+
+  closeSendInvoice(): void {
+    if (this.busy()) return;
+    this.sendOpen.set(false);
+  }
+
+  canSendInvoice(): boolean {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.sendEmail.trim());
+  }
+
+  sendInvoice(): void {
+    const b = this.booking();
+    const email = this.sendEmail.trim();
+    if (!b || !this.canSendInvoice()) return;
+    this.busy.set(true);
+    this.api.resendBookingInvoice(b.id, email).subscribe({
+      next: (inv) => {
+        this.busy.set(false);
+        this.sendOpen.set(false);
+        this.snack.open(`Invoice emailed to ${inv.email_to || email}`, 'OK', { duration: 3000 });
+        this.load(b.id);
+      },
+      error: (err: unknown) => {
+        this.busy.set(false);
+        this.snack.open(err instanceof Error ? err.message : 'Send failed', 'Close');
       },
     });
   }

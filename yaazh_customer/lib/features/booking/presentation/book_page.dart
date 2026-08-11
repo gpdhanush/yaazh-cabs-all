@@ -957,7 +957,7 @@ class _OngoingBookingGate extends StatelessWidget {
               textAlign: TextAlign.center,
               style: const TextStyle(fontWeight: FontWeight.w700),
             ),
-            if (booking.showsAssignedDriver && booking.driver != null) ...[
+            if (booking.driver != null) ...[
               const SizedBox(height: 18),
               DriverAvatar(driver: booking.driver!, radius: 28),
               const SizedBox(height: 8),

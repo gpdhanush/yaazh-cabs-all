@@ -47,6 +47,10 @@ export class AdminApiService {
       .pipe(map((r) => r.data));
   }
 
+  downloadBookingInvoice(id: string) {
+    return this.api.getBlob(`${ADMIN}/bookings/${id}/invoice/pdf`);
+  }
+
   assignDriver(id: string, body: { driver_id: string | number; vehicle_id?: string | number }) {
     return this.api.post<Booking>(`${ADMIN}/bookings/${id}/assign-driver`, body).pipe(map((r) => r.data));
   }

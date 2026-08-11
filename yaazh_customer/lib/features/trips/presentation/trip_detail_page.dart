@@ -282,13 +282,12 @@ class _TripDetailPageState extends ConsumerState<TripDetailPage> {
                       style: const TextStyle(color: AppConstants.textSecondaryLight),
                     ),
                   ),
-                if (booking.showsAssignedDriver && booking.driver != null) ...[
+                if (booking.driver != null) ...[
                   const SizedBox(height: 16),
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: DriverAvatar(driver: booking.driver!, radius: 26),
-                    title: Text(booking.driver!.name, style: const TextStyle(fontWeight: FontWeight.w800)),
-                    subtitle: Text(booking.vehicle?.registration ?? booking.vehicle?.name ?? 'Assigned cab'),
+                  DriverNameLine(
+                    driver: booking.driver!,
+                    avatarRadius: 26,
+                    subtitle: booking.vehicle?.registration ?? booking.vehicle?.name ?? 'Assigned cab',
                     trailing: booking.driver!.phone.isEmpty
                         ? null
                         : IconButton(

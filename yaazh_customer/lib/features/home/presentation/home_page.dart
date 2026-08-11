@@ -295,7 +295,7 @@ class _UpcomingTripCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final driver = booking.showsAssignedDriver ? booking.driver : null;
+    final driver = booking.driver;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 36, 16, 0),
       child: Material(
@@ -306,61 +306,71 @@ class _UpcomingTripCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(20),
           child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 14, 16),
-            child: Row(
-              children: [
-                if (driver != null)
-                  DriverAvatar(driver: driver, radius: 26)
-                else
-                  Container(
-                    width: 52,
-                    height: 52,
-                    decoration: BoxDecoration(
-                      color: AppConstants.accentColor.withValues(alpha: 0.18),
-                      shape: BoxShape.circle,
+            child: driver != null
+                ? DriverNameLine(
+                    driver: driver,
+                    avatarRadius: 26,
+                    nameColor: Colors.white,
+                    nameStyle: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 16,
                     ),
-                    child: const Icon(Icons.local_taxi_rounded, color: AppConstants.accentColor),
-                  ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                    subtitle: '${booking.pickupLocation} → ${booking.dropLocation}',
+                    trailing: const Icon(Icons.chevron_right_rounded, color: Colors.white70),
+                  )
+                : Row(
                     children: [
-                      Text(
-                        booking.status == 'trip_started' ? 'Trip in progress' : 'Ongoing booking',
-                        style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.62),
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0.4,
+                      Container(
+                        width: 52,
+                        height: 52,
+                        decoration: BoxDecoration(
+                          color: AppConstants.accentColor.withValues(alpha: 0.18),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.local_taxi_rounded, color: AppConstants.accentColor),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              booking.status == 'trip_started' ? 'Trip in progress' : 'Ongoing booking',
+                              style: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.62),
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.4,
+                              ),
+                            ),
+                            const SizedBox(height: 3),
+                            Text(
+                              booking.bookingReference,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w800,
+                                fontSize: 16,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              '${booking.pickupLocation} → ${booking.dropLocation}',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.7),
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      const SizedBox(height: 3),
-                      Text(
-                        driver?.name ?? booking.bookingReference,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w800,
-                          fontSize: 16,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        '${booking.pickupLocation} → ${booking.dropLocation}',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.7),
-                          fontSize: 12,
-                        ),
-                      ),
+                      const Icon(Icons.chevron_right_rounded, color: Colors.white70),
                     ],
                   ),
-                ),
-                const Icon(Icons.chevron_right_rounded, color: Colors.white70),
-              ],
-            ),
           ),
         ),
       ),

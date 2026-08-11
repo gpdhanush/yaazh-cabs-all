@@ -3,7 +3,12 @@ import { z } from "zod";
 import { prisma } from "../../../config/database.js";
 import { ok } from "../../../utils/api-response.js";
 import { requireAuth, requireUser } from "../../../middleware/auth.js";
-import { bookingService, serializeBooking, serializeDriverParty } from "../../../services/booking.service.js";
+import {
+  bookingService,
+  loadDriverPhotoUrls,
+  serializeBooking,
+  serializeDriverParty,
+} from "../../../services/booking.service.js";
 import { NotFoundError, ValidationError, ForbiddenError, ConflictError } from "../../../errors/app-error.js";
 import type { TripType } from "@prisma/client";
 
@@ -126,13 +131,14 @@ export const customerRoutes: FastifyPluginAsync = async (app) => {
     const vehicleIds = [
       ...new Set(rows.map((r) => r.assigned_vehicle_id).filter((id): id is bigint => id != null)),
     ];
-    const [drivers, vehicles] = await Promise.all([
+    const [drivers, vehicles, photos] = await Promise.all([
       driverIds.length
         ? prisma.drivers.findMany({ where: { id: { in: driverIds } } })
         : Promise.resolve([]),
       vehicleIds.length
         ? prisma.vehicles.findMany({ where: { id: { in: vehicleIds } } })
         : Promise.resolve([]),
+      loadDriverPhotoUrls(driverIds),
     ]);
     const driverMap = new Map(drivers.map((d) => [String(d.id), d]));
     const vehicleMap = new Map(vehicles.map((v) => [String(v.id), v]));
@@ -143,7 +149,7 @@ export const customerRoutes: FastifyPluginAsync = async (app) => {
         const v = b.assigned_vehicle_id ? vehicleMap.get(String(b.assigned_vehicle_id)) : null;
         return {
           ...serializeBooking(b),
-          driver: serializeDriverParty(d),
+          driver: serializeDriverParty(d, d ? photos.get(String(d.id)) : null),
           vehicle: v
             ? { name: v.vehicle_name, registration: v.registration_no }
             : null,

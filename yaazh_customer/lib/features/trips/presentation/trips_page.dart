@@ -97,21 +97,12 @@ class _TripTile extends StatelessWidget {
               '$when · ₹${booking.estimatedTotal.toStringAsFixed(0)}',
               style: const TextStyle(color: AppConstants.textSecondaryLight, fontSize: 13),
             ),
-            if (booking.showsAssignedDriver && booking.driver != null) ...[
+            if (booking.driver != null) ...[
               const SizedBox(height: 10),
-              Row(
-                children: [
-                  DriverAvatar(driver: booking.driver!, radius: 16),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      booking.driver!.name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
-                    ),
-                  ),
-                ],
+              DriverNameLine(
+                driver: booking.driver!,
+                avatarRadius: 16,
+                nameStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
               ),
             ],
           ],

@@ -473,6 +473,12 @@ export const driverRoutes: FastifyPluginAsync = async (app) => {
         vehicle_id: parsed.data.vehicle_id != null ? BigInt(parsed.data.vehicle_id) : null,
       },
     });
+    if (parsed.data.document_type === "profile_photo") {
+      await prisma.drivers.update({
+        where: { id: user.id },
+        data: { profile_image_url: parsed.data.file_url },
+      });
+    }
     return ok(reply, { id: String(row.id) }, "Document uploaded.", 201);
   });
 

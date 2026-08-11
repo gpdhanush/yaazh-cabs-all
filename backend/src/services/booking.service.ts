@@ -790,8 +790,11 @@ export const bookingService = {
     let vehicle: { name: string; registration: string | null } | null = null;
 
     if (booking.assigned_driver_id) {
-      const d = await prisma.drivers.findUnique({ where: { id: booking.assigned_driver_id } });
-      driver = serializeDriverParty(d);
+      const [d, photos] = await Promise.all([
+        prisma.drivers.findUnique({ where: { id: booking.assigned_driver_id } }),
+        loadDriverPhotoUrls([booking.assigned_driver_id]),
+      ]);
+      driver = serializeDriverParty(d, photos.get(String(booking.assigned_driver_id)));
     }
     if (booking.assigned_vehicle_id) {
       const v = await prisma.vehicles.findUnique({ where: { id: booking.assigned_vehicle_id } });
@@ -840,8 +843,11 @@ export const bookingService = {
     let vehicle: { name: string; registration: string | null } | null = null;
 
     if (booking.assigned_driver_id) {
-      const d = await prisma.drivers.findUnique({ where: { id: booking.assigned_driver_id } });
-      driver = serializeDriverParty(d);
+      const [d, photos] = await Promise.all([
+        prisma.drivers.findUnique({ where: { id: booking.assigned_driver_id } }),
+        loadDriverPhotoUrls([booking.assigned_driver_id]),
+      ]);
+      driver = serializeDriverParty(d, photos.get(String(booking.assigned_driver_id)));
     }
     if (booking.assigned_vehicle_id) {
       const v = await prisma.vehicles.findUnique({ where: { id: booking.assigned_vehicle_id } });
@@ -1118,15 +1124,48 @@ export function serializeBooking(b: {
   };
 }
 
+/** Prefer a /storage path so mobile apps can prefix their configured API host. */
+function publicMediaPath(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  const value = raw.trim();
+  if (!value || value === "null") return null;
+  try {
+    const u = new URL(value);
+    if (u.pathname.startsWith("/storage/")) return `${u.pathname}${u.search}`;
+  } catch {
+    /* relative or malformed */
+  }
+  return value;
+}
+
+export async function loadDriverPhotoUrls(driverIds: bigint[]): Promise<Map<string, string>> {
+  const map = new Map<string, string>();
+  if (driverIds.length === 0) return map;
+  const docs = await prisma.driverDocuments.findMany({
+    where: { driver_id: { in: driverIds }, document_type: "profile_photo" },
+    orderBy: { created_at: "desc" },
+    select: { driver_id: true, file_url: true },
+  });
+  for (const doc of docs) {
+    const key = String(doc.driver_id);
+    const path = publicMediaPath(doc.file_url);
+    if (path && !map.has(key)) map.set(key, path);
+  }
+  return map;
+}
+
 export function serializeDriverParty(
-  d: { name: string; phone: string; profile_image_url?: string | null } | null | undefined,
+  d: { id?: bigint; name: string; phone: string; profile_image_url?: string | null } | null | undefined,
+  photoOverride?: string | null,
 ) {
   if (!d) return null;
+  const photo = publicMediaPath(d.profile_image_url) ?? publicMediaPath(photoOverride);
   return {
+    id: d.id != null ? String(d.id) : undefined,
     name: d.name,
     phone: d.phone,
-    photo_url: d.profile_image_url ?? null,
-    profile_image_url: d.profile_image_url ?? null,
+    photo_url: photo,
+    profile_image_url: photo,
   };
 }
 

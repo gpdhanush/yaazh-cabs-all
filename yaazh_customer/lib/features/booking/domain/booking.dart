@@ -95,17 +95,7 @@ class Booking {
   bool get isCancelled =>
       status == 'cancelled' || status == 'rejected' || status == 'no_show';
 
-  bool get showsAssignedDriver {
-    if (driver == null) return false;
-    return const {
-      'driver_assigned',
-      'driver_accepted',
-      'on_the_way',
-      'arrived',
-      'trip_started',
-      'completed',
-    }.contains(status);
-  }
+  bool get showsAssignedDriver => driver != null;
 
   factory Booking.fromJson(Map<String, dynamic> json) {
     final driverJson = json['driver'];
@@ -139,8 +129,11 @@ class Booking {
           ? BookingParty(
               name: driverJson['name']?.toString() ?? 'Driver',
               phone: driverJson['phone']?.toString() ?? '',
-              photoUrl: (driverJson['photo_url'] ?? driverJson['profile_image_url'])
-                  ?.toString(),
+              photoUrl: _photo(
+                driverJson['photo_url'] ??
+                    driverJson['profile_image_url'] ??
+                    driverJson['avatar_url'],
+              ),
             )
           : null,
       vehicle: vehicleJson is Map
@@ -167,6 +160,13 @@ class Booking {
   static double? _d(dynamic value) {
     if (value == null) return null;
     return double.tryParse(value.toString());
+  }
+
+  static String? _photo(dynamic value) {
+    if (value == null) return null;
+    final text = value.toString().trim();
+    if (text.isEmpty || text == 'null') return null;
+    return text;
   }
 }
 

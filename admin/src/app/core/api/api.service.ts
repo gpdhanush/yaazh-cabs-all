@@ -53,6 +53,12 @@ export class ApiService {
       );
   }
 
+  getBlob(path: string): Observable<Blob> {
+    return this.http.get(`${this.base}${path}`, { responseType: 'blob' }).pipe(
+      catchError((err) => this.handleError(err)),
+    );
+  }
+
   delete<T>(path: string): Observable<ApiResult<T>> {
     return this.http
       .delete<ApiEnvelope<T>>(`${this.base}${path}`)

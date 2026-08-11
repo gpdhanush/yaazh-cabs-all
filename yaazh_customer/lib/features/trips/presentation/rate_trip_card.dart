@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:yaazh_customer/app/constants.dart';
+import 'package:yaazh_customer/core/widgets/driver_avatar.dart';
 import 'package:yaazh_customer/features/booking/domain/booking.dart';
 
 const _ratingLabels = ['', 'Terrible', 'Poor', 'Good', 'Great', 'Excellent'];
@@ -182,7 +183,20 @@ class _Form extends StatelessWidget {
             letterSpacing: -0.4,
           ),
         ),
-        if (driverName != null && driverName.isNotEmpty) ...[
+        if (parent.booking.driver != null) ...[
+          const SizedBox(height: 12),
+          DriverNameLine(
+            driver: parent.booking.driver!,
+            avatarRadius: 18,
+            nameColor: Colors.white,
+            nameStyle: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w700,
+              fontSize: 14,
+            ),
+            subtitle: parent.booking.bookingReference,
+          ),
+        ] else if (driverName != null && driverName.isNotEmpty) ...[
           const SizedBox(height: 4),
           Text(
             'With $driverName · ${parent.booking.bookingReference}',

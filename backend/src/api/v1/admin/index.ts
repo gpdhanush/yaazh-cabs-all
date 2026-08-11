@@ -12,6 +12,7 @@ import {
   resolveCustomerEmail,
   sendBookingInvoiceEmail,
   serializeInvoice,
+  upsertBookingInvoice,
 } from "../../../services/invoice.service.js";
 import { NotFoundError, ValidationError, ConflictError } from "../../../errors/app-error.js";
 import {
@@ -915,12 +916,26 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
       const id = BigInt((req.params as { id: string }).id);
       const booking = await prisma.bookings.findUnique({ where: { id } });
       if (!booking) throw new NotFoundError();
-      const invoice = await prisma.bookingInvoices.findUnique({ where: { booking_id: id } });
-      if (!invoice) throw new NotFoundError("Invoice not found.");
+      const { invoice } = await upsertBookingInvoice(id);
       return ok(reply, {
-        ...serializeInvoice(invoice),
+        ...invoice,
         customer_email: await resolveCustomerEmail(id),
       });
+    },
+  );
+
+  app.get(
+    "/bookings/:id/invoice/pdf",
+    { preHandler: [requirePermission("bookings.view")] },
+    async (req, reply) => {
+      const id = BigInt((req.params as { id: string }).id);
+      const booking = await prisma.bookings.findUnique({ where: { id } });
+      if (!booking) throw new NotFoundError();
+      const { invoice, pdfBuffer } = await upsertBookingInvoice(id);
+      return reply
+        .header("Content-Type", "application/pdf")
+        .header("Content-Disposition", `inline; filename="${invoice.invoice_number}.pdf"`)
+        .send(pdfBuffer);
     },
   );
 
