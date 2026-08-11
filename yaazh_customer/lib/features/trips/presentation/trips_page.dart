@@ -6,6 +6,7 @@ import 'package:yaazh_customer/app/constants.dart';
 import 'package:yaazh_customer/core/widgets/app_error_view.dart';
 import 'package:yaazh_customer/core/widgets/app_loading_view.dart';
 import 'package:yaazh_customer/core/widgets/app_state_pages.dart';
+import 'package:yaazh_customer/core/widgets/driver_avatar.dart';
 import 'package:yaazh_customer/core/widgets/status_chip.dart';
 import 'package:yaazh_customer/features/booking/domain/booking.dart';
 import 'package:yaazh_customer/features/trips/presentation/trips_viewmodel.dart';
@@ -96,6 +97,23 @@ class _TripTile extends StatelessWidget {
               '$when · ₹${booking.estimatedTotal.toStringAsFixed(0)}',
               style: const TextStyle(color: AppConstants.textSecondaryLight, fontSize: 13),
             ),
+            if (booking.showsAssignedDriver && booking.driver != null) ...[
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  DriverAvatar(driver: booking.driver!, radius: 16),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      booking.driver!.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ],
         ),
       ),

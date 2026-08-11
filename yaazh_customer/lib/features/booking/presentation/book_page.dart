@@ -8,6 +8,7 @@ import 'package:yaazh_customer/app/constants.dart';
 import 'package:yaazh_customer/core/location/location_service.dart';
 import 'package:yaazh_customer/core/location/place_search.dart';
 import 'package:yaazh_customer/core/network/api_exception.dart';
+import 'package:yaazh_customer/core/widgets/driver_avatar.dart';
 import 'package:yaazh_customer/core/widgets/ya_network_image.dart';
 import 'package:yaazh_customer/features/booking/data/booking_repository.dart';
 import 'package:yaazh_customer/features/booking/domain/booking.dart';
@@ -956,6 +957,22 @@ class _OngoingBookingGate extends StatelessWidget {
               textAlign: TextAlign.center,
               style: const TextStyle(fontWeight: FontWeight.w700),
             ),
+            if (booking.showsAssignedDriver && booking.driver != null) ...[
+              const SizedBox(height: 18),
+              DriverAvatar(driver: booking.driver!, radius: 28),
+              const SizedBox(height: 8),
+              Text(
+                booking.driver!.name,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+              ),
+              if (booking.vehicle?.name != null)
+                Text(
+                  booking.vehicle!.registration ?? booking.vehicle!.name,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: AppConstants.textSecondaryLight),
+                ),
+            ],
             const SizedBox(height: 28),
             ElevatedButton(
               onPressed: () => context.push('/trips/${booking.id}'),

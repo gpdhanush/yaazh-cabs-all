@@ -81,6 +81,12 @@ const envSchema = z
     MAIL_ENCRYPTION: z.string().optional().default("tls"),
     MAIL_FROM_ADDRESS: z.string().optional().default(""),
     MAIL_FROM_NAME: z.string().optional().default("Yaazh Cabs"),
+    MAIL_DEBUG: z.string().optional(),
+    MAIL_LOGGER: z.string().optional(),
+    MAIL_TLS_REJECT: z.string().optional(),
+    MAIL_CONN_TIMEOUT: z.coerce.number().int().positive().default(15_000),
+    MAIL_GREETING_TIMEOUT: z.coerce.number().int().positive().default(15_000),
+    MAIL_SOCKET_TIMEOUT: z.coerce.number().int().positive().default(20_000),
     SMS_ENABLED: z.string().optional(),
     WHATSAPP_ENABLED: z.string().optional(),
     PAYMENT_ENABLED: z.string().optional(),
@@ -115,6 +121,9 @@ export type Env = z.output<typeof envSchema> & {
   redisEnabled: boolean;
   fcmEnabled: boolean;
   mailEnabled: boolean;
+  mailDebug: boolean;
+  mailLogger: boolean;
+  mailTlsRejectUnauthorized: boolean;
   smsEnabled: boolean;
   whatsappEnabled: boolean;
   paymentEnabled: boolean;
@@ -126,10 +135,49 @@ export type Env = z.output<typeof envSchema> & {
 
 let cached: Env | null = null;
 
+/** Map EMAIL_* aliases (cPanel / nodemailer-style) onto MAIL_* before parse. */
+function applyEmailAliases(env: NodeJS.ProcessEnv) {
+  const setIfEmpty = (mailKey: string, emailKey: string) => {
+    if (!env[mailKey] && env[emailKey]) env[mailKey] = env[emailKey];
+  };
+  setIfEmpty("MAIL_HOST", "EMAIL_HOST");
+  setIfEmpty("MAIL_USERNAME", "EMAIL_USER");
+  setIfEmpty("MAIL_PASSWORD", "EMAIL_PASS");
+  setIfEmpty("MAIL_PORT", "EMAIL_PORT");
+  setIfEmpty("MAIL_DEBUG", "EMAIL_DEBUG");
+  setIfEmpty("MAIL_LOGGER", "EMAIL_LOGGER");
+  setIfEmpty("MAIL_TLS_REJECT", "EMAIL_TLS_REJECT");
+  setIfEmpty("MAIL_CONN_TIMEOUT", "EMAIL_CONN_TIMEOUT");
+  setIfEmpty("MAIL_GREETING_TIMEOUT", "EMAIL_GREETING_TIMEOUT");
+  setIfEmpty("MAIL_SOCKET_TIMEOUT", "EMAIL_SOCKET_TIMEOUT");
+  if (!env.MAIL_ENABLED && (env.EMAIL_HOST || env.MAIL_HOST)) env.MAIL_ENABLED = "true";
+
+  if (!env.MAIL_ENCRYPTION) {
+    const secure = env.EMAIL_SECURE;
+    const port = Number(env.MAIL_PORT || env.EMAIL_PORT || 587);
+    if (port === 465) env.MAIL_ENCRYPTION = "ssl";
+    else if (secure && ["1", "true", "yes", "on"].includes(secure.toLowerCase())) env.MAIL_ENCRYPTION = "ssl";
+    else if (secure && ["0", "false", "no", "off"].includes(secure.toLowerCase())) env.MAIL_ENCRYPTION = "tls";
+  }
+
+  const from = env.EMAIL_FROM?.trim();
+  if (from && (!env.MAIL_FROM_ADDRESS || !env.MAIL_FROM_NAME)) {
+    const match = from.match(/^(.*)<([^>]+)>$/);
+    if (match) {
+      if (!env.MAIL_FROM_NAME) env.MAIL_FROM_NAME = match[1]!.trim().replace(/^"|"$/g, "") || "Yaazh Cabs";
+      if (!env.MAIL_FROM_ADDRESS) env.MAIL_FROM_ADDRESS = match[2]!.trim();
+    } else if (!env.MAIL_FROM_ADDRESS) {
+      env.MAIL_FROM_ADDRESS = from;
+    }
+  }
+}
+
 export function loadEnv(raw?: NodeJS.ProcessEnv): Env {
   if (cached) return cached;
   if (!raw) loadDotEnvFile();
-  const parsed = envSchema.parse(raw ?? process.env);
+  const source = raw ?? process.env;
+  applyEmailAliases(source);
+  const parsed = envSchema.parse(source);
 
   // Prisma reads process.env.DATABASE_URL
   process.env.DATABASE_URL = parsed.DATABASE_URL;
@@ -139,6 +187,9 @@ export function loadEnv(raw?: NodeJS.ProcessEnv): Env {
     redisEnabled: bool(parsed.REDIS_ENABLED, false),
     fcmEnabled: bool(parsed.FCM_ENABLED, false),
     mailEnabled: bool(parsed.MAIL_ENABLED, false),
+    mailDebug: bool(parsed.MAIL_DEBUG, false),
+    mailLogger: bool(parsed.MAIL_LOGGER, false),
+    mailTlsRejectUnauthorized: bool(parsed.MAIL_TLS_REJECT, true),
     smsEnabled: bool(parsed.SMS_ENABLED, false),
     whatsappEnabled: bool(parsed.WHATSAPP_ENABLED, false),
     paymentEnabled: bool(parsed.PAYMENT_ENABLED, false),

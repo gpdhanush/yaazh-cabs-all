@@ -54,6 +54,7 @@ export async function buildApp() {
   const publicDir = path.resolve(env.STORAGE_PATH, "public");
   fs.mkdirSync(path.join(publicDir, "routes"), { recursive: true });
   fs.mkdirSync(path.join(publicDir, "documents"), { recursive: true });
+  fs.mkdirSync(path.join(publicDir, "invoices"), { recursive: true });
   await app.register(fastifyStatic, {
     root: publicDir,
     prefix: "/storage/public/",

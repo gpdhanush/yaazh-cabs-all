@@ -11,6 +11,7 @@ import 'package:yaazh_customer/app/constants.dart';
 import 'package:yaazh_customer/core/network/api_exception.dart';
 import 'package:yaazh_customer/core/widgets/app_error_view.dart';
 import 'package:yaazh_customer/core/widgets/app_loading_view.dart';
+import 'package:yaazh_customer/core/widgets/driver_avatar.dart';
 import 'package:yaazh_customer/core/widgets/status_chip.dart';
 import 'package:yaazh_customer/features/booking/data/booking_repository.dart';
 import 'package:yaazh_customer/features/booking/domain/booking.dart';
@@ -119,33 +120,32 @@ class _TripDetailPageState extends ConsumerState<TripDetailPage> {
     context.go('/home');
   }
 
-  Future<bool> _confirmExit() async {
-    final leave = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Leave trip details?'),
-        content: const Text(
-          'Your booking will keep running. You can open it again from Trips anytime.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Stay'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Go to dashboard'),
-          ),
-        ],
-      ),
-    );
-    return leave == true;
+  void _onBackPressed() {
+    if (!mounted) return;
+    if (context.canPop()) {
+      context.pop();
+    } else {
+      context.go('/trips');
+    }
   }
 
-  Future<void> _onBackPressed() async {
-    final leave = await _confirmExit();
-    if (!leave || !mounted) return;
-    await _goDashboard();
+  Widget _tripScaffold({required String title, required Widget body}) {
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _onBackPressed();
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_rounded),
+            onPressed: _onBackPressed,
+          ),
+          title: Text(title),
+        ),
+        body: body,
+      ),
+    );
   }
 
   Future<void> _rate() async {
@@ -177,27 +177,15 @@ class _TripDetailPageState extends ConsumerState<TripDetailPage> {
   @override
   Widget build(BuildContext context) {
     if (_error != null && _booking == null) {
-      return Scaffold(
-        appBar: AppBar(
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back_rounded),
-            onPressed: _onBackPressed,
-          ),
-          title: const Text('Trip'),
-        ),
+      return _tripScaffold(
+        title: 'Trip',
         body: AppErrorView(message: _error.toString(), onRetry: _load),
       );
     }
     final booking = _booking;
     if (booking == null) {
-      return Scaffold(
-        appBar: AppBar(
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back_rounded),
-            onPressed: _onBackPressed,
-          ),
-          title: const Text('Trip'),
-        ),
+      return _tripScaffold(
+        title: 'Trip',
         body: const AppLoadingView(message: 'Loading trip…'),
       );
     }
@@ -219,7 +207,6 @@ class _TripDetailPageState extends ConsumerState<TripDetailPage> {
       },
       child: Scaffold(
       appBar: AppBar(
-        automaticallyImplyLeading: false,
         leading: IconButton(
           tooltip: 'Back',
           icon: const Icon(Icons.arrow_back_rounded),
@@ -295,14 +282,11 @@ class _TripDetailPageState extends ConsumerState<TripDetailPage> {
                       style: const TextStyle(color: AppConstants.textSecondaryLight),
                     ),
                   ),
-                if (booking.driver != null) ...[
+                if (booking.showsAssignedDriver && booking.driver != null) ...[
                   const SizedBox(height: 16),
                   ListTile(
                     contentPadding: EdgeInsets.zero,
-                    leading: CircleAvatar(
-                      backgroundColor: AppConstants.accentColor,
-                      child: Text(booking.driver!.name.isNotEmpty ? booking.driver!.name[0] : 'D'),
-                    ),
+                    leading: DriverAvatar(driver: booking.driver!, radius: 26),
                     title: Text(booking.driver!.name, style: const TextStyle(fontWeight: FontWeight.w800)),
                     subtitle: Text(booking.vehicle?.registration ?? booking.vehicle?.name ?? 'Assigned cab'),
                     trailing: booking.driver!.phone.isEmpty

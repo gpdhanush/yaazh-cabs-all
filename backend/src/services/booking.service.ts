@@ -537,6 +537,15 @@ export const bookingService = {
       });
     }
 
+    if (result.previousStatus === "pending") {
+      try {
+        const { sendBookingInvoiceEmail } = await import("./invoice.service.js");
+        await sendBookingInvoiceEmail(b.id);
+      } catch (err) {
+        console.error("Invoice email after assign failed:", err instanceof Error ? err.message : err);
+      }
+    }
+
     return serializeBooking(b);
   },
 
@@ -745,6 +754,13 @@ export const bookingService = {
       });
     }
 
+    try {
+      const { sendBookingInvoiceEmail } = await import("./invoice.service.js");
+      await sendBookingInvoiceEmail(final.id);
+    } catch (err) {
+      console.error("Invoice email after trip close failed:", err instanceof Error ? err.message : err);
+    }
+
     return serializeBooking(final);
   },
 
@@ -770,12 +786,12 @@ export const bookingService = {
       orderBy: { changed_at: "asc" },
     });
 
-    let driver: { name: string; phone: string } | null = null;
+    let driver: ReturnType<typeof serializeDriverParty> = null;
     let vehicle: { name: string; registration: string | null } | null = null;
 
     if (booking.assigned_driver_id) {
       const d = await prisma.drivers.findUnique({ where: { id: booking.assigned_driver_id } });
-      if (d) driver = { name: d.name, phone: d.phone };
+      driver = serializeDriverParty(d);
     }
     if (booking.assigned_vehicle_id) {
       const v = await prisma.vehicles.findUnique({ where: { id: booking.assigned_vehicle_id } });
@@ -820,12 +836,12 @@ export const bookingService = {
       orderBy: { changed_at: "asc" },
     });
 
-    let driver: { name: string; phone: string } | null = null;
+    let driver: ReturnType<typeof serializeDriverParty> = null;
     let vehicle: { name: string; registration: string | null } | null = null;
 
     if (booking.assigned_driver_id) {
       const d = await prisma.drivers.findUnique({ where: { id: booking.assigned_driver_id } });
-      if (d) driver = { name: d.name, phone: d.phone };
+      driver = serializeDriverParty(d);
     }
     if (booking.assigned_vehicle_id) {
       const v = await prisma.vehicles.findUnique({ where: { id: booking.assigned_vehicle_id } });
@@ -1049,6 +1065,7 @@ export function serializeBooking(b: {
   final_total?: { toString(): string } | null;
   customer_name: string;
   customer_phone: string;
+  customer_email?: string | null;
   pickup_location: string;
   drop_location: string;
   pickup_at: Date;
@@ -1081,6 +1098,7 @@ export function serializeBooking(b: {
     payment_status: b.payment_status,
     customer_name: b.customer_name,
     customer_phone: b.customer_phone,
+    customer_email: b.customer_email ?? null,
     pickup_location: b.pickup_location,
     drop_location: b.drop_location,
     pickup_at: b.pickup_at.toISOString(),
@@ -1097,6 +1115,18 @@ export function serializeBooking(b: {
     end_odometer_km: endOdo,
     actual_distance_km: actual,
     odometer_difference_km: actual,
+  };
+}
+
+export function serializeDriverParty(
+  d: { name: string; phone: string; profile_image_url?: string | null } | null | undefined,
+) {
+  if (!d) return null;
+  return {
+    name: d.name,
+    phone: d.phone,
+    photo_url: d.profile_image_url ?? null,
+    profile_image_url: d.profile_image_url ?? null,
   };
 }
 

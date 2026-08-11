@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
 import { ApiService, ApiResult } from './api.service';
-import { Booking, BookingPayment, DashboardStats, LiveTrackingTrip } from './api.types';
+import { Booking, BookingInvoice, BookingPayment, DashboardStats, LiveTrackingTrip } from './api.types';
 
 const ADMIN = '/api/v1/admin';
 
@@ -33,8 +33,18 @@ export class AdminApiService {
     return this.api.post<Booking>(`${ADMIN}/bookings/${id}/confirm`).pipe(map((r) => r.data));
   }
 
+  rejectBooking(id: string, reason?: string): Observable<Booking> {
+    return this.api.post<Booking>(`${ADMIN}/bookings/${id}/reject`, { reason }).pipe(map((r) => r.data));
+  }
+
   cancelBooking(id: string, reason?: string): Observable<Booking> {
     return this.api.post<Booking>(`${ADMIN}/bookings/${id}/cancel`, { reason }).pipe(map((r) => r.data));
+  }
+
+  resendBookingInvoice(id: string, email?: string): Observable<BookingInvoice> {
+    return this.api
+      .post<BookingInvoice>(`${ADMIN}/bookings/${id}/invoice/resend`, email ? { email } : {})
+      .pipe(map((r) => r.data));
   }
 
   assignDriver(id: string, body: { driver_id: string | number; vehicle_id?: string | number }) {

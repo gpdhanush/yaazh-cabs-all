@@ -3,7 +3,7 @@ import { z } from "zod";
 import { prisma } from "../../../config/database.js";
 import { ok } from "../../../utils/api-response.js";
 import { requireAuth, requireUser } from "../../../middleware/auth.js";
-import { bookingService, serializeBooking } from "../../../services/booking.service.js";
+import { bookingService, serializeBooking, serializeDriverParty } from "../../../services/booking.service.js";
 import { NotFoundError, ValidationError, ForbiddenError, ConflictError } from "../../../errors/app-error.js";
 import type { TripType } from "@prisma/client";
 
@@ -120,7 +120,38 @@ export const customerRoutes: FastifyPluginAsync = async (app) => {
         take: perPage,
       }),
     ]);
-    return ok(reply, rows.map(serializeBooking), "Bookings fetched.", 200, {
+    const driverIds = [
+      ...new Set(rows.map((r) => r.assigned_driver_id).filter((id): id is bigint => id != null)),
+    ];
+    const vehicleIds = [
+      ...new Set(rows.map((r) => r.assigned_vehicle_id).filter((id): id is bigint => id != null)),
+    ];
+    const [drivers, vehicles] = await Promise.all([
+      driverIds.length
+        ? prisma.drivers.findMany({ where: { id: { in: driverIds } } })
+        : Promise.resolve([]),
+      vehicleIds.length
+        ? prisma.vehicles.findMany({ where: { id: { in: vehicleIds } } })
+        : Promise.resolve([]),
+    ]);
+    const driverMap = new Map(drivers.map((d) => [String(d.id), d]));
+    const vehicleMap = new Map(vehicles.map((v) => [String(v.id), v]));
+    return ok(
+      reply,
+      rows.map((b) => {
+        const d = b.assigned_driver_id ? driverMap.get(String(b.assigned_driver_id)) : null;
+        const v = b.assigned_vehicle_id ? vehicleMap.get(String(b.assigned_vehicle_id)) : null;
+        return {
+          ...serializeBooking(b),
+          driver: serializeDriverParty(d),
+          vehicle: v
+            ? { name: v.vehicle_name, registration: v.registration_no }
+            : null,
+        };
+      }),
+      "Bookings fetched.",
+      200,
+      {
       page,
       per_page: perPage,
       total,

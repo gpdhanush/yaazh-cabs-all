@@ -8,6 +8,11 @@ import { loadEnv } from "../../../config/env.js";
 import { ok } from "../../../utils/api-response.js";
 import { requireAuth, requirePermission, requireUser } from "../../../middleware/auth.js";
 import { bookingService, serializeBooking, getBookingPaymentSummary, recordBookingPayment, setBookingPaymentStatus } from "../../../services/booking.service.js";
+import {
+  resolveCustomerEmail,
+  sendBookingInvoiceEmail,
+  serializeInvoice,
+} from "../../../services/invoice.service.js";
 import { NotFoundError, ValidationError, ConflictError } from "../../../errors/app-error.js";
 import {
   deliverAdminNotification,
@@ -703,7 +708,7 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
     async (req, reply) => {
       const q = req.query as { page?: string; per_page?: string; status?: string };
       const page = Math.max(1, Number(q.page ?? 1) || 1);
-      const perPage = Math.min(100, Math.max(1, Number(q.per_page ?? 20) || 20));
+      const perPage = Math.min(500, Math.max(1, Number(q.per_page ?? 20) || 20));
       const where = q.status ? { status: q.status as never } : {};
       const [total, rows] = await Promise.all([
         prisma.bookings.count({ where }),
@@ -751,7 +756,7 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
       const id = BigInt((req.params as { id: string }).id);
       const booking = await prisma.bookings.findUnique({ where: { id } });
       if (!booking) throw new NotFoundError();
-      const [history, driver, vehicle] = await Promise.all([
+      const [history, driver, vehicle, invoiceRow, customerEmail] = await Promise.all([
         prisma.bookingStatusHistory.findMany({
           where: { booking_id: id },
           orderBy: { changed_at: "asc" },
@@ -762,10 +767,13 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
         booking.assigned_vehicle_id
           ? prisma.vehicles.findUnique({ where: { id: booking.assigned_vehicle_id } })
           : Promise.resolve(null),
+        prisma.bookingInvoices.findUnique({ where: { booking_id: id } }),
+        resolveCustomerEmail(id),
       ]);
       const payment = await getBookingPaymentSummary(id);
       return ok(reply, {
         ...serializeBooking(booking),
+        customer_email: customerEmail,
         created_at: booking.created_at.toISOString(),
         confirmed_at: booking.confirmed_at?.toISOString() ?? null,
         completed_at: booking.completed_at?.toISOString() ?? null,
@@ -777,6 +785,7 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
               registration: vehicle.registration_no,
             }
           : null,
+        invoice: invoiceRow ? serializeInvoice(invoiceRow) : null,
         payment,
         history: history.map((h) => ({
           old_status: h.old_status,
@@ -851,7 +860,96 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
           body: `Your booking ${booking.booking_reference} is confirmed. We will assign a driver shortly.`,
         });
       }
-      return ok(reply, data, "Booking confirmed.");
+      const emailResult = await sendBookingInvoiceEmail(id);
+      return ok(
+        reply,
+        {
+          ...data,
+          invoice: emailResult.invoice ?? null,
+          email_sent: emailResult.sent,
+          email_to: emailResult.email,
+          email_error: emailResult.error ?? null,
+        },
+        emailResult.sent
+          ? `Booking confirmed. Invoice emailed to ${emailResult.email}.`
+          : emailResult.email
+            ? `Booking confirmed. Invoice email failed: ${emailResult.error}`
+            : "Booking confirmed. No customer email on file.",
+      );
+    },
+  );
+
+  app.post(
+    "/bookings/:id/reject",
+    { preHandler: [requirePermission("bookings.update")] },
+    async (req, reply) => {
+      const user = requireUser(req);
+      const id = BigInt((req.params as { id: string }).id);
+      const reason = (req.body as { reason?: string } | null)?.reason ?? "Rejected by admin";
+      const data = await bookingService.transition({
+        bookingId: id,
+        to: "rejected",
+        actor: { type: "admin", adminId: user.id },
+        note: reason,
+      });
+      await audit(user.id, "booking.reject", "bookings", String(id), null, data, req);
+      const booking = await prisma.bookings.findUnique({ where: { id } });
+      if (booking?.customer_id) {
+        await deliverBookingNotification({
+          recipientType: "customer",
+          customerId: String(booking.customer_id),
+          bookingId: String(id),
+          jobType: "notify_booking_rejected",
+          title: "Booking declined",
+          body: `Your booking ${booking.booking_reference} was declined. ${reason}`,
+        });
+      }
+      return ok(reply, data, "Booking rejected.");
+    },
+  );
+
+  app.get(
+    "/bookings/:id/invoice",
+    { preHandler: [requirePermission("bookings.view")] },
+    async (req, reply) => {
+      const id = BigInt((req.params as { id: string }).id);
+      const booking = await prisma.bookings.findUnique({ where: { id } });
+      if (!booking) throw new NotFoundError();
+      const invoice = await prisma.bookingInvoices.findUnique({ where: { booking_id: id } });
+      if (!invoice) throw new NotFoundError("Invoice not found.");
+      return ok(reply, {
+        ...serializeInvoice(invoice),
+        customer_email: await resolveCustomerEmail(id),
+      });
+    },
+  );
+
+  app.post(
+    "/bookings/:id/invoice/resend",
+    { preHandler: [requirePermission("bookings.update")] },
+    async (req, reply) => {
+      const user = requireUser(req);
+      const id = BigInt((req.params as { id: string }).id);
+      const booking = await prisma.bookings.findUnique({ where: { id } });
+      if (!booking) throw new NotFoundError();
+      const override = (req.body as { email?: string } | null)?.email?.trim();
+      const result = await sendBookingInvoiceEmail(id, override);
+      await audit(
+        user.id,
+        "booking.invoice_resend",
+        "bookings",
+        String(id),
+        null,
+        { email: result.email, sent: result.sent },
+        req,
+      );
+      if (!result.email) throw new ValidationError("Customer has no email address.");
+      if (!result.sent) throw new ValidationError(result.error || "Failed to send invoice email.");
+      return ok(
+        reply,
+        { ...result.invoice, email_sent: true, email_to: result.email },
+        `Invoice emailed to ${result.email}.`,
+      );
     },
   );
 

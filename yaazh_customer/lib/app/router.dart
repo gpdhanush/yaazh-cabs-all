@@ -247,13 +247,13 @@ class _ScaffoldWithBottomNavBarState extends ConsumerState<ScaffoldWithBottomNav
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Exit Yaazh Cabs?'),
-        content: const Text('Are you sure you want to close the app?'),
+        content: const Text('Close the app? You can come back anytime to book or track a trip.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
             child: const Text('Stay'),
           ),
-          TextButton(
+          FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
             child: const Text('Exit'),
           ),

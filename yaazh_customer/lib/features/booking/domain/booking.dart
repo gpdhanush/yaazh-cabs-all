@@ -1,8 +1,9 @@
 class BookingParty {
   final String name;
   final String phone;
+  final String? photoUrl;
 
-  const BookingParty({required this.name, required this.phone});
+  const BookingParty({required this.name, required this.phone, this.photoUrl});
 }
 
 class BookingVehicle {
@@ -94,6 +95,18 @@ class Booking {
   bool get isCancelled =>
       status == 'cancelled' || status == 'rejected' || status == 'no_show';
 
+  bool get showsAssignedDriver {
+    if (driver == null) return false;
+    return const {
+      'driver_assigned',
+      'driver_accepted',
+      'on_the_way',
+      'arrived',
+      'trip_started',
+      'completed',
+    }.contains(status);
+  }
+
   factory Booking.fromJson(Map<String, dynamic> json) {
     final driverJson = json['driver'];
     final vehicleJson = json['vehicle'];
@@ -126,6 +139,8 @@ class Booking {
           ? BookingParty(
               name: driverJson['name']?.toString() ?? 'Driver',
               phone: driverJson['phone']?.toString() ?? '',
+              photoUrl: (driverJson['photo_url'] ?? driverJson['profile_image_url'])
+                  ?.toString(),
             )
           : null,
       vehicle: vehicleJson is Map

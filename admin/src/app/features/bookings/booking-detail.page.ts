@@ -44,10 +44,10 @@ import { canAssignDriver, statusLabel, statusTone } from '../../shared/status-ch
           @if (b.status === 'pending') {
             <div class="bk-detail-hero__actions">
               <button mat-flat-button class="ya-btn-primary bk-btn" type="button" [disabled]="busy()" (click)="confirm()">
-                Confirm booking
+                {{ busy() ? 'Confirming…' : 'Confirm booking' }}
               </button>
-              <button mat-stroked-button class="ya-btn-ghost bk-btn" type="button" [disabled]="busy()" (click)="cancel()">
-                Cancel
+              <button mat-stroked-button class="ya-btn-ghost bk-btn" type="button" [disabled]="busy()" (click)="reject()">
+                Reject
               </button>
             </div>
           }
@@ -111,6 +111,10 @@ import { canAssignDriver, statusLabel, statusTone } from '../../shared/status-ch
               <div>
                 <dt>Phone</dt>
                 <dd>{{ b.customer_phone }}</dd>
+              </div>
+              <div>
+                <dt>Email</dt>
+                <dd>{{ b.customer_email || 'Not provided' }}</dd>
               </div>
             </dl>
 
@@ -189,6 +193,48 @@ import { canAssignDriver, statusLabel, statusTone } from '../../shared/status-ch
                   on the way → arrive → <strong>start (enter odometer)</strong> →
                   <strong>close (enter odometer)</strong>.
                 }
+              </p>
+            }
+          </section>
+
+          <section class="ya-page-card bk-panel">
+            <h3 class="bk-panel__title">Invoice</h3>
+            @if (b.invoice; as inv) {
+              <dl class="bk-kv">
+                <div>
+                  <dt>Number</dt>
+                  <dd>{{ inv.invoice_number }}</dd>
+                </div>
+                <div>
+                  <dt>Status</dt>
+                  <dd>{{ inv.status | titlecase }}</dd>
+                </div>
+                <div>
+                  <dt>Total</dt>
+                  <dd>₹{{ inv.total_amount }}</dd>
+                </div>
+                <div>
+                  <dt>Balance</dt>
+                  <dd>₹{{ inv.balance_amount }}</dd>
+                </div>
+              </dl>
+              <div class="bk-detail-hero__actions" style="border-top: 0; padding-top: 0.75rem; margin-top: 0.5rem">
+                <button
+                  mat-flat-button
+                  class="ya-btn-primary bk-btn"
+                  type="button"
+                  [disabled]="busy() || !b.customer_email"
+                  (click)="resendInvoice()"
+                >
+                  {{ busy() ? 'Sending…' : 'Resend invoice email' }}
+                </button>
+              </div>
+              @if (!b.customer_email) {
+                <p class="bk-panel__hint">No customer email on this booking — invoice cannot be sent.</p>
+              }
+            } @else {
+              <p class="bk-panel__hint">
+                Invoice is created when the booking is confirmed. Confirm the trip to issue and email it.
               </p>
             }
           </section>
@@ -426,9 +472,14 @@ export class BookingDetailPage implements OnInit {
     if (!b) return;
     this.busy.set(true);
     this.api.confirmBooking(b.id).subscribe({
-      next: () => {
+      next: (res) => {
         this.busy.set(false);
-        this.snack.open('Booking confirmed — customer notified', 'OK', { duration: 2500 });
+        const msg = res.email_sent
+          ? `Booking confirmed — invoice emailed to ${res.email_to}`
+          : res.email_to
+            ? 'Booking confirmed — invoice email failed'
+            : 'Booking confirmed — no customer email on file';
+        this.snack.open(msg, 'OK', { duration: 3200 });
         this.load(b.id);
       },
       error: (err: unknown) => {
@@ -438,20 +489,37 @@ export class BookingDetailPage implements OnInit {
     });
   }
 
-  cancel(): void {
+  reject(): void {
     const b = this.booking();
     if (!b) return;
-    const reason = window.prompt('Cancellation reason?', 'Cancelled by admin') || undefined;
+    const reason = window.prompt('Rejection reason?', 'Rejected by admin') || undefined;
     this.busy.set(true);
-    this.api.cancelBooking(b.id, reason).subscribe({
+    this.api.rejectBooking(b.id, reason).subscribe({
       next: () => {
         this.busy.set(false);
-        this.snack.open('Booking cancelled', 'OK', { duration: 2500 });
+        this.snack.open('Booking rejected', 'OK', { duration: 2500 });
         this.load(b.id);
       },
       error: (err: unknown) => {
         this.busy.set(false);
-        this.snack.open(err instanceof Error ? err.message : 'Cancel failed', 'Close');
+        this.snack.open(err instanceof Error ? err.message : 'Reject failed', 'Close');
+      },
+    });
+  }
+
+  resendInvoice(): void {
+    const b = this.booking();
+    if (!b) return;
+    this.busy.set(true);
+    this.api.resendBookingInvoice(b.id).subscribe({
+      next: (inv) => {
+        this.busy.set(false);
+        this.snack.open(`Invoice emailed to ${inv.email_to || b.customer_email}`, 'OK', { duration: 3000 });
+        this.load(b.id);
+      },
+      error: (err: unknown) => {
+        this.busy.set(false);
+        this.snack.open(err instanceof Error ? err.message : 'Resend failed', 'Close');
       },
     });
   }

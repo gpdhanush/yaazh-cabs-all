@@ -74,6 +74,27 @@ export type BookingPayment = {
   }>;
 };
 
+export type BookingInvoice = {
+  id: string;
+  booking_id: string;
+  invoice_number: string;
+  invoice_date: string;
+  subtotal: number;
+  discount_amount: number;
+  taxable_amount: number;
+  gst_percentage: number;
+  gst_amount: number;
+  total_amount: number;
+  amount_paid: number;
+  balance_amount: number;
+  currency: string;
+  status: string;
+  pdf_url: string | null;
+  issued_at: string | null;
+  email_sent?: boolean;
+  email_to?: string | null;
+};
+
 export type Booking = {
   id: string;
   booking_reference: string;
@@ -82,6 +103,7 @@ export type Booking = {
   payment_status: string;
   customer_name: string;
   customer_phone: string;
+  customer_email?: string | null;
   pickup_location: string;
   drop_location: string;
   pickup_at: string;
@@ -96,8 +118,12 @@ export type Booking = {
   created_at?: string;
   confirmed_at?: string | null;
   completed_at?: string | null;
+  email_sent?: boolean;
+  email_to?: string | null;
+  email_error?: string | null;
   driver?: BookingDriver | null;
   vehicle?: BookingVehicle | null;
+  invoice?: BookingInvoice | null;
   payment?: BookingPayment | null;
   history?: Array<{
     old_status: string | null;

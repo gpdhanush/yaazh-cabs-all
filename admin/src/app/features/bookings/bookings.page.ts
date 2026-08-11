@@ -1,4 +1,3 @@
-import { DatePipe, TitleCasePipe } from '@angular/common';
 import { AfterViewInit, Component, OnInit, ViewChild, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -16,8 +15,6 @@ import { canAssignDriver, statusLabel, statusTone } from '../../shared/status-ch
   selector: 'app-bookings-page',
   standalone: true,
   imports: [
-    DatePipe,
-    TitleCasePipe,
     FormsModule,
     RouterLink,
     MatTableModule,
@@ -81,7 +78,6 @@ import { canAssignDriver, statusLabel, statusTone } from '../../shared/status-ch
               <th mat-header-cell *matHeaderCellDef mat-sort-header class="ya-cell-left">Reference</th>
               <td mat-cell *matCellDef="let b" class="ya-cell-left">
                 <a class="bk-table__ref" [routerLink]="['/bookings', b.id]">{{ b.booking_reference }}</a>
-                <p class="bk-table__sub">{{ b.trip_type | titlecase }} · {{ b.pickup_at | date: 'MMM d, h:mm a' }}</p>
               </td>
             </ng-container>
 
@@ -140,19 +136,36 @@ import { canAssignDriver, statusLabel, statusTone } from '../../shared/status-ch
 
             <ng-container matColumnDef="actions">
               <th mat-header-cell *matHeaderCellDef class="ya-col-actions">Actions</th>
-              <td mat-cell *matCellDef="let b" class="ya-col-actions whitespace-nowrap">
+              <td mat-cell *matCellDef="let b" class="ya-col-actions">
                 <div class="ya-row-actions">
                   @if (b.status === 'pending') {
-                    <button mat-flat-button class="ya-action-btn ya-action-btn--edit" type="button" (click)="confirm(b)">
+                    <button
+                      mat-flat-button
+                      class="ya-action-btn ya-action-btn--edit"
+                      type="button"
+                      [disabled]="busyId() === b.id"
+                      (click)="confirm(b)"
+                    >
                       Confirm
                     </button>
-                    <button mat-flat-button class="ya-action-btn ya-action-btn--delete" type="button" (click)="cancel(b)">
-                      Cancel
+                    <button
+                      mat-flat-button
+                      class="ya-action-btn ya-action-btn--delete"
+                      type="button"
+                      [disabled]="busyId() === b.id"
+                      (click)="reject(b)"
+                    >
+                      Reject
                     </button>
+                  } @else if (canAssign(b.status)) {
+                    <a mat-flat-button class="ya-action-btn ya-action-btn--open" [routerLink]="['/bookings', b.id]">
+                      Assign
+                    </a>
+                  } @else {
+                    <a mat-flat-button class="ya-action-btn ya-action-btn--open" [routerLink]="['/bookings', b.id]">
+                      Open
+                    </a>
                   }
-                  <a mat-flat-button class="ya-action-btn ya-action-btn--open" [routerLink]="['/bookings', b.id]">
-                    {{ canAssign(b.status) ? 'Assign' : 'Open' }}
-                  </a>
                 </div>
               </td>
             </ng-container>
@@ -198,6 +211,7 @@ export class BookingsPage implements OnInit, AfterViewInit {
   readonly statuses = [
     'pending',
     'confirmed',
+    'rejected',
     'driver_assigned',
     'on_the_way',
     'arrived',
@@ -209,6 +223,7 @@ export class BookingsPage implements OnInit, AfterViewInit {
   readonly dataSource = new MatTableDataSource<Booking>([]);
   readonly search = signal('');
   readonly filteredCount = signal(0);
+  readonly busyId = signal<string | null>(null);
 
   pageSize = 10;
   status = '';
@@ -267,23 +282,38 @@ export class BookingsPage implements OnInit, AfterViewInit {
   }
 
   confirm(b: Booking): void {
+    this.busyId.set(b.id);
     this.api.confirmBooking(b.id).subscribe({
-      next: () => {
-        this.snack.open(`Confirmed ${b.booking_reference}`, 'OK', { duration: 2500 });
+      next: (res) => {
+        this.busyId.set(null);
+        const extra = res.email_sent
+          ? ` · invoice emailed to ${res.email_to}`
+          : res.email_to
+            ? ` · email failed`
+            : ' · no customer email';
+        this.snack.open(`Confirmed ${b.booking_reference}${extra}`, 'OK', { duration: 3200 });
         this.reload();
       },
-      error: (err: unknown) => this.snack.open(err instanceof Error ? err.message : 'Confirm failed', 'Close'),
+      error: (err: unknown) => {
+        this.busyId.set(null);
+        this.snack.open(err instanceof Error ? err.message : 'Confirm failed', 'Close');
+      },
     });
   }
 
-  cancel(b: Booking): void {
-    const reason = window.prompt('Cancellation reason?', 'Cancelled by admin') || undefined;
-    this.api.cancelBooking(b.id, reason).subscribe({
+  reject(b: Booking): void {
+    const reason = window.prompt('Rejection reason?', 'Rejected by admin') || undefined;
+    this.busyId.set(b.id);
+    this.api.rejectBooking(b.id, reason).subscribe({
       next: () => {
-        this.snack.open(`Cancelled ${b.booking_reference}`, 'OK', { duration: 2500 });
+        this.busyId.set(null);
+        this.snack.open(`Rejected ${b.booking_reference}`, 'OK', { duration: 2500 });
         this.reload();
       },
-      error: (err: unknown) => this.snack.open(err instanceof Error ? err.message : 'Cancel failed', 'Close'),
+      error: (err: unknown) => {
+        this.busyId.set(null);
+        this.snack.open(err instanceof Error ? err.message : 'Reject failed', 'Close');
+      },
     });
   }
 

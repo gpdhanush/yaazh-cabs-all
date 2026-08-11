@@ -182,6 +182,7 @@ function SelectField({
 type FormErrors = {
   name?: string;
   mobile?: string;
+  email?: string;
   pickup?: string;
   drop?: string;
   date?: string;
@@ -244,6 +245,7 @@ function shortVehicleName(name: string) {
 export function BookingForm() {
   const [name, setName] = useState("");
   const [mobile, setMobile] = useState("");
+  const [email, setEmail] = useState("");
   const [pickup, setPickup] = useState("");
   const [drop, setDrop] = useState("");
   const [pickupMeta, setPickupMeta] = useState<LocationValue | null>(null);
@@ -308,6 +310,9 @@ export function BookingForm() {
     if (!name.trim()) next.name = "Your name is required";
     if (!cleanMobile) next.mobile = "Mobile number is required";
     else if (!/^[6-9]\d{9}$/.test(cleanMobile)) next.mobile = "Enter a valid 10-digit mobile number";
+    if (email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      next.email = "Enter a valid email address";
+    }
     if (!pickup.trim()) next.pickup = "Pickup location is required";
     if (!drop.trim()) next.drop = "Drop location is required";
     if (pickup && drop && pickup.trim() === drop.trim()) next.drop = "Drop must differ from pickup";
@@ -338,6 +343,7 @@ export function BookingForm() {
         trip_type: toApiTripType(trip),
         customer_name: name.trim(),
         customer_phone: cleanMobile,
+        customer_email: email.trim() || null,
         pickup_location: pickup.trim(),
         drop_location: drop.trim(),
         pickup_city: pickup.trim(),
@@ -564,6 +570,14 @@ export function BookingForm() {
           onChange={setTrip}
           options={tripTypes}
           searchable={false}
+        />
+        <TextField
+          label="Email (optional — invoice will be sent here)"
+          value={email}
+          onChange={setEmail}
+          error={errors.email}
+          type="email"
+          icon={<Mail />}
         />
       </div>
 
