@@ -108,7 +108,13 @@ Future<void> _addPlace(BuildContext context, WidgetRef ref) async {
             ),
             actions: [
               TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-              TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Save')),
+              TextButton(
+                onPressed: () {
+                  FocusManager.instance.primaryFocus?.unfocus();
+                  Navigator.pop(ctx, true);
+                },
+                child: const Text('Save'),
+              ),
             ],
           );
         },

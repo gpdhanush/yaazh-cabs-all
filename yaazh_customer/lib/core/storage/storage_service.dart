@@ -50,16 +50,6 @@ class StorageService {
     return prefs.getString(AppConstants.profileCacheKey);
   }
 
-  Future<void> setThemeMode(String mode) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(AppConstants.themeModeKey, mode);
-  }
-
-  Future<String?> getThemeMode() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(AppConstants.themeModeKey);
-  }
-
   Future<void> clearAll() async {
     await clearTokens();
     final prefs = await SharedPreferences.getInstance();

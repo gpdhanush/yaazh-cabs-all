@@ -23,7 +23,9 @@ import 'package:yaazh_cabs/features/notifications/presentation/notifications_pag
 import 'package:yaazh_cabs/features/offers/presentation/offers_page.dart';
 import 'package:yaazh_cabs/features/profile/presentation/profile_edit_page.dart';
 import 'package:yaazh_cabs/features/profile/presentation/profile_page.dart';
+import 'package:yaazh_cabs/features/profile/presentation/ratings_page.dart';
 import 'package:yaazh_cabs/features/settings/presentation/settings_page.dart';
+import 'package:yaazh_cabs/features/support/presentation/support_detail_page.dart';
 import 'package:yaazh_cabs/features/support/presentation/support_page.dart';
 import 'package:yaazh_cabs/features/trips/presentation/pages/active_trip_page.dart';
 import 'package:yaazh_cabs/features/trips/presentation/pages/assigned_trips_page.dart';
@@ -229,6 +231,16 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/support',
         builder: (context, state) => const SupportPage(),
+      ),
+      GoRoute(
+        path: '/support/:id',
+        builder: (context, state) => SupportDetailPage(
+          ticketId: state.pathParameters['id']!,
+        ),
+      ),
+      GoRoute(
+        path: '/ratings',
+        builder: (context, state) => const RatingsPage(),
       ),
     ],
   );

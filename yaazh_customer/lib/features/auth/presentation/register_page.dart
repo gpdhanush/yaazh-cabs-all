@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:yaazh_customer/app/constants.dart';
@@ -31,6 +32,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
   }
 
   Future<void> _submit() async {
+    FocusManager.instance.primaryFocus?.unfocus();
     if (!_formKey.currentState!.validate()) return;
     final success = await ref.read(authNotifierProvider.notifier).register(
           name: _nameController.text.trim(),
@@ -96,14 +98,21 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
             const SizedBox(height: 14),
             TextFormField(
               controller: _phoneController,
-              keyboardType: TextInputType.phone,
+              keyboardType: TextInputType.number,
+              textInputAction: TextInputAction.next,
+              maxLength: 10,
+              inputFormatters: [
+                FilteringTextInputFormatter.digitsOnly,
+                LengthLimitingTextInputFormatter(10),
+              ],
               decoration: const InputDecoration(
                 labelText: 'Phone number',
                 hintText: '9876543210',
                 prefixIcon: Icon(Icons.phone_rounded),
+                counterText: '',
               ),
               validator: (value) {
-                if (value == null || value.trim().length < 10) {
+                if (value == null || value.trim().length != 10) {
                   return 'Enter a valid 10-digit number';
                 }
                 return null;
@@ -122,6 +131,8 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
             TextFormField(
               controller: _passwordController,
               obscureText: _obscurePassword,
+              textInputAction: TextInputAction.done,
+              onFieldSubmitted: (_) => _submit(),
               decoration: InputDecoration(
                 labelText: 'Password',
                 prefixIcon: const Icon(Icons.lock_outline_rounded),

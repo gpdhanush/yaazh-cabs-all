@@ -5,12 +5,14 @@ class AppNotification {
   final String id;
   final String title;
   final String? body;
+  final String? channel;
   final DateTime? createdAt;
 
   const AppNotification({
     required this.id,
     required this.title,
     this.body,
+    this.channel,
     this.createdAt,
   });
 
@@ -19,7 +21,10 @@ class AppNotification {
       id: json['id']?.toString() ?? '',
       title: json['title']?.toString() ?? 'Notification',
       body: json['body']?.toString(),
-      createdAt: json['created_at'] != null ? DateTime.tryParse(json['created_at'].toString()) : null,
+      channel: json['channel']?.toString(),
+      createdAt: json['created_at'] != null
+          ? DateTime.tryParse(json['created_at'].toString())
+          : null,
     );
   }
 }

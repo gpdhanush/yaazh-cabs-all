@@ -5,7 +5,6 @@ import 'package:yaazh_customer/app/constants.dart';
 import 'package:yaazh_customer/app/router.dart';
 import 'package:yaazh_customer/app/theme.dart';
 import 'package:yaazh_customer/core/firebase/firebase_bootstrap.dart';
-import 'package:yaazh_customer/features/settings/presentation/theme_controller.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -30,7 +29,6 @@ class YaazhCustomerApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(routerProvider);
-    final themeMode = ref.watch(themeModeProvider);
 
     const overlay = SystemUiOverlayStyle(
       statusBarColor: AppConstants.primaryColor,
@@ -46,8 +44,7 @@ class YaazhCustomerApp extends ConsumerWidget {
         title: AppConstants.appName,
         debugShowCheckedModeBanner: false,
         theme: AppTheme.lightTheme,
-        darkTheme: AppTheme.darkTheme,
-        themeMode: themeMode,
+        themeMode: ThemeMode.light,
         routerConfig: router,
         builder: (context, child) {
           return ColoredBox(

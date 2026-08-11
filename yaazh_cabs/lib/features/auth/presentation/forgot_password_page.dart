@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:yaazh_cabs/app/constants.dart';
 
@@ -47,17 +48,25 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                 const SizedBox(height: 24),
                 TextFormField(
                   controller: _phoneController,
-                  keyboardType: TextInputType.phone,
+                  keyboardType: TextInputType.number,
+                  textInputAction: TextInputAction.done,
+                  maxLength: 10,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    LengthLimitingTextInputFormatter(10),
+                  ],
                   decoration: const InputDecoration(
                     labelText: 'Phone number',
                     hintText: 'e.g. 9876543210',
                     prefixIcon: Icon(Icons.phone_rounded),
+                    counterText: '',
                   ),
                 ),
                 const SizedBox(height: 24),
                 ElevatedButton(
                   onPressed: () {
-                    if (_phoneController.text.trim().isNotEmpty) {
+                    FocusManager.instance.primaryFocus?.unfocus();
+                    if (_phoneController.text.trim().length == 10) {
                       setState(() => _submitted = true);
                     }
                   },

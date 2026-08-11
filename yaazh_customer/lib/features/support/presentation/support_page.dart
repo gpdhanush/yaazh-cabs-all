@@ -134,6 +134,7 @@ class _NewTicketSheetState extends State<_NewTicketSheet> {
   }
 
   void _submit() {
+    FocusManager.instance.primaryFocus?.unfocus();
     if (!_formKey.currentState!.validate()) return;
     Navigator.of(context).pop(
       _TicketDraft(

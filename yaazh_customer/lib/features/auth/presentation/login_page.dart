@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:yaazh_customer/app/constants.dart';
@@ -29,6 +30,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   }
 
   Future<void> _onLoginSubmitted() async {
+    FocusManager.instance.primaryFocus?.unfocus();
     if (!_formKey.currentState!.validate()) return;
     final success = await ref.read(authNotifierProvider.notifier).login(
           _phoneController.text.trim(),
@@ -84,17 +86,24 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             ],
             TextFormField(
               controller: _phoneController,
-              keyboardType: TextInputType.phone,
+              keyboardType: TextInputType.number,
+              textInputAction: TextInputAction.next,
+              maxLength: 10,
+              inputFormatters: [
+                FilteringTextInputFormatter.digitsOnly,
+                LengthLimitingTextInputFormatter(10),
+              ],
               decoration: const InputDecoration(
                 labelText: 'Phone number',
                 hintText: '9876543210',
                 prefixIcon: Icon(Icons.phone_rounded),
+                counterText: '',
               ),
               validator: (value) {
                 if (value == null || value.trim().isEmpty) {
                   return 'Enter your phone number';
                 }
-                if (value.trim().length < 10) {
+                if (value.trim().length != 10) {
                   return 'Enter a valid 10-digit number';
                 }
                 return null;
@@ -104,6 +113,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             TextFormField(
               controller: _passwordController,
               obscureText: _obscurePassword,
+              textInputAction: TextInputAction.done,
+              onFieldSubmitted: (_) => _onLoginSubmitted(),
               decoration: InputDecoration(
                 labelText: 'Password',
                 prefixIcon: const Icon(Icons.lock_outline_rounded),

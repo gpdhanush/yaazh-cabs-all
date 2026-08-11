@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:yaazh_cabs/app/constants.dart';
@@ -44,6 +45,7 @@ class _PaymentCollectionPageState
   }
 
   void _onRecordPayment(double balanceDue) async {
+    FocusManager.instance.primaryFocus?.unfocus();
     final amountText = _amountController.text.trim();
     final amount = double.tryParse(amountText.isEmpty ? balanceDue.toString() : amountText);
 
@@ -147,6 +149,10 @@ class _PaymentCollectionPageState
                   TextFormField(
                     controller: _amountController,
                     keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    textInputAction: TextInputAction.next,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}')),
+                    ],
                     decoration: InputDecoration(
                       labelText: 'Collected Amount (₹)',
                       hintText: balanceDue.toStringAsFixed(2),

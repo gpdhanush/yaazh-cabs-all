@@ -175,6 +175,11 @@ export const routes: Routes = [
           import('./features/enquiries/enquiry-detail.page').then((m) => m.EnquiryDetailPage),
       },
       {
+        path: 'notifications',
+        loadComponent: () =>
+          import('./features/notifications/notifications.page').then((m) => m.NotificationsPage),
+      },
+      {
         path: 'remote-config',
         loadComponent: () =>
           import('./features/remote-config/remote-config.page').then((m) => m.RemoteConfigPage),

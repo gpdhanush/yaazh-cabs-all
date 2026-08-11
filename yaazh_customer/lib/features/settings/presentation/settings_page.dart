@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 import 'package:yaazh_customer/app/constants.dart';
 import 'package:yaazh_customer/core/widgets/logout_sheet.dart';
 import 'package:yaazh_customer/features/auth/presentation/auth_viewmodel.dart';
-import 'package:yaazh_customer/features/settings/presentation/theme_controller.dart';
 
 class SettingsPage extends ConsumerWidget {
   const SettingsPage({super.key});
@@ -12,7 +11,6 @@ class SettingsPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(authNotifierProvider).user;
-    final themeMode = ref.watch(themeModeProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Settings')),
@@ -67,46 +65,6 @@ class SettingsPage extends ConsumerWidget {
             ),
             const SizedBox(height: 20),
           ],
-          const Text(
-            'APPEARANCE',
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 0.7,
-              color: AppConstants.textSecondaryLight,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Material(
-            color: Theme.of(context).cardColor,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-              side: const BorderSide(color: AppConstants.borderLight),
-            ),
-            clipBehavior: Clip.antiAlias,
-            child: Column(
-              children: [
-                _ThemeTile(
-                  label: 'System',
-                  selected: themeMode == ThemeMode.system,
-                  onTap: () => ref.read(themeModeProvider.notifier).setMode(ThemeMode.system),
-                ),
-                const Divider(height: 1),
-                _ThemeTile(
-                  label: 'Light',
-                  selected: themeMode == ThemeMode.light,
-                  onTap: () => ref.read(themeModeProvider.notifier).setMode(ThemeMode.light),
-                ),
-                const Divider(height: 1),
-                _ThemeTile(
-                  label: 'Dark',
-                  selected: themeMode == ThemeMode.dark,
-                  onTap: () => ref.read(themeModeProvider.notifier).setMode(ThemeMode.dark),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 20),
           Material(
             color: Theme.of(context).cardColor,
             shape: RoundedRectangleBorder(
@@ -143,39 +101,6 @@ class SettingsPage extends ConsumerWidget {
             },
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _ThemeTile extends StatelessWidget {
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  const _ThemeTile({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        child: Row(
-          children: [
-            Expanded(
-              child: Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
-            ),
-            Icon(
-              selected ? Icons.check_circle_rounded : Icons.circle_outlined,
-              color: selected ? AppConstants.accentHover : AppConstants.textSecondaryLight,
-            ),
-          ],
-        ),
       ),
     );
   }

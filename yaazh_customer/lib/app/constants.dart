@@ -12,7 +12,6 @@ class AppConstants {
   static const String tokenKey = 'customer_access_token';
   static const String refreshTokenKey = 'customer_refresh_token';
   static const String profileCacheKey = 'customer_profile_cache';
-  static const String themeModeKey = 'app_theme_mode';
 
   static const Color splashColor = Color(0xFF0B0E1B);
   static const Color primaryColor = Color(0xFF0F172A);

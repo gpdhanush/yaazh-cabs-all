@@ -50,11 +50,13 @@ class AuthRepository {
     String? name,
     String? email,
     String? address,
+    String? profileImageUrl,
   }) async {
     await _apiClient.put('/driver/profile', data: {
       if (name != null) 'name': name,
       if (email != null) 'email': email,
       if (address != null) 'address': address,
+      if (profileImageUrl != null) 'profile_image_url': profileImageUrl,
     });
   }
 

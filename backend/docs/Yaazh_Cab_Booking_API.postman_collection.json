@@ -5524,7 +5524,7 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"title\": \"Announcement\",\n  \"body\": \"Hello from Yaazh\",\n  \"recipient_type\": \"customer\",\n  \"customer_id\": \"{{customerId}}\"\n}",
+                  "raw": "{\n  \"title\": \"Announcement\",\n  \"body\": \"Hello from Yaazh\",\n  \"audience\": \"customer\",\n  \"customer_id\": \"{{customerId}}\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"

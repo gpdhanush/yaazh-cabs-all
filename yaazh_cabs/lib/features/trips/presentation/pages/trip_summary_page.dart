@@ -6,6 +6,7 @@ import 'package:yaazh_cabs/core/widgets/app_error_view.dart';
 import 'package:yaazh_cabs/core/widgets/app_loading_view.dart';
 import 'package:yaazh_cabs/core/widgets/status_chip.dart';
 import 'package:yaazh_cabs/core/widgets/trip_timeline.dart';
+import 'package:yaazh_cabs/features/profile/data/driver_profile_repository.dart';
 import '../viewmodels/active_trip_viewmodel.dart';
 
 class TripSummaryPage extends ConsumerStatefulWidget {
@@ -18,6 +19,17 @@ class TripSummaryPage extends ConsumerStatefulWidget {
 }
 
 class _TripSummaryPageState extends ConsumerState<TripSummaryPage> {
+  int _rating = 5;
+  final _review = TextEditingController();
+  bool _submittingRating = false;
+  bool _rated = false;
+
+  @override
+  void dispose() {
+    _review.dispose();
+    super.dispose();
+  }
+
   @override
   void initState() {
     super.initState();
@@ -138,6 +150,17 @@ class _TripSummaryPageState extends ConsumerState<TripSummaryPage> {
                             ),
                           ),
                           const SizedBox(height: 16),
+                          if (trip.isCompleted)
+                            _PassengerRateCard(
+                              customerName: trip.customerName,
+                              alreadyRated: _rated || trip.driverRating != null,
+                              rating: _rating,
+                              submitting: _submittingRating,
+                              reviewController: _review,
+                              onChanged: (v) => setState(() => _rating = v),
+                              onSubmit: () => _submitRating(),
+                            ),
+                          const SizedBox(height: 16),
 
                           // Route Summary Card
                           Card(
@@ -176,6 +199,105 @@ class _TripSummaryPageState extends ConsumerState<TripSummaryPage> {
             ),
           );
         },
+      ),
+    );
+  }
+
+  Future<void> _submitRating() async {
+    FocusManager.instance.primaryFocus?.unfocus();
+    setState(() => _submittingRating = true);
+    try {
+      await ref.read(driverProfileRepositoryProvider).ratePassenger(
+            bookingId: widget.bookingId,
+            rating: _rating,
+            review: _review.text.trim(),
+          );
+      if (!mounted) return;
+      setState(() => _rated = true);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Thanks for rating the passenger')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not submit rating: $e')),
+      );
+    } finally {
+      if (mounted) setState(() => _submittingRating = false);
+    }
+  }
+}
+
+class _PassengerRateCard extends StatelessWidget {
+  final String customerName;
+  final bool alreadyRated;
+  final int rating;
+  final bool submitting;
+  final TextEditingController reviewController;
+  final ValueChanged<int> onChanged;
+  final VoidCallback onSubmit;
+
+  const _PassengerRateCard({
+    required this.customerName,
+    required this.alreadyRated,
+    required this.rating,
+    required this.submitting,
+    required this.reviewController,
+    required this.onChanged,
+    required this.onSubmit,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(AppConstants.paddingM),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text('RATE PASSENGER', style: Theme.of(context).textTheme.labelMedium),
+            const SizedBox(height: 8),
+            Text(customerName, style: Theme.of(context).textTheme.titleMedium),
+            if (alreadyRated) ...[
+              const SizedBox(height: 8),
+              const Text('You already rated this trip.'),
+            ] else ...[
+              const SizedBox(height: 10),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  for (var i = 1; i <= 5; i++)
+                    IconButton(
+                      onPressed: () => onChanged(i),
+                      icon: Icon(
+                        i <= rating ? Icons.star_rounded : Icons.star_border_rounded,
+                        color: AppConstants.gold,
+                      ),
+                    ),
+                ],
+              ),
+              TextField(
+                controller: reviewController,
+                maxLines: 2,
+                decoration: const InputDecoration(
+                  hintText: 'Optional note about the passenger',
+                  counterText: '',
+                ),
+              ),
+              const SizedBox(height: 12),
+              ElevatedButton(
+                onPressed: submitting ? null : onSubmit,
+                child: submitting
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black),
+                      )
+                    : const Text('SUBMIT RATING'),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }

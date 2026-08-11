@@ -8,26 +8,51 @@ import { loadEnv } from "../../../config/env.js";
 import { ok } from "../../../utils/api-response.js";
 import { requireAuth, requireUser } from "../../../middleware/auth.js";
 import { bookingService, serializeBooking, getBookingPaymentSummary, collectBookingPayment } from "../../../services/booking.service.js";
-import { NotFoundError, ValidationError, ConflictError, ForbiddenError } from "../../../errors/app-error.js";
+import { NotFoundError, ValidationError, ConflictError } from "../../../errors/app-error.js";
 import { Prisma } from "@prisma/client";
 
 export const driverRoutes: FastifyPluginAsync = async (app) => {
   app.addHook("preHandler", requireAuth("driver"));
 
-  app.get("/profile", async (req, reply) => {
-    const user = requireUser(req);
-    const d = await prisma.drivers.findUnique({ where: { id: user.id } });
-    if (!d) throw new NotFoundError();
-    return ok(reply, {
+  function serializeDriverProfile(d: {
+    id: bigint;
+    name: string;
+    phone: string;
+    email: string | null;
+    address: string | null;
+    profile_image_url: string | null;
+    license_no: string | null;
+    license_expiry_date: Date | null;
+    online_status: string;
+    availability_status: string;
+    verification_status: string;
+    rating_avg: unknown;
+    total_completed_trips: number;
+  }) {
+    return {
       id: String(d.id),
       name: d.name,
       phone: d.phone,
       email: d.email,
+      address: d.address,
+      profile_image_url: d.profile_image_url,
+      license_no: d.license_no,
+      license_expiry_date: d.license_expiry_date
+        ? d.license_expiry_date.toISOString().slice(0, 10)
+        : null,
       online_status: d.online_status,
       availability_status: d.availability_status,
       verification_status: d.verification_status,
       rating_avg: Number(d.rating_avg),
-    });
+      total_completed_trips: d.total_completed_trips,
+    };
+  }
+
+  app.get("/profile", async (req, reply) => {
+    const user = requireUser(req);
+    const d = await prisma.drivers.findUnique({ where: { id: user.id } });
+    if (!d) throw new NotFoundError();
+    return ok(reply, serializeDriverProfile(d));
   });
 
   app.put("/profile", async (req, reply) => {
@@ -36,11 +61,12 @@ export const driverRoutes: FastifyPluginAsync = async (app) => {
       name: z.string().min(2).optional(),
       email: z.string().email().optional().nullable(),
       address: z.string().optional().nullable(),
+      profile_image_url: z.string().min(1).max(500).optional().nullable(),
     });
     const parsed = schema.safeParse(req.body);
     if (!parsed.success) throw new ValidationError("Validation failed.", parsed.error.flatten());
     const d = await prisma.drivers.update({ where: { id: user.id }, data: parsed.data });
-    return ok(reply, { id: String(d.id), name: d.name }, "Profile updated.");
+    return ok(reply, serializeDriverProfile(d), "Profile updated.");
   });
 
   app.get("/status", async (req, reply) => {
@@ -142,7 +168,10 @@ export const driverRoutes: FastifyPluginAsync = async (app) => {
     const id = BigInt((req.params as { id: string }).id);
     const booking = await prisma.bookings.findUnique({ where: { id } });
     if (!booking || booking.assigned_driver_id !== user.id) throw new NotFoundError();
-    const payment = await getBookingPaymentSummary(id);
+    const [payment, rating] = await Promise.all([
+      getBookingPaymentSummary(id),
+      prisma.tripRatings.findUnique({ where: { booking_id: id } }),
+    ]);
     return ok(reply, {
       ...serializeBooking(booking),
       payment: {
@@ -151,6 +180,13 @@ export const driverRoutes: FastifyPluginAsync = async (app) => {
         balance_due: payment.balance_due,
         payment_status: payment.payment_status,
       },
+      rating: rating
+        ? {
+            customer_rating: rating.customer_rating,
+            driver_rating: rating.driver_rating,
+            driver_review: rating.driver_review,
+          }
+        : null,
     });
   });
 
@@ -351,7 +387,9 @@ export const driverRoutes: FastifyPluginAsync = async (app) => {
       rows.map((d) => ({
         id: String(d.id),
         document_type: d.document_type,
+        document_no: d.document_no,
         verification_status: d.verification_status,
+        rejection_reason: d.rejection_reason,
         expiry_date: d.expiry_date,
         file_url: d.file_url,
       })),
@@ -565,5 +603,202 @@ export const driverRoutes: FastifyPluginAsync = async (app) => {
     return ok(reply, { id: String(row.id) }, "Device registered.", 201);
   });
 
-  void ForbiddenError;
+  app.get("/vehicle", async (req, reply) => {
+    const user = requireUser(req);
+    const assignment = await prisma.driverVehicleAssignments.findFirst({
+      where: { driver_id: user.id, is_current: true },
+    });
+    if (!assignment) return ok(reply, null);
+    const vehicle = await prisma.vehicles.findUnique({ where: { id: assignment.vehicle_id } });
+    if (!vehicle) return ok(reply, null);
+    const category = await prisma.vehicleCategories.findUnique({
+      where: { id: vehicle.category_id },
+      select: { name: true },
+    });
+    return ok(reply, {
+      assignment_id: String(assignment.id),
+      vehicle_id: String(vehicle.id),
+      vehicle_name: vehicle.vehicle_name,
+      registration_no: vehicle.registration_no,
+      model_name: vehicle.model_name,
+      color: vehicle.color,
+      fuel_type: vehicle.fuel_type,
+      category_name: category?.name ?? null,
+      assigned_from: assignment.assigned_from,
+      rc_expiry_date: vehicle.rc_expiry_date,
+      insurance_expiry_date: vehicle.insurance_expiry_date,
+    });
+  });
+
+  app.get("/ratings", async (req, reply) => {
+    const user = requireUser(req);
+    const rows = await prisma.tripRatings.findMany({
+      where: { driver_id: user.id },
+      orderBy: { created_at: "desc" },
+      take: 50,
+    });
+    const bookingIds = rows.map((r) => r.booking_id);
+    const bookings = bookingIds.length
+      ? await prisma.bookings.findMany({
+          where: { id: { in: bookingIds } },
+          select: { id: true, booking_reference: true, customer_name: true },
+        })
+      : [];
+    const bookingMap = new Map(bookings.map((b) => [String(b.id), b]));
+    return ok(
+      reply,
+      rows.map((r) => {
+        const booking = bookingMap.get(String(r.booking_id));
+        return {
+          id: String(r.id),
+          booking_id: String(r.booking_id),
+          booking_reference: booking?.booking_reference ?? null,
+          customer_name: booking?.customer_name ?? null,
+          customer_rating: r.customer_rating,
+          customer_review: r.customer_review,
+          driver_rating: r.driver_rating,
+          driver_review: r.driver_review,
+          created_at: r.created_at,
+        };
+      }),
+    );
+  });
+
+  app.post("/trips/:id/rating", async (req, reply) => {
+    const user = requireUser(req);
+    const id = BigInt((req.params as { id: string }).id);
+    const booking = await prisma.bookings.findUnique({ where: { id } });
+    if (!booking || booking.assigned_driver_id !== user.id) throw new NotFoundError();
+    if (booking.status !== "completed") {
+      throw new ValidationError("Rate the passenger after the trip is completed.");
+    }
+    const schema = z.object({
+      rating: z.number().int().min(1).max(5),
+      review: z.string().max(400).optional().nullable(),
+    });
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) throw new ValidationError("Validation failed.", parsed.error.flatten());
+    const row = await prisma.tripRatings.upsert({
+      where: { booking_id: id },
+      create: {
+        booking_id: id,
+        customer_id: booking.customer_id,
+        driver_id: user.id,
+        driver_rating: parsed.data.rating,
+        driver_review: parsed.data.review ?? null,
+      },
+      update: {
+        driver_id: user.id,
+        driver_rating: parsed.data.rating,
+        driver_review: parsed.data.review ?? null,
+      },
+    });
+    return ok(
+      reply,
+      { id: String(row.id), rating: parsed.data.rating, review: parsed.data.review ?? null },
+      "Rating submitted.",
+      201,
+    );
+  });
+
+  app.get("/support", async (req, reply) => {
+    const user = requireUser(req);
+    const rows = await prisma.supportTickets.findMany({
+      where: { driver_id: user.id },
+      orderBy: { created_at: "desc" },
+    });
+    return ok(
+      reply,
+      rows.map((t) => ({
+        id: String(t.id),
+        ticket_reference: t.ticket_reference,
+        subject: t.subject,
+        status: t.status,
+        priority: t.priority,
+        created_at: t.created_at,
+      })),
+    );
+  });
+
+  app.post("/support", async (req, reply) => {
+    const user = requireUser(req);
+    const schema = z.object({
+      subject: z.string().min(3),
+      message: z.string().min(5),
+      booking_id: z.union([z.string(), z.number()]).optional(),
+      priority: z.enum(["low", "medium", "high", "urgent"]).optional(),
+    });
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) throw new ValidationError("Validation failed.", parsed.error.flatten());
+    const ticket = await prisma.$transaction(async (tx) => {
+      const ref = `TKT${Date.now().toString().slice(-10)}`;
+      const t = await tx.supportTickets.create({
+        data: {
+          ticket_reference: ref,
+          subject: parsed.data.subject,
+          raised_by_type: "driver",
+          driver_id: user.id,
+          booking_id: parsed.data.booking_id != null ? BigInt(parsed.data.booking_id) : null,
+          priority: parsed.data.priority ?? "medium",
+        },
+      });
+      await tx.supportTicketMessages.create({
+        data: {
+          ticket_id: t.id,
+          sender_type: "driver",
+          driver_id: user.id,
+          message: parsed.data.message,
+        },
+      });
+      return t;
+    });
+    return ok(
+      reply,
+      { id: String(ticket.id), ticket_reference: ticket.ticket_reference },
+      "Support ticket created.",
+      201,
+    );
+  });
+
+  app.get("/support/:id", async (req, reply) => {
+    const user = requireUser(req);
+    const id = BigInt((req.params as { id: string }).id);
+    const ticket = await prisma.supportTickets.findUnique({ where: { id } });
+    if (!ticket || ticket.driver_id !== user.id) throw new NotFoundError();
+    const messages = await prisma.supportTicketMessages.findMany({
+      where: { ticket_id: id },
+      orderBy: { created_at: "asc" },
+    });
+    return ok(reply, {
+      id: String(ticket.id),
+      subject: ticket.subject,
+      status: ticket.status,
+      ticket_reference: ticket.ticket_reference,
+      messages: messages.map((m) => ({
+        id: String(m.id),
+        sender_type: m.sender_type,
+        message: m.message,
+        created_at: m.created_at,
+      })),
+    });
+  });
+
+  app.post("/support/:id/messages", async (req, reply) => {
+    const user = requireUser(req);
+    const id = BigInt((req.params as { id: string }).id);
+    const ticket = await prisma.supportTickets.findUnique({ where: { id } });
+    if (!ticket || ticket.driver_id !== user.id) throw new NotFoundError();
+    const schema = z.object({ message: z.string().min(1) });
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) throw new ValidationError("Validation failed.", parsed.error.flatten());
+    const msg = await prisma.supportTicketMessages.create({
+      data: {
+        ticket_id: id,
+        sender_type: "driver",
+        driver_id: user.id,
+        message: parsed.data.message,
+      },
+    });
+    return ok(reply, { id: String(msg.id) }, "Message sent.", 201);
+  });
 };

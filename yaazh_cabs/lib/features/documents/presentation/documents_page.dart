@@ -159,6 +159,18 @@ class _DocumentsPageState extends ConsumerState<DocumentsPage> {
                                   style: const TextStyle(fontSize: 13),
                                 ),
                               ],
+                              if ((doc.rejectionReason ?? '').trim().isNotEmpty) ...[
+                                const SizedBox(height: 4),
+                                Text(
+                                  doc.rejectionReason!,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: AppConstants.errorColor,
+                                  ),
+                                ),
+                              ],
                               const SizedBox(height: 4),
                               Text(
                                 'Expiry: $expiryStr',

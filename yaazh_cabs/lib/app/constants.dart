@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 class AppConstants {
   static const String appName = 'Yaazh Cabs Driver';
+  static const String appVersion = '1.0.0';
   static const String appLogo = 'assets/img/playstore-icon.png';
 
   // API Config
@@ -12,7 +13,6 @@ class AppConstants {
   static const String tokenKey = 'driver_access_token';
   static const String refreshTokenKey = 'driver_refresh_token';
   static const String driverProfileKey = 'driver_profile_cache';
-  static const String themeModeKey = 'app_theme_mode';
 
   // Black & Gold Elegance
   static const Color white = Color(0xFFFFFFFF);

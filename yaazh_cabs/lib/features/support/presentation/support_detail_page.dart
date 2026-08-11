@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:yaazh_customer/app/constants.dart';
-import 'package:yaazh_customer/core/widgets/app_error_view.dart';
-import 'package:yaazh_customer/core/widgets/app_loading_view.dart';
-import 'package:yaazh_customer/core/widgets/status_chip.dart';
-import 'package:yaazh_customer/features/support/data/support_repository.dart';
+import 'package:yaazh_cabs/app/constants.dart';
+import 'package:yaazh_cabs/core/widgets/app_error_view.dart';
+import 'package:yaazh_cabs/core/widgets/app_loading_view.dart';
+import 'package:yaazh_cabs/core/widgets/status_chip.dart';
+import 'package:yaazh_cabs/features/support/data/support_repository.dart';
 
 class SupportDetailPage extends ConsumerStatefulWidget {
   final String ticketId;
@@ -79,9 +79,15 @@ class _SupportDetailPageState extends ConsumerState<SupportDetailPage> {
     }
 
     return Scaffold(
+      backgroundColor: AppConstants.bgLight,
       appBar: AppBar(
         title: Text(detail.subject),
-        actions: [Padding(padding: const EdgeInsets.only(right: 12), child: Center(child: StatusChip.forStatus(detail.status)))],
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: Center(child: StatusChip.forStatus(detail.status)),
+          ),
+        ],
       ),
       body: Column(
         children: [
@@ -91,7 +97,7 @@ class _SupportDetailPageState extends ConsumerState<SupportDetailPage> {
               itemCount: detail.messages.length,
               itemBuilder: (context, i) {
                 final msg = detail.messages[i];
-                final mine = msg.senderType == 'customer';
+                final mine = msg.senderType == 'driver';
                 return Align(
                   alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
                   child: Container(
@@ -99,9 +105,11 @@ class _SupportDetailPageState extends ConsumerState<SupportDetailPage> {
                     padding: const EdgeInsets.all(12),
                     constraints: const BoxConstraints(maxWidth: 320),
                     decoration: BoxDecoration(
-                      color: mine ? AppConstants.accentColor.withValues(alpha: 0.18) : Theme.of(context).cardColor,
+                      color: mine
+                          ? AppConstants.gold.withValues(alpha: 0.18)
+                          : Colors.white,
                       borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: AppConstants.borderLight),
+                      border: Border.all(color: AppConstants.lightGrey),
                     ),
                     child: Text(msg.message),
                   ),
@@ -117,12 +125,14 @@ class _SupportDetailPageState extends ConsumerState<SupportDetailPage> {
                   Expanded(
                     child: TextField(
                       controller: _controller,
+                      textInputAction: TextInputAction.send,
+                      onSubmitted: (_) => _send(),
                       decoration: const InputDecoration(hintText: 'Write a reply'),
                     ),
                   ),
                   IconButton(
                     onPressed: _sending ? null : _send,
-                    icon: const Icon(Icons.send_rounded, color: AppConstants.accentHover),
+                    icon: const Icon(Icons.send_rounded, color: AppConstants.navy),
                   ),
                 ],
               ),

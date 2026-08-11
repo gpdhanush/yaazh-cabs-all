@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:yaazh_cabs/app/constants.dart';
 import 'package:yaazh_cabs/core/firebase/analytics_service.dart';
 import 'package:yaazh_cabs/core/widgets/app_surface.dart';
+import 'package:yaazh_cabs/core/widgets/driver_avatar.dart';
 import 'package:yaazh_cabs/core/widgets/logout_sheet.dart';
 import 'package:yaazh_cabs/features/auth/presentation/auth_viewmodel.dart';
 
@@ -27,15 +28,10 @@ class SettingsPage extends ConsumerWidget {
             AppSurfaceCard(
               child: Row(
                 children: [
-                  CircleAvatar(
+                  DriverAvatar(
+                    name: user.name,
+                    imageUrl: user.profileImageUrl,
                     radius: 24,
-                    backgroundColor: AppConstants.gold,
-                    child: Text(
-                      user.name.isNotEmpty ? user.name[0].toUpperCase() : 'D',
-                      style: theme.textTheme.titleLarge?.copyWith(
-                        color: AppConstants.black,
-                      ),
-                    ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -119,7 +115,7 @@ class SettingsPage extends ConsumerWidget {
               _SettingsTile(
                 icon: Icons.info_outline_rounded,
                 title: 'App version',
-                trailingText: '1.0.0',
+                trailingText: AppConstants.appVersion,
               ),
             ],
           ),

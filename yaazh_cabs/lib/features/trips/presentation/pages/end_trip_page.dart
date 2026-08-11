@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:yaazh_cabs/app/constants.dart';
@@ -31,6 +32,7 @@ class _EndTripPageState extends ConsumerState<EndTripPage> {
   }
 
   void _onCompleteTrip() async {
+    FocusManager.instance.primaryFocus?.unfocus();
     if (!_formKey.currentState!.validate()) return;
 
     final endOdo = double.tryParse(_endOdoController.text.trim());
@@ -135,6 +137,10 @@ class _EndTripPageState extends ConsumerState<EndTripPage> {
                 TextFormField(
                   controller: _endOdoController,
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  textInputAction: TextInputAction.done,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}')),
+                  ],
                   decoration: const InputDecoration(
                     labelText: 'End Odometer Reading (KM)',
                     suffixText: 'km',

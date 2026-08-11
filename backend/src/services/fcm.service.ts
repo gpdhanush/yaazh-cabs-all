@@ -134,3 +134,181 @@ export async function deliverBookingNotification(params: {
   }
   return pushStatus;
 }
+
+const FCM_MULTICAST_LIMIT = 500;
+
+export type AdminNotificationAudience =
+  | "all_customers"
+  | "all_drivers"
+  | "customer"
+  | "driver";
+
+function chunk<T>(items: T[], size: number): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < items.length; i += size) out.push(items.slice(i, i + size));
+  return out;
+}
+
+export async function sendAudiencePush(params: {
+  recipientType: "customer" | "driver";
+  customerId?: string | null;
+  driverId?: string | null;
+  broadcast: boolean;
+  title: string;
+  body: string;
+  jobType: string;
+}): Promise<{ status: "sent" | "skipped" | "failed"; devices: number }> {
+  const app = initAdmin();
+  if (!app) return { status: "skipped", devices: 0 };
+
+  const where = params.broadcast
+    ? { user_type: params.recipientType, is_active: true }
+    : params.recipientType === "driver" && params.driverId
+      ? { user_type: "driver" as const, driver_id: BigInt(params.driverId), is_active: true }
+      : params.recipientType === "customer" && params.customerId
+        ? { user_type: "customer" as const, customer_id: BigInt(params.customerId), is_active: true }
+        : null;
+  if (!where) return { status: "skipped", devices: 0 };
+
+  const devices = await prisma.appDevices.findMany({
+    where,
+    select: { fcm_token: true },
+  });
+  if (devices.length === 0) return { status: "skipped", devices: 0 };
+
+  const data: Record<string, string> = {
+    type: "announcement",
+    job_type: params.jobType,
+    title: params.title,
+    body: params.body,
+  };
+
+  try {
+    let sentAny = false;
+    for (const group of chunk(devices, FCM_MULTICAST_LIMIT)) {
+      await admin.messaging().sendEachForMulticast({
+        tokens: group.map((d) => d.fcm_token),
+        notification: {
+          title: params.title,
+          body: params.body,
+        },
+        data,
+        android: {
+          priority: "high",
+          notification: {
+            channelId: "yaazh_bookings",
+            sound: "default",
+          },
+        },
+        webpush: {
+          headers: { Urgency: "high" },
+          notification: {
+            title: params.title,
+            body: params.body,
+            icon: "/favicon.ico",
+          },
+        },
+      });
+      sentAny = true;
+    }
+    return { status: sentAny ? "sent" : "skipped", devices: devices.length };
+  } catch (err) {
+    console.error("FCM audience send failed", err);
+    return { status: "failed", devices: devices.length };
+  }
+}
+
+export async function deliverAdminNotification(params: {
+  audience: AdminNotificationAudience;
+  customerId?: string | null;
+  driverId?: string | null;
+  title: string;
+  body: string;
+  senderAdminId: bigint;
+}): Promise<{
+  delivery_status: "sent" | "skipped" | "failed";
+  recipient_count: number;
+  push_devices: number;
+  audience: AdminNotificationAudience;
+}> {
+  const broadcast = params.audience === "all_customers" || params.audience === "all_drivers";
+  const recipientType: "customer" | "driver" =
+    params.audience === "all_customers" || params.audience === "customer" ? "customer" : "driver";
+
+  let recipients: Array<{ id: bigint }> = [];
+  if (params.audience === "all_customers") {
+    recipients = await prisma.customers.findMany({
+      where: { is_active: true, app_status: "active" },
+      select: { id: true },
+    });
+  } else if (params.audience === "all_drivers") {
+    recipients = await prisma.drivers.findMany({
+      where: { is_active: true },
+      select: { id: true },
+    });
+  } else if (params.audience === "customer" && params.customerId) {
+    const customer = await prisma.customers.findUnique({
+      where: { id: BigInt(params.customerId) },
+      select: { id: true },
+    });
+    if (customer) recipients = [customer];
+  } else if (params.audience === "driver" && params.driverId) {
+    const driver = await prisma.drivers.findUnique({
+      where: { id: BigInt(params.driverId) },
+      select: { id: true },
+    });
+    if (driver) recipients = [driver];
+  }
+
+  if (recipients.length === 0) {
+    return {
+      delivery_status: "skipped",
+      recipient_count: 0,
+      push_devices: 0,
+      audience: params.audience,
+    };
+  }
+
+  const jobType = broadcast ? "admin_broadcast" : "admin_direct";
+  const push = await sendAudiencePush({
+    recipientType,
+    customerId: params.customerId ?? null,
+    driverId: params.driverId ?? null,
+    broadcast,
+    title: params.title,
+    body: params.body,
+    jobType,
+  });
+
+  const env = loadEnv();
+  const channel = env.fcmEnabled ? ("push" as const) : ("in_app" as const);
+  const deliveryStatus =
+    push.status === "sent" ? "sent" : push.status === "failed" ? "failed" : "queued";
+  const sentAt = push.status === "sent" ? new Date() : null;
+
+  await prisma.notificationLogs.createMany({
+    data: recipients.map((r) => ({
+      sender_type: "admin" as const,
+      sender_admin_id: params.senderAdminId,
+      recipient_type: recipientType,
+      customer_id: recipientType === "customer" ? r.id : null,
+      driver_id: recipientType === "driver" ? r.id : null,
+      channel,
+      title: params.title,
+      body: params.body,
+      delivery_status: deliveryStatus,
+      sent_at: sentAt,
+      data_payload: {
+        job_type: jobType,
+        audience: params.audience,
+      },
+    })),
+  });
+
+  return {
+    delivery_status: push.status,
+    recipient_count: recipients.length,
+    push_devices: push.devices,
+    audience: params.audience,
+  };
+}

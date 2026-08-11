@@ -42,6 +42,7 @@ class _ConfirmBookingPageState extends ConsumerState<ConfirmBookingPage> {
   }
 
   Future<void> _submit() async {
+    FocusManager.instance.primaryFocus?.unfocus();
     final active = ref.read(upcomingTripProvider);
     if (active != null) {
       if (!mounted) return;

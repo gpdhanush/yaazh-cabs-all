@@ -9,7 +9,11 @@ import { ok } from "../../../utils/api-response.js";
 import { requireAuth, requirePermission, requireUser } from "../../../middleware/auth.js";
 import { bookingService, serializeBooking, getBookingPaymentSummary, recordBookingPayment, setBookingPaymentStatus } from "../../../services/booking.service.js";
 import { NotFoundError, ValidationError, ConflictError } from "../../../errors/app-error.js";
-import { deliverBookingNotification } from "../../../services/fcm.service.js";
+import {
+  deliverAdminNotification,
+  deliverBookingNotification,
+  type AdminNotificationAudience,
+} from "../../../services/fcm.service.js";
 import type { TripType } from "@prisma/client";
 import { hashPassword } from "../../../utils/crypto.js";
 
@@ -955,12 +959,23 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
   );
 
   app.get("/customers", { preHandler: [requirePermission("customers.view")] }, async (req, reply) => {
-    const q = req.query as { page?: string; per_page?: string };
+    const q = req.query as { page?: string; per_page?: string; q?: string };
     const page = Math.max(1, Number(q.page ?? 1) || 1);
     const perPage = Math.min(500, Math.max(1, Number(q.per_page ?? 20) || 20));
+    const search = q.q?.trim();
+    const where = search
+      ? {
+          OR: [
+            { name: { contains: search } },
+            { phone: { contains: search } },
+            { email: { contains: search } },
+          ],
+        }
+      : {};
     const [total, rows] = await Promise.all([
-      prisma.customers.count(),
+      prisma.customers.count({ where }),
       prisma.customers.findMany({
+        where,
         orderBy: { created_at: "desc" },
         skip: (page - 1) * perPage,
         take: perPage,
@@ -1026,12 +1041,23 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
   });
 
   app.get("/drivers", { preHandler: [requirePermission("drivers.view")] }, async (req, reply) => {
-    const q = req.query as { page?: string; per_page?: string };
+    const q = req.query as { page?: string; per_page?: string; q?: string };
     const page = Math.max(1, Number(q.page ?? 1) || 1);
     const perPage = Math.min(500, Math.max(1, Number(q.per_page ?? 20) || 20));
+    const search = q.q?.trim();
+    const where = search
+      ? {
+          OR: [
+            { name: { contains: search } },
+            { phone: { contains: search } },
+            { email: { contains: search } },
+          ],
+        }
+      : {};
     const [total, rows] = await Promise.all([
-      prisma.drivers.count(),
+      prisma.drivers.count({ where }),
       prisma.drivers.findMany({
+        where,
         orderBy: { created_at: "desc" },
         skip: (page - 1) * perPage,
         take: perPage,
@@ -2438,39 +2464,141 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
     return ok(reply, serializeEnquiry(e), "Enquiry updated.");
   });
 
-  app.get("/notifications", { preHandler: [requirePermission("notifications.send")] }, async (_req, reply) => {
-    const rows = await prisma.notificationLogs.findMany({ orderBy: { created_at: "desc" }, take: 50 });
+  app.get("/notifications", { preHandler: [requirePermission("notifications.send")] }, async (req, reply) => {
+    const q = req.query as { recipient_type?: string };
+    const recipientFilter =
+      q.recipient_type === "customer" || q.recipient_type === "driver" || q.recipient_type === "admin"
+        ? q.recipient_type
+        : undefined;
+    const rows = await prisma.notificationLogs.findMany({
+      where: recipientFilter ? { recipient_type: recipientFilter } : undefined,
+      orderBy: { created_at: "desc" },
+      take: 100,
+    });
+    const customerIds = [...new Set(rows.map((n) => n.customer_id).filter((id): id is bigint => id != null))];
+    const driverIds = [...new Set(rows.map((n) => n.driver_id).filter((id): id is bigint => id != null))];
+    const [customers, drivers] = await Promise.all([
+      customerIds.length
+        ? prisma.customers.findMany({
+            where: { id: { in: customerIds } },
+            select: { id: true, name: true, phone: true },
+          })
+        : Promise.resolve([]),
+      driverIds.length
+        ? prisma.drivers.findMany({
+            where: { id: { in: driverIds } },
+            select: { id: true, name: true, phone: true },
+          })
+        : Promise.resolve([]),
+    ]);
+    const customerMap = new Map(customers.map((c) => [String(c.id), c]));
+    const driverMap = new Map(drivers.map((d) => [String(d.id), d]));
     return ok(
       reply,
-      rows.map((n) => ({
-        id: String(n.id),
-        title: n.title,
-        channel: n.channel,
-        delivery_status: n.delivery_status,
-        created_at: n.created_at,
-      })),
+      rows.map((n) => {
+        const customer = n.customer_id ? customerMap.get(String(n.customer_id)) : null;
+        const driver = n.driver_id ? driverMap.get(String(n.driver_id)) : null;
+        const person = customer ?? driver;
+        const payload = (n.data_payload ?? {}) as { audience?: string };
+        const audience = payload.audience ?? null;
+        const recipientName =
+          person?.name ??
+          (audience === "all_customers"
+            ? "All customers"
+            : audience === "all_drivers"
+              ? "All drivers"
+              : n.customer_id
+                ? `Customer #${n.customer_id}`
+                : n.driver_id
+                  ? `Driver #${n.driver_id}`
+                  : n.recipient_type === "admin"
+                    ? "Admin"
+                    : n.recipient_type);
+        return {
+          id: String(n.id),
+          title: n.title,
+          body: n.body,
+          channel: n.channel,
+          delivery_status: n.delivery_status,
+          recipient_type: n.recipient_type,
+          recipient_name: recipientName,
+          recipient_phone: person?.phone ?? null,
+          customer_id: n.customer_id ? String(n.customer_id) : null,
+          driver_id: n.driver_id ? String(n.driver_id) : null,
+          audience,
+          sender_type: n.sender_type,
+          created_at: n.created_at,
+          sent_at: n.sent_at,
+        };
+      }),
     );
   });
 
+  app.delete("/notifications/:id", { preHandler: [requirePermission("notifications.send")] }, async (req, reply) => {
+    const id = BigInt((req.params as { id: string }).id);
+    const existing = await prisma.notificationLogs.findUnique({ where: { id } });
+    if (!existing) throw new NotFoundError("Notification not found.");
+    await prisma.notificationLogs.delete({ where: { id } });
+    return ok(reply, { id: String(id) }, "Notification deleted.");
+  });
+
   app.post("/notifications/send", { preHandler: [requirePermission("notifications.send")] }, async (req, reply) => {
+    const user = requireUser(req);
     const schema = z.object({
-      title: z.string(),
-      body: z.string(),
-      recipient_type: z.enum(["customer", "driver", "admin"]),
-      customer_id: z.union([z.string(), z.number()]).optional(),
-      driver_id: z.union([z.string(), z.number()]).optional(),
+      title: z.string().trim().min(1).max(180),
+      body: z.string().trim().min(1).max(2000),
+      audience: z.enum(["all_customers", "all_drivers", "customer", "driver"]).optional(),
+      recipient_type: z.enum(["customer", "driver", "admin"]).optional(),
+      customer_id: z.union([z.string(), z.number()]).optional().nullable(),
+      driver_id: z.union([z.string(), z.number()]).optional().nullable(),
     });
     const parsed = schema.safeParse(req.body);
     if (!parsed.success) throw new ValidationError("Validation failed.", parsed.error.flatten());
-    const status = await deliverBookingNotification({
-      recipientType: parsed.data.recipient_type,
+
+    let audience: AdminNotificationAudience | null = parsed.data.audience ?? null;
+    if (!audience && parsed.data.recipient_type && parsed.data.recipient_type !== "admin") {
+      const hasCustomer = parsed.data.customer_id != null && String(parsed.data.customer_id).trim() !== "";
+      const hasDriver = parsed.data.driver_id != null && String(parsed.data.driver_id).trim() !== "";
+      if (parsed.data.recipient_type === "customer" && hasCustomer) audience = "customer";
+      else if (parsed.data.recipient_type === "driver" && hasDriver) audience = "driver";
+      else if (parsed.data.recipient_type === "customer" && !hasCustomer) audience = "all_customers";
+      else if (parsed.data.recipient_type === "driver" && !hasDriver) audience = "all_drivers";
+    }
+
+    if (!audience) {
+      throw new ValidationError("Choose an audience: all customers, all drivers, or a specific user.");
+    }
+    if (audience === "customer" && (parsed.data.customer_id == null || String(parsed.data.customer_id).trim() === "")) {
+      throw new ValidationError("Select a customer to notify.");
+    }
+    if (audience === "driver" && (parsed.data.driver_id == null || String(parsed.data.driver_id).trim() === "")) {
+      throw new ValidationError("Select a driver to notify.");
+    }
+
+    const result = await deliverAdminNotification({
+      audience,
       customerId: parsed.data.customer_id != null ? String(parsed.data.customer_id) : null,
       driverId: parsed.data.driver_id != null ? String(parsed.data.driver_id) : null,
-      jobType: "send_notification",
       title: parsed.data.title,
       body: parsed.data.body,
+      senderAdminId: user.id,
     });
-    return ok(reply, { delivery_status: status }, "Notification sent.");
+
+    if (result.recipient_count === 0) {
+      throw new ValidationError(
+        audience.startsWith("all_")
+          ? `No active ${audience === "all_customers" ? "customers" : "drivers"} to notify.`
+          : "Recipient not found.",
+      );
+    }
+
+    const label =
+      audience === "all_customers"
+        ? `${result.recipient_count} customer${result.recipient_count === 1 ? "" : "s"}`
+        : audience === "all_drivers"
+          ? `${result.recipient_count} driver${result.recipient_count === 1 ? "" : "s"}`
+          : "recipient";
+    return ok(reply, result, `Notification sent to ${label}.`);
   });
 
   app.get("/cms", { preHandler: [requirePermission("cms.manage")] }, async (_req, reply) => {

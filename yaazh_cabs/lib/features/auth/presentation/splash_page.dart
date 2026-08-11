@@ -28,13 +28,14 @@ class _SplashPageState extends ConsumerState<SplashPage> {
 
   @override
   Widget build(BuildContext context) {
+    final bottom = MediaQuery.paddingOf(context).bottom;
+
     return Scaffold(
       backgroundColor: AppConstants.navy,
-      body: SafeArea(
-        child: Center(
+      body: SizedBox.expand(
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            const Spacer(flex: 5),
             const AppLogo(size: 112),
             const SizedBox(height: 24),
             Text(
@@ -60,8 +61,18 @@ class _SplashPageState extends ConsumerState<SplashPage> {
                 color: AppConstants.gold,
               ),
             ),
+            const Spacer(flex: 4),
+            Text(
+              'Version ${AppConstants.appVersion}',
+              style: TextStyle(
+                color: AppConstants.white.withValues(alpha: 0.42),
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.4,
+              ),
+            ),
+            SizedBox(height: 16 + bottom),
           ],
-        ),
         ),
       ),
     );

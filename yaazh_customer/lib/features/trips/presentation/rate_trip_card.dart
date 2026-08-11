@@ -223,7 +223,7 @@ class _Form extends StatelessWidget {
           style: const TextStyle(color: Colors.white, fontSize: 14, height: 1.4),
           cursorColor: AppConstants.accentColor,
           decoration: InputDecoration(
-            counterStyle: TextStyle(color: Colors.white.withValues(alpha: 0.35), fontSize: 11),
+            counterText: '',
             hintText: 'Share a few words about the ride (optional)',
             hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.38)),
             filled: true,
@@ -244,7 +244,12 @@ class _Form extends StatelessWidget {
           width: double.infinity,
           height: 54,
           child: ElevatedButton(
-            onPressed: parent.submitting ? null : parent.onSubmit,
+            onPressed: parent.submitting
+                ? null
+                : () {
+                    FocusManager.instance.primaryFocus?.unfocus();
+                    parent.onSubmit();
+                  },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppConstants.accentColor,
               foregroundColor: const Color(0xFF0B1220),

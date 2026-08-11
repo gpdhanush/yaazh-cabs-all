@@ -290,32 +290,14 @@ export const enquiriesResource: ResourceConfig = {
 
 export const notificationsResource: ResourceConfig = {
   title: 'Notifications',
-  description: 'Recent notification logs. Create queues a send via /notifications/send.',
+  description: 'Use the dedicated Notifications page to send group or individual alerts.',
   path: '/notifications',
-  createPath: '/notifications/send',
   columns: [
-    { key: 'id', label: 'ID' },
-    { key: 'channel', label: 'Channel' },
-    { key: 'recipient', label: 'Recipient' },
-    { key: 'status', label: 'Status' },
-    { key: 'created_at', label: 'Created' },
-  ],
-  createFields: [
-    {
-      key: 'recipient_type',
-      label: 'Recipient type',
-      type: 'select',
-      options: [
-        { label: 'Customer', value: 'customer' },
-        { label: 'Driver', value: 'driver' },
-        { label: 'Admin', value: 'admin' },
-      ],
-      defaultValue: 'customer',
-    },
-    { key: 'customer_id', label: 'Customer ID', type: 'number', nullable: true },
-    { key: 'driver_id', label: 'Driver ID', type: 'number', nullable: true },
     { key: 'title', label: 'Title' },
-    { key: 'body', label: 'Body', type: 'textarea' },
+    { key: 'recipient_name', label: 'Recipient' },
+    { key: 'recipient_type', label: 'Audience' },
+    { key: 'delivery_status', label: 'Status' },
+    { key: 'created_at', label: 'Created', type: 'date' },
   ],
 };
 

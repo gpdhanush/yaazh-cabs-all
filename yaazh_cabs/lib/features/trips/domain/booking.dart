@@ -26,6 +26,7 @@ class Booking {
   final double fareDue;
   final double amountPaid;
   final double balanceDue;
+  final int? driverRating;
 
   const Booking({
     required this.id,
@@ -54,11 +55,13 @@ class Booking {
     required this.fareDue,
     required this.amountPaid,
     required this.balanceDue,
+    this.driverRating,
   });
 
   factory Booking.fromJson(Map<String, dynamic> json) {
     final payment = json['payment'] as Map<String, dynamic>?;
     final customer = json['customer'] as Map<String, dynamic>?;
+    final rating = json['rating'] as Map<String, dynamic>?;
 
     return Booking(
       id: json['id']?.toString() ?? '',
@@ -107,6 +110,7 @@ class Booking {
       balanceDue: _double(payment?['balance_due'] ?? json['balance_due']) ??
           _double(json['estimated_total']) ??
           0.0,
+      driverRating: int.tryParse(rating?['driver_rating']?.toString() ?? ''),
     );
   }
 

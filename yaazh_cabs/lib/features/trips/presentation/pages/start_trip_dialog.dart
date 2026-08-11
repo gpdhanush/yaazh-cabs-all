@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:yaazh_cabs/app/constants.dart';
@@ -30,6 +31,7 @@ class _StartTripDialogState extends ConsumerState<StartTripDialog> {
   }
 
   void _onConfirmStart() async {
+    FocusManager.instance.primaryFocus?.unfocus();
     if (!_formKey.currentState!.validate()) return;
 
     final odo = double.tryParse(_odoController.text.trim());
@@ -80,7 +82,11 @@ class _StartTripDialogState extends ConsumerState<StartTripDialog> {
             TextFormField(
               controller: _odoController,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              textInputAction: TextInputAction.done,
               autofocus: true,
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}')),
+              ],
               decoration: const InputDecoration(
                 labelText: 'Start Odometer (KM)',
                 suffixText: 'km',

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../../app/constants.dart';
@@ -90,6 +91,9 @@ class _WalletPageState extends ConsumerState<WalletPage>
               keyboardType: const TextInputType.numberWithOptions(
                 decimal: true,
               ),
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}')),
+              ],
               decoration: const InputDecoration(
                 labelText: 'Amount (₹)',
                 hintText: 'Enter amount',
@@ -124,6 +128,7 @@ class _WalletPageState extends ConsumerState<WalletPage>
               minimumSize: const Size(140, 44),
             ),
             onPressed: () async {
+              FocusManager.instance.primaryFocus?.unfocus();
               final amt = double.tryParse(amountController.text.trim());
               if (amt == null || amt <= 0) {
                 ScaffoldMessenger.of(context).showSnackBar(
