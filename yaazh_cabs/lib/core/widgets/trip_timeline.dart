@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:yaazh_cabs/app/constants.dart';
 
 class TripTimeline extends StatelessWidget {
   final String pickupAddress;
@@ -18,109 +19,111 @@ class TripTimeline extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final lineColor = isDark ? AppConstants.borderDark : AppConstants.lightGrey;
 
     return Column(
       children: [
-        // Pickup node
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        _TimelineNode(
+          icon: Icons.radio_button_checked,
+          iconColor: AppConstants.gold,
+          label: 'PICKUP',
+          labelColor: AppConstants.gold,
+          address: pickupAddress,
+          time: pickupTime,
+          showLine: true,
+          lineColor: lineColor,
+        ),
+        _TimelineNode(
+          icon: Icons.location_on_rounded,
+          iconColor: AppConstants.navy,
+          label: 'DESTINATION',
+          labelColor: AppConstants.navy,
+          address: dropAddress,
+          time: dropTime,
+          showLine: false,
+          lineColor: lineColor,
+        ),
+      ],
+    );
+  }
+}
+
+class _TimelineNode extends StatelessWidget {
+  final IconData icon;
+  final Color iconColor;
+  final String label;
+  final Color labelColor;
+  final String address;
+  final String? time;
+  final bool showLine;
+  final Color lineColor;
+
+  const _TimelineNode({
+    required this.icon,
+    required this.iconColor,
+    required this.label,
+    required this.labelColor,
+    required this.address,
+    required this.time,
+    required this.showLine,
+    required this.lineColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Column(
           children: [
-            Column(
-              children: [
-                const Icon(Icons.radio_button_checked, color: Color(0xFF10B981), size: 20),
-                Container(
-                  width: 2,
-                  height: 32,
-                  color: isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1),
-                ),
-              ],
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        'PICKUP',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF10B981),
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                      if (pickupTime != null)
-                        Text(
-                          pickupTime!,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
-                          ),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    pickupAddress,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: theme.colorScheme.onSurface,
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            Icon(icon, color: iconColor, size: 20),
+            if (showLine)
+              Container(width: 2, height: 36, color: lineColor),
           ],
         ),
-        // Drop node
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Icon(Icons.location_on, color: Colors.redAccent, size: 20),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        'DESTINATION',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.redAccent,
-                          letterSpacing: 0.5,
+        const SizedBox(width: 12),
+        Expanded(
+          child: Padding(
+            padding: EdgeInsets.only(bottom: showLine ? 10 : 0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: labelColor,
                         ),
                       ),
-                      if (dropTime != null)
-                        Text(
-                          dropTime!,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
-                          ),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 2),
+                    ),
+                    if (time != null)
+                      Text(
+                        time!,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodySmall,
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 2),
                   Text(
-                    dropAddress,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: theme.colorScheme.onSurface,
+                    address,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      height: 1.35,
+                      color: AppConstants.navy,
                     ),
                   ),
-                ],
-              ),
+              ],
             ),
-          ],
+          ),
         ),
       ],
     );

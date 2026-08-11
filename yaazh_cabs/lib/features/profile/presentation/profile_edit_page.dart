@@ -75,7 +75,9 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
       appBar: AppBar(title: const Text('Edit profile')),
       body: _saving
           ? const AppLoadingView(message: 'Saving profile…')
-          : SingleChildScrollView(
+          : SafeArea(
+              top: false,
+              child: SingleChildScrollView(
               padding: const EdgeInsets.all(AppConstants.paddingL),
               child: Form(
                 key: _formKey,
@@ -84,11 +86,9 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
                   children: [
                     Text(
                       'Phone ${user?.phone ?? ''} cannot be changed here. Ask fleet admin if you need a new number.',
-                      style: const TextStyle(
-                        fontSize: 13,
-                        height: 1.4,
-                        color: AppConstants.textSecondaryLight,
-                      ),
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            height: 1.45,
+                          ),
                     ),
                     const SizedBox(height: 20),
                     TextFormField(
@@ -141,6 +141,7 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
                   ],
                 ),
               ),
+            ),
             ),
     );
   }

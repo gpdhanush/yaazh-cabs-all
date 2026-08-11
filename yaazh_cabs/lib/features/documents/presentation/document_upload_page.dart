@@ -258,7 +258,9 @@ class _DocumentUploadPageState extends ConsumerState<DocumentUploadPage> {
       appBar: AppBar(title: const Text('Upload document')),
       body: _submitting
           ? const AppLoadingView(message: 'Uploading document…')
-          : SingleChildScrollView(
+          : SafeArea(
+              top: false,
+              child: SingleChildScrollView(
               padding: const EdgeInsets.all(AppConstants.paddingL),
               child: Form(
                 key: _formKey,
@@ -268,18 +270,18 @@ class _DocumentUploadPageState extends ConsumerState<DocumentUploadPage> {
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: AppConstants.infoColor.withValues(alpha: 0.08),
+                        color: AppConstants.gold.withValues(alpha: 0.12),
                         borderRadius:
                             BorderRadius.circular(AppConstants.borderRadiusL),
                         border: Border.all(
-                          color: AppConstants.infoColor.withValues(alpha: 0.2),
+                          color: AppConstants.gold.withValues(alpha: 0.3),
                         ),
                       ),
                       child: const Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Icon(Icons.info_outline_rounded,
-                              color: AppConstants.infoColor),
+                              color: AppConstants.navy),
                           SizedBox(width: 12),
                           Expanded(
                             child: Text(
@@ -360,8 +362,8 @@ class _DocumentUploadPageState extends ConsumerState<DocumentUploadPage> {
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(
                             color: _pickedFile == null
-                                ? const Color(0xFFCBD5E1)
-                                : AppConstants.successColor,
+                                ? AppConstants.lightGrey
+                                : AppConstants.gold,
                             width: 1.5,
                           ),
                         ),
@@ -475,6 +477,7 @@ class _DocumentUploadPageState extends ConsumerState<DocumentUploadPage> {
                   ],
                 ),
               ),
+            ),
             ),
     );
   }

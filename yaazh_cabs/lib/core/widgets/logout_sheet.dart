@@ -33,7 +33,7 @@ class _LogoutSheet extends StatelessWidget {
                   width: 40,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFE2E8F0),
+                    color: AppConstants.lightGrey,
                     borderRadius: BorderRadius.circular(99),
                   ),
                 ),
@@ -52,23 +52,17 @@ class _LogoutSheet extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 16),
-                const Text(
+                Text(
                   'Log out?',
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: -0.3,
-                  ),
+                  style: Theme.of(context).textTheme.headlineSmall,
                 ),
                 const SizedBox(height: 8),
-                const Text(
+                Text(
                   'You will need your phone and password to sign back in. Active trip tracking will stop.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 14,
-                    height: 1.4,
-                    color: AppConstants.textSecondaryLight,
-                  ),
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: AppConstants.textSecondaryLight,
+                      ),
                 ),
                 const SizedBox(height: 24),
                 SizedBox(

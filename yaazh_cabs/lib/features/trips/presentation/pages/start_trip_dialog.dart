@@ -72,9 +72,9 @@ class _StartTripDialogState extends ConsumerState<StartTripDialog> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Enter the initial vehicle odometer reading (in KM) before beginning the journey.',
-              style: TextStyle(fontSize: 13, color: Colors.grey),
+            Text(
+              'Enter the start odometer reading (km) before beginning the journey.',
+              style: Theme.of(context).textTheme.bodySmall,
             ),
             const SizedBox(height: 16),
             TextFormField(

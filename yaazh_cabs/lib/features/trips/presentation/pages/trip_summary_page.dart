@@ -69,19 +69,16 @@ class _TripSummaryPageState extends ConsumerState<TripSummaryPage> {
                             ),
                           ),
                           const SizedBox(height: 12),
-                          const Text(
-                            'Trip Completed Successfully!',
+                          Text(
+                            'Trip completed',
                             textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                            ),
+                            style: Theme.of(context).textTheme.headlineSmall,
                           ),
                           const SizedBox(height: 4),
                           Text(
                             trip.bookingCode,
                             textAlign: TextAlign.center,
-                            style: const TextStyle(color: Colors.grey),
+                            style: Theme.of(context).textTheme.bodySmall,
                           ),
                           const SizedBox(height: 24),
 
@@ -98,16 +95,19 @@ class _TripSummaryPageState extends ConsumerState<TripSummaryPage> {
                                     mainAxisAlignment:
                                         MainAxisAlignment.spaceBetween,
                                     children: [
-                                      const Text(
-                                        'FARE & PAYMENT SUMMARY',
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.bold,
-                                          color:
-                                              AppConstants.textSecondaryLight,
+                                      Expanded(
+                                        child: Text(
+                                          'FARE SUMMARY',
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .labelMedium,
                                         ),
                                       ),
-                                      StatusChip.forStatus(trip.paymentStatus),
+                                      Flexible(
+                                        child: StatusChip.forStatus(
+                                          trip.paymentStatus,
+                                        ),
+                                      ),
                                     ],
                                   ),
                                   const Divider(height: 20),
@@ -148,13 +148,10 @@ class _TripSummaryPageState extends ConsumerState<TripSummaryPage> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Text(
-                                    'ROUTE SUMMARY',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.bold,
-                                      color: AppConstants.textSecondaryLight,
-                                    ),
+                                  Text(
+                                    'ROUTE',
+                                    style:
+                                        Theme.of(context).textTheme.labelMedium,
                                   ),
                                   const SizedBox(height: 16),
                                   TripTimeline(
@@ -197,10 +194,18 @@ class _RowItem extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(fontSize: 13)),
+          Expanded(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ),
+          const SizedBox(width: 8),
           Text(
             value,
-            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+            style: Theme.of(context).textTheme.titleSmall,
           ),
         ],
       ),

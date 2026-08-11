@@ -89,7 +89,9 @@ class _DocumentsPageState extends ConsumerState<DocumentsPage> {
         icon: const Icon(Icons.upload_file_rounded),
         label: const Text('Upload'),
       ),
-      body: _documents.isEmpty
+      body: SafeArea(
+        top: false,
+        child: _documents.isEmpty
           ? AppEmptyView(
               icon: Icons.folder_shared_outlined,
               title: 'No documents yet',
@@ -114,7 +116,7 @@ class _DocumentsPageState extends ConsumerState<DocumentsPage> {
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                      border: Border.all(color: AppConstants.lightGrey),
                     ),
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -140,21 +142,28 @@ class _DocumentsPageState extends ConsumerState<DocumentsPage> {
                                 doc.documentType
                                     .replaceAll('_', ' ')
                                     .toUpperCase(),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.w800,
+                                  color: AppConstants.navy,
                                 ),
                               ),
                               if (doc.documentNo != null) ...[
                                 const SizedBox(height: 4),
                                 Text(
                                   'No: ${doc.documentNo}',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                   style: const TextStyle(fontSize: 13),
                                 ),
                               ],
                               const SizedBox(height: 4),
                               Text(
                                 'Expiry: $expiryStr',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(
                                   fontSize: 12,
                                   color: AppConstants.textSecondaryLight,
@@ -163,13 +172,16 @@ class _DocumentsPageState extends ConsumerState<DocumentsPage> {
                             ],
                           ),
                         ),
-                        StatusChip.forStatus(doc.verificationStatus),
+                        Flexible(
+                          child: StatusChip.forStatus(doc.verificationStatus),
+                        ),
                       ],
                     ),
                   );
                 },
               ),
             ),
+      ),
     );
   }
 }

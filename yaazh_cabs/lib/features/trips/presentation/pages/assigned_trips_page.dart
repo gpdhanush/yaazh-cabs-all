@@ -7,6 +7,7 @@ import 'package:yaazh_cabs/core/network/connectivity_provider.dart';
 import 'package:yaazh_cabs/core/widgets/app_error_view.dart';
 import 'package:yaazh_cabs/core/widgets/app_loading_view.dart';
 import 'package:yaazh_cabs/core/widgets/app_state_pages.dart';
+import 'package:yaazh_cabs/core/widgets/app_surface.dart';
 import 'package:yaazh_cabs/core/widgets/status_chip.dart';
 import 'package:yaazh_cabs/core/widgets/trip_timeline.dart';
 import 'package:yaazh_cabs/features/trips/domain/booking.dart';
@@ -43,7 +44,9 @@ class AssignedTripsPage extends ConsumerWidget {
           ),
         ],
       ),
-      body: tripsState.when(
+      body: SafeArea(
+        top: false,
+        child: tripsState.when(
         loading: () =>
             const AppLoadingView(message: 'Loading assignments…'),
         error: (error, st) => AppErrorView(
@@ -57,6 +60,7 @@ class AssignedTripsPage extends ConsumerWidget {
 
           if (activeTrips.isEmpty) {
             return RefreshIndicator(
+              color: AppConstants.gold,
               onRefresh: () =>
                   ref.read(tripListNotifierProvider.notifier).refresh(),
               child: ListView(
@@ -77,6 +81,7 @@ class AssignedTripsPage extends ConsumerWidget {
           }
 
           return RefreshIndicator(
+            color: AppConstants.gold,
             onRefresh: () =>
                 ref.read(tripListNotifierProvider.notifier).refresh(),
             child: ListView.separated(
@@ -89,6 +94,7 @@ class AssignedTripsPage extends ConsumerWidget {
             ),
           );
         },
+        ),
       ),
     );
   }
@@ -101,93 +107,79 @@ class _AssignedTripCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final formattedDate = trip.pickupAt != null
         ? DateFormat('dd MMM yyyy, hh:mm a').format(trip.pickupAt!)
         : 'As scheduled';
 
-    return Material(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(18),
-      child: InkWell(
-        onTap: () => context.push('/trips/${trip.id}'),
-        borderRadius: BorderRadius.circular(18),
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: const Color(0xFFE2E8F0)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    return AppSurfaceCard(
+      onTap: () => context.push('/trips/${trip.id}'),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      trip.bookingCode,
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ),
-                  StatusChip.forStatus(trip.status),
-                ],
+              Expanded(
+                child: Text(
+                  trip.bookingCode,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.titleMedium,
+                ),
               ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  const Icon(
-                    Icons.schedule_rounded,
-                    size: 14,
-                    color: AppConstants.accentHover,
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    formattedDate,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: AppConstants.textSecondaryLight,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
+              const SizedBox(width: 8),
+              Flexible(child: StatusChip.forStatus(trip.status)),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              const Icon(
+                Icons.schedule_rounded,
+                size: 14,
+                color: AppConstants.gold,
               ),
-              const SizedBox(height: 14),
-              TripTimeline(
-                pickupAddress: trip.pickupAddress,
-                dropAddress: trip.dropAddress,
-              ),
-              const SizedBox(height: 14),
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      trip.customerName,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                  const Text(
-                    'Open',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w800,
-                      color: AppConstants.accentHover,
-                    ),
-                  ),
-                  const Icon(
-                    Icons.chevron_right_rounded,
-                    size: 18,
-                    color: AppConstants.accentHover,
-                  ),
-                ],
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  formattedDate,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodySmall,
+                ),
               ),
             ],
           ),
-        ),
+          const SizedBox(height: 14),
+          TripTimeline(
+            pickupAddress: trip.pickupAddress,
+            dropAddress: trip.dropAddress,
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  trip.customerName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.titleSmall,
+                ),
+              ),
+              Text(
+                'Open',
+                style: theme.textTheme.titleSmall?.copyWith(
+                  color: AppConstants.navy,
+                ),
+              ),
+              const Icon(
+                Icons.chevron_right_rounded,
+                size: 18,
+                color: AppConstants.navy,
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

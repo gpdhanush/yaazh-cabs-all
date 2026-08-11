@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:yaazh_cabs/app/constants.dart';
+import 'package:yaazh_cabs/core/firebase/analytics_service.dart';
+import 'package:yaazh_cabs/core/notifications/push_notification_service.dart';
 import 'package:yaazh_cabs/features/auth/presentation/auth_viewmodel.dart';
 
 class SplashPage extends ConsumerStatefulWidget {
@@ -24,6 +26,12 @@ class _SplashPageState extends ConsumerState<SplashPage> {
 
     final status = ref.read(authNotifierProvider).status;
     if (status == AuthStatus.authenticated) {
+      final user = ref.read(authNotifierProvider).user;
+      if (user != null) {
+        await ref.read(analyticsServiceProvider).setDriver(user.id);
+      }
+      await ref.read(pushNotificationServiceProvider).start();
+      if (!mounted) return;
       context.go('/home');
     } else {
       context.go('/login');
@@ -33,41 +41,38 @@ class _SplashPageState extends ConsumerState<SplashPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppConstants.primaryColor,
-      body: Center(
+      backgroundColor: AppConstants.navy,
+      body: SafeArea(
+        child: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: AppConstants.accentColor,
-                borderRadius: BorderRadius.circular(20),
+                color: AppConstants.gold,
+                borderRadius: BorderRadius.circular(22),
               ),
               child: const Icon(
                 Icons.local_taxi_rounded,
                 size: 48,
-                color: Colors.black,
+                color: AppConstants.black,
               ),
             ),
             const SizedBox(height: 24),
-            const Text(
+            Text(
               'Yaazh Cabs',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 28,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 0.5,
-              ),
+              style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                    color: AppConstants.white,
+                  ),
             ),
             const SizedBox(height: 6),
             Text(
-              'Driver',
-              style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.7),
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-              ),
+              'DRIVER',
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: AppConstants.gold,
+                    letterSpacing: 2.4,
+                  ),
             ),
             const SizedBox(height: 40),
             const SizedBox(
@@ -75,10 +80,11 @@ class _SplashPageState extends ConsumerState<SplashPage> {
               height: 28,
               child: CircularProgressIndicator(
                 strokeWidth: 2.5,
-                color: AppConstants.accentColor,
+                color: AppConstants.gold,
               ),
             ),
           ],
+        ),
         ),
       ),
     );

@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:yaazh_cabs/app/constants.dart';
 import 'package:yaazh_cabs/core/network/api_exception.dart';
+import 'package:yaazh_cabs/core/network/firebase_perf_interceptor.dart';
 import 'package:yaazh_cabs/core/storage/storage_service.dart';
 
 final dioProvider = Provider<Dio>((ref) {
@@ -25,6 +26,8 @@ final dioProvider = Provider<Dio>((ref) {
 
   final storage = ref.watch(storageServiceProvider);
   var isRefreshing = false;
+
+  dio.interceptors.add(FirebasePerfInterceptor());
 
   dio.interceptors.add(
     InterceptorsWrapper(

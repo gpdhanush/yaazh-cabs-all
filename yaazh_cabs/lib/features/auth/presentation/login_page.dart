@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:yaazh_cabs/app/constants.dart';
+import 'package:yaazh_cabs/core/firebase/analytics_service.dart';
 import 'package:yaazh_cabs/core/network/connectivity_provider.dart';
+import 'package:yaazh_cabs/core/notifications/push_notification_service.dart';
 import 'package:yaazh_cabs/core/widgets/app_state_pages.dart';
 import 'package:yaazh_cabs/features/auth/presentation/auth_viewmodel.dart';
 
@@ -32,7 +34,14 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           _phoneController.text.trim(),
           _passwordController.text,
         );
-    if (success && mounted) context.go('/home');
+    if (success && mounted) {
+      final user = ref.read(authNotifierProvider).user;
+      final analytics = ref.read(analyticsServiceProvider);
+      if (user != null) await analytics.setDriver(user.id);
+      await analytics.logLogin();
+      await ref.read(pushNotificationServiceProvider).start();
+      if (mounted) context.go('/home');
+    }
   }
 
   @override
@@ -40,6 +49,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     final authState = ref.watch(authNotifierProvider);
     final isLoading = authState.status == AuthStatus.loading;
     final online = ref.watch(isOnlineProvider);
+    final theme = Theme.of(context);
 
     if (!online) {
       return OfflinePage(
@@ -53,8 +63,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [Color(0xFF0F172A), Color(0xFF1E293B), Color(0xFFF8FAFC)],
-            stops: [0, 0.42, 0.42],
+            colors: [AppConstants.navy, AppConstants.black, AppConstants.bgLight],
+            stops: [0, 0.4, 0.4],
           ),
         ),
         child: SafeArea(
@@ -70,42 +80,39 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                       width: 72,
                       height: 72,
                       decoration: BoxDecoration(
-                        color: AppConstants.accentColor,
+                        color: AppConstants.gold,
                         borderRadius: BorderRadius.circular(22),
                       ),
                       child: const Icon(
                         Icons.local_taxi_rounded,
                         size: 38,
-                        color: Colors.black,
+                        color: AppConstants.black,
                       ),
                     ),
                     const SizedBox(height: 18),
-                    const Text(
+                    Text(
                       'Yaazh Cabs',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 28,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: -0.5,
+                      style: theme.textTheme.displaySmall?.copyWith(
+                        color: AppConstants.white,
                       ),
                     ),
+                    const SizedBox(height: 4),
                     Text(
                       'Driver workspace',
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.7),
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: AppConstants.white.withValues(alpha: 0.72),
                       ),
                     ),
                     const SizedBox(height: 28),
                     Container(
                       padding: const EdgeInsets.all(22),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: AppConstants.white,
                         borderRadius: BorderRadius.circular(22),
+                        border: Border.all(color: AppConstants.lightGrey),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.08),
+                            color: AppConstants.black.withValues(alpha: 0.08),
                             blurRadius: 24,
                             offset: const Offset(0, 12),
                           ),
@@ -116,20 +123,11 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            const Text(
-                              'Sign in',
-                              style: TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
+                            Text('Sign in', style: theme.textTheme.headlineSmall),
                             const SizedBox(height: 6),
-                            const Text(
+                            Text(
                               'Use your registered driver phone and password.',
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: AppConstants.textSecondaryLight,
-                              ),
+                              style: theme.textTheme.bodySmall,
                             ),
                             const SizedBox(height: 20),
                             if (authState.status == AuthStatus.error &&
@@ -143,10 +141,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                                 ),
                                 child: Text(
                                   authState.errorMessage!,
-                                  style: const TextStyle(
+                                  style: theme.textTheme.bodySmall?.copyWith(
                                     color: AppConstants.errorColor,
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600,
+                                    fontWeight: FontWeight.w700,
                                   ),
                                 ),
                               ),
@@ -215,7 +212,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                                       height: 20,
                                       child: CircularProgressIndicator(
                                         strokeWidth: 2,
-                                        color: Colors.black,
+                                        color: AppConstants.black,
                                       ),
                                     )
                                   : const Text('CONTINUE'),

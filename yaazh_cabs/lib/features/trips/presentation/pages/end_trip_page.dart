@@ -91,14 +91,16 @@ class _EndTripPageState extends ConsumerState<EndTripPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Text(
-                  'Final Odometer Reading',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                Text(
+                  'Final odometer',
+                  style: Theme.of(context).textTheme.headlineSmall,
                 ),
                 const SizedBox(height: 8),
-                const Text(
-                  'Record the vehicle meter reading upon reaching destination to calculate actual trip distance.',
-                  style: TextStyle(color: Colors.grey, fontSize: 13),
+                Text(
+                  'Record the vehicle meter reading at the destination to calculate trip distance.',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: AppConstants.textSecondaryLight,
+                      ),
                 ),
                 const SizedBox(height: 24),
 
@@ -106,7 +108,7 @@ class _EndTripPageState extends ConsumerState<EndTripPage> {
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Colors.grey.withOpacity(0.1),
+                    color: AppConstants.lightGrey.withValues(alpha: 0.55),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Row(
@@ -165,7 +167,7 @@ class _EndTripPageState extends ConsumerState<EndTripPage> {
                             color: Colors.black,
                           ),
                         )
-                      : const Text('SUBMIT & COMPLETE RIDE'),
+                      : const Text('COMPLETE RIDE'),
                 ),
               ],
             ),

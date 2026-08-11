@@ -113,32 +113,29 @@ class _PaymentCollectionPageState
                 children: [
                   // Fare Header Card
                   Card(
-                    color: AppConstants.accentColor.withOpacity(0.15),
+                    color: AppConstants.gold.withValues(alpha: 0.14),
                     child: Padding(
                       padding: const EdgeInsets.all(AppConstants.paddingM),
                       child: Column(
                         children: [
-                          const Text(
-                            'BALANCE DUE FROM CUSTOMER',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 0.5,
-                            ),
+                          Text(
+                            'BALANCE DUE',
+                            style: Theme.of(context).textTheme.labelMedium,
                           ),
                           const SizedBox(height: 8),
-                          Text(
-                            '₹${balanceDue.toStringAsFixed(2)}',
-                            style: const TextStyle(
-                              fontSize: 32,
-                              fontWeight: FontWeight.w900,
-                              color: AppConstants.primaryColor,
+                          FittedBox(
+                            child: Text(
+                              '₹${balanceDue.toStringAsFixed(2)}',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .displaySmall
+                                  ?.copyWith(color: AppConstants.navy),
                             ),
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'Booking Ref: ${trip.bookingCode}',
-                            style: const TextStyle(fontSize: 13, color: Colors.grey),
+                            trip.bookingCode,
+                            style: Theme.of(context).textTheme.bodySmall,
                           ),
                         ],
                       ),
@@ -159,9 +156,9 @@ class _PaymentCollectionPageState
                   const SizedBox(height: 20),
 
                   // Payment Method Selector
-                  const Text(
-                    'Payment Method',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                  Text(
+                    'Payment method',
+                    style: Theme.of(context).textTheme.titleSmall,
                   ),
                   const SizedBox(height: 10),
                   Row(
@@ -211,7 +208,7 @@ class _PaymentCollectionPageState
                               color: Colors.black,
                             ),
                           )
-                        : const Text('CONFIRM PAYMENT RECEIVED'),
+                        : const Text('CONFIRM PAYMENT'),
                   ),
                 ],
               ),
@@ -245,22 +242,27 @@ class _MethodChip extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(
-            color: selected ? AppConstants.accentColor : Colors.grey.withOpacity(0.1),
+            color: selected
+                ? AppConstants.gold
+                : AppConstants.lightGrey.withValues(alpha: 0.5),
             borderRadius: BorderRadius.circular(10),
             border: Border.all(
-              color: selected ? AppConstants.accentColor : Colors.grey.withOpacity(0.3),
+              color: selected ? AppConstants.gold : AppConstants.lightGrey,
             ),
           ),
           child: Column(
             children: [
-              Icon(icon, color: selected ? Colors.black : Colors.grey.shade700),
+              Icon(
+                icon,
+                color: selected ? AppConstants.black : AppConstants.navy,
+              ),
               const SizedBox(height: 4),
               Text(
                 label,
                 style: TextStyle(
-                  fontWeight: FontWeight.bold,
+                  fontWeight: FontWeight.w800,
                   fontSize: 12,
-                  color: selected ? Colors.black : Colors.grey.shade700,
+                  color: selected ? AppConstants.black : AppConstants.navy,
                 ),
               ),
             ],

@@ -25,21 +25,21 @@ class AppBottomNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
-            blurRadius: 20,
-            offset: const Offset(0, -4),
+        color: isDark ? AppConstants.navy : AppConstants.white,
+        border: Border(
+          top: BorderSide(
+            color: isDark ? AppConstants.borderDark : AppConstants.lightGrey,
           ),
-        ],
+        ),
       ),
       child: SafeArea(
         top: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
+          padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
           child: Row(
             children: List.generate(_items.length, (index) {
               final item = _items[index];
@@ -86,35 +86,38 @@ class _NavButton extends StatelessWidget {
       label: item.label,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(14),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 220),
           curve: Curves.easeOutCubic,
           padding: const EdgeInsets.symmetric(vertical: 8),
           decoration: BoxDecoration(
             color: selected
-                ? AppConstants.accentColor.withValues(alpha: 0.16)
+                ? AppConstants.gold.withValues(alpha: 0.16)
                 : Colors.transparent,
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(14),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(
                 selected ? item.selectedIcon : item.icon,
-                size: 24,
+                size: 22,
                 color: selected
-                    ? AppConstants.accentHover
+                    ? AppConstants.navy
                     : AppConstants.textSecondaryLight,
               ),
               const SizedBox(height: 4),
               Text(
                 item.label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontSize: 11,
+                  height: 1.1,
                   fontWeight: selected ? FontWeight.w800 : FontWeight.w500,
                   color: selected
-                      ? AppConstants.primaryColor
+                      ? AppConstants.navy
                       : AppConstants.textSecondaryLight,
                 ),
               ),

@@ -185,21 +185,15 @@ class _StateScaffold extends StatelessWidget {
               Text(
                 title,
                 textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: -0.3,
-                ),
+                style: Theme.of(context).textTheme.headlineSmall,
               ),
               const SizedBox(height: 10),
               Text(
                 message,
                 textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 15,
-                  height: 1.45,
-                  color: AppConstants.textSecondaryLight,
-                ),
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: AppConstants.textSecondaryLight,
+                    ),
               ),
               if (primaryLabel != null && onPrimary != null) ...[
                 const SizedBox(height: 28),

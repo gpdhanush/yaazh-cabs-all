@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:yaazh_cabs/app/constants.dart';
+import 'package:yaazh_cabs/core/firebase/analytics_service.dart';
+import 'package:yaazh_cabs/core/widgets/app_surface.dart';
 import 'package:yaazh_cabs/core/widgets/logout_sheet.dart';
 import 'package:yaazh_cabs/features/auth/presentation/auth_viewmodel.dart';
 
@@ -10,32 +12,28 @@ class SettingsPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
     final user = ref.watch(authNotifierProvider).user;
 
     return Scaffold(
       backgroundColor: AppConstants.bgLight,
       appBar: AppBar(title: const Text('Settings')),
-      body: ListView(
+      body: SafeArea(
+        top: false,
+        child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
         children: [
           if (user != null) ...[
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: const Color(0xFFE2E8F0)),
-              ),
+            AppSurfaceCard(
               child: Row(
                 children: [
                   CircleAvatar(
                     radius: 24,
-                    backgroundColor: AppConstants.accentColor,
+                    backgroundColor: AppConstants.gold,
                     child: Text(
                       user.name.isNotEmpty ? user.name[0].toUpperCase() : 'D',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w800,
-                        color: Colors.black,
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        color: AppConstants.black,
                       ),
                     ),
                   ),
@@ -46,17 +44,15 @@ class SettingsPage extends ConsumerWidget {
                       children: [
                         Text(
                           user.name,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w800,
-                            fontSize: 16,
-                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.titleMedium,
                         ),
                         Text(
                           user.phone,
-                          style: const TextStyle(
-                            color: AppConstants.textSecondaryLight,
-                            fontSize: 13,
-                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.bodySmall,
                         ),
                       ],
                     ),
@@ -70,7 +66,8 @@ class SettingsPage extends ConsumerWidget {
             ),
             const SizedBox(height: 20),
           ],
-          const _SectionLabel('Account'),
+          const AppSectionLabel('Account'),
+          const SizedBox(height: 8),
           _SettingsGroup(
             children: [
               _SettingsTile(
@@ -88,7 +85,8 @@ class SettingsPage extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: 20),
-          const _SectionLabel('Support'),
+          const AppSectionLabel('Support'),
+          const SizedBox(height: 8),
           _SettingsGroup(
             children: [
               _SettingsTile(
@@ -114,10 +112,11 @@ class SettingsPage extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: 20),
-          const _SectionLabel('About'),
-          _SettingsGroup(
+          const AppSectionLabel('About'),
+          const SizedBox(height: 8),
+          const _SettingsGroup(
             children: [
-              const _SettingsTile(
+              _SettingsTile(
                 icon: Icons.info_outline_rounded,
                 title: 'App version',
                 trailingText: '1.0.0',
@@ -140,32 +139,12 @@ class SettingsPage extends ConsumerWidget {
             onPressed: () async {
               final confirm = await showLogoutSheet(context);
               if (!confirm) return;
+              await ref.read(analyticsServiceProvider).clearUser();
               await ref.read(authNotifierProvider.notifier).logout();
               if (context.mounted) context.go('/login');
             },
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _SectionLabel extends StatelessWidget {
-  final String text;
-
-  const _SectionLabel(this.text);
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(left: 4, bottom: 8),
-      child: Text(
-        text.toUpperCase(),
-        style: const TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w800,
-          letterSpacing: 0.7,
-          color: AppConstants.textSecondaryLight,
         ),
       ),
     );
@@ -179,12 +158,8 @@ class _SettingsGroup extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-      ),
+    return AppSurfaceCard(
+      padding: EdgeInsets.zero,
       child: Column(
         children: [
           for (var i = 0; i < children.length; i++) ...[
@@ -214,6 +189,7 @@ class _SettingsTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return ListTile(
       onTap: onTap,
       leading: Container(
@@ -223,32 +199,28 @@ class _SettingsTile extends StatelessWidget {
           color: AppConstants.bgLight,
           borderRadius: BorderRadius.circular(10),
         ),
-        child: Icon(icon, size: 20, color: AppConstants.primaryColor),
+        child: Icon(icon, size: 20, color: AppConstants.navy),
       ),
       title: Text(
         title,
-        style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: theme.textTheme.titleMedium,
       ),
       subtitle: subtitle == null
           ? null
           : Text(
               subtitle!,
-              style: const TextStyle(
-                fontSize: 12,
-                color: AppConstants.textSecondaryLight,
-              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.bodySmall,
             ),
       trailing: trailingText != null
-          ? Text(
-              trailingText!,
-              style: const TextStyle(
-                color: AppConstants.textSecondaryLight,
-                fontWeight: FontWeight.w600,
-              ),
-            )
+          ? Text(trailingText!, style: theme.textTheme.bodySmall)
           : (onTap == null
               ? null
-              : const Icon(Icons.chevron_right_rounded, color: Colors.grey)),
+              : const Icon(Icons.chevron_right_rounded,
+                  color: AppConstants.textSecondaryLight)),
     );
   }
 }

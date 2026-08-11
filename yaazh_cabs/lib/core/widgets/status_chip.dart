@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:yaazh_cabs/app/constants.dart';
 
 class StatusChip extends StatelessWidget {
   final String label;
@@ -22,8 +23,8 @@ class StatusChip extends StatelessWidget {
       case 'approved':
         return StatusChip(
           label: _formatLabel(status),
-          color: const Color(0xFFDCFCE7),
-          textColor: const Color(0xFF15803D),
+          color: const Color(0xFFE8F6EE),
+          textColor: AppConstants.successColor,
         );
       case 'on_the_way':
       case 'driver_assigned':
@@ -31,8 +32,8 @@ class StatusChip extends StatelessWidget {
       case 'seen':
         return StatusChip(
           label: _formatLabel(status),
-          color: const Color(0xFFDBEAFE),
-          textColor: const Color(0xFF1D4ED8),
+          color: const Color(0xFFE8ECF4),
+          textColor: AppConstants.navy,
         );
       case 'arrived':
       case 'trip_started':
@@ -40,10 +41,11 @@ class StatusChip extends StatelessWidget {
       case 'busy':
       case 'processing':
       case 'pending':
+      case 'partial':
         return StatusChip(
           label: _formatLabel(status),
-          color: const Color(0xFFFEF3C7),
-          textColor: const Color(0xFFB45309),
+          color: const Color(0xFFFFF3DE),
+          textColor: const Color(0xFF8A5A00),
         );
       case 'cancelled':
       case 'rejected':
@@ -53,21 +55,15 @@ class StatusChip extends StatelessWidget {
       case 'unpaid':
         return StatusChip(
           label: _formatLabel(status),
-          color: const Color(0xFFFEE2E2),
-          textColor: const Color(0xFFB91C1C),
-        );
-      case 'partial':
-        return StatusChip(
-          label: _formatLabel(status),
-          color: const Color(0xFFFEF3C7),
-          textColor: const Color(0xFFB45309),
+          color: const Color(0xFFFDECEC),
+          textColor: AppConstants.errorColor,
         );
       case 'offline':
       default:
         return StatusChip(
           label: _formatLabel(status),
-          color: const Color(0xFFF1F5F9),
-          textColor: const Color(0xFF475569),
+          color: AppConstants.lightGrey,
+          textColor: AppConstants.textSecondaryLight,
         );
     }
   }
@@ -79,18 +75,21 @@ class StatusChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
         color: color,
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(
         label,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
         style: TextStyle(
-          color: textColor ?? Colors.black,
-          fontSize: 11,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 0.5,
+          color: textColor ?? AppConstants.navy,
+          fontSize: 10,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 0.4,
+          height: 1.2,
         ),
       ),
     );

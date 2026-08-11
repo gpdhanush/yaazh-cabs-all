@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../../../app/constants.dart';
 import '../../../core/widgets/app_error_view.dart';
 import '../../../core/widgets/app_loading_view.dart';
+import '../../../core/widgets/app_surface.dart';
 import '../../../core/widgets/status_chip.dart';
 import '../data/wallet_repository.dart';
 import '../domain/wallet.dart';
@@ -74,12 +75,15 @@ class _WalletPageState extends ConsumerState<WalletPage>
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Request Payout'),
+        title: const Text('Request payout'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Current Available Balance: ₹${_balance.toStringAsFixed(2)}'),
+            Text(
+              'Available: ₹${_balance.toStringAsFixed(2)}',
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
             const SizedBox(height: 16),
             TextFormField(
               controller: amountController,
@@ -88,14 +92,14 @@ class _WalletPageState extends ConsumerState<WalletPage>
               ),
               decoration: const InputDecoration(
                 labelText: 'Amount (₹)',
-                hintText: 'Enter amount to withdraw',
+                hintText: 'Enter amount',
                 prefixText: '₹ ',
               ),
             ),
             const SizedBox(height: 16),
             DropdownButtonFormField<String>(
-              value: selectedMethod,
-              decoration: const InputDecoration(labelText: 'Payout Method'),
+              initialValue: selectedMethod,
+              decoration: const InputDecoration(labelText: 'Payout method'),
               items: const [
                 DropdownMenuItem(value: 'upi', child: Text('UPI Transfer')),
                 DropdownMenuItem(
@@ -116,6 +120,9 @@ class _WalletPageState extends ConsumerState<WalletPage>
             child: const Text('CANCEL'),
           ),
           ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              minimumSize: const Size(140, 44),
+            ),
             onPressed: () async {
               final amt = double.tryParse(amountController.text.trim());
               if (amt == null || amt <= 0) {
@@ -147,7 +154,7 @@ class _WalletPageState extends ConsumerState<WalletPage>
                 }
               }
             },
-            child: const Text('SUBMIT REQUEST'),
+            child: const Text('SUBMIT'),
           ),
         ],
       ),
@@ -172,145 +179,161 @@ class _WalletPageState extends ConsumerState<WalletPage>
     }
 
     return Scaffold(
+      backgroundColor: AppConstants.bgLight,
       appBar: AppBar(
-        title: const Text('Wallet & Earnings'),
+        title: const Text('Wallet'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
+            icon: const Icon(Icons.refresh_rounded),
             onPressed: _fetchWalletData,
           ),
         ],
       ),
-      body: Column(
+      body: SafeArea(
+        top: false,
+        child: Column(
         children: [
-          // Balance Banner Card
           Container(
             width: double.infinity,
             margin: const EdgeInsets.all(AppConstants.paddingM),
             padding: const EdgeInsets.all(AppConstants.paddingL),
             decoration: BoxDecoration(
               gradient: const LinearGradient(
-                colors: [AppConstants.primaryColor, AppConstants.primaryLight],
+                colors: [AppConstants.navy, AppConstants.black],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
               borderRadius: BorderRadius.circular(AppConstants.borderRadiusL),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.2),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ],
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'TOTAL WALLET BALANCE',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.grey,
-                    letterSpacing: 0.5,
+                Text(
+                  'TOTAL BALANCE',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: AppConstants.gold,
                   ),
                 ),
                 const SizedBox(height: 8),
-                Text(
-                  '₹${_balance.toStringAsFixed(2)}',
-                  style: const TextStyle(
-                    fontSize: 34,
-                    fontWeight: FontWeight.w900,
-                    color: Colors.white,
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    '₹${_balance.toStringAsFixed(2)}',
+                    style: theme.textTheme.displaySmall?.copyWith(
+                      color: AppConstants.white,
+                      fontSize: 34,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 16),
                 ElevatedButton.icon(
-                  icon: const Icon(
-                    Icons.account_balance_outlined,
-                    color: Colors.black,
-                  ),
+                  icon: const Icon(Icons.account_balance_outlined),
                   label: const Text('REQUEST PAYOUT'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppConstants.accentColor,
-                    foregroundColor: Colors.black,
-                    minimumSize: const Size(double.infinity, 44),
-                  ),
                   onPressed: _showRequestPayoutDialog,
                 ),
               ],
             ),
           ),
-
           TabBar(
             controller: _tabController,
             tabs: const [
               Tab(text: 'Transactions'),
-              Tab(text: 'Payout Requests'),
+              Tab(text: 'Payouts'),
             ],
           ),
-
           Expanded(
             child: TabBarView(
               controller: _tabController,
               children: [
-                // Transactions List
                 _transactions.isEmpty
-                    ? const Center(
-                        child: Text('No wallet transactions recorded.'),
+                    ? Center(
+                        child: Text(
+                          'No wallet transactions recorded.',
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: AppConstants.textSecondaryLight,
+                          ),
+                        ),
                       )
                     : ListView.separated(
                         padding: const EdgeInsets.all(AppConstants.paddingM),
                         itemCount: _transactions.length,
-                        separatorBuilder: (ctx, i) => const Divider(),
+                        separatorBuilder: (ctx, i) =>
+                            const SizedBox(height: 10),
                         itemBuilder: (ctx, i) {
                           final txn = _transactions[i];
                           final isCredit = txn.transactionType == 'credit';
                           final dateStr = txn.createdAt != null
-                              ? DateFormat(
-                                  'dd MMM yyyy, hh:mm a',
-                                ).format(txn.createdAt!)
+                              ? DateFormat('dd MMM yyyy, hh:mm a')
+                                  .format(txn.createdAt!)
                               : '';
 
-                          return ListTile(
-                            leading: CircleAvatar(
-                              backgroundColor: isCredit
-                                  ? Colors.green.shade100
-                                  : Colors.red.shade100,
-                              child: Icon(
-                                isCredit
-                                    ? Icons.add_circle_outline_rounded
-                                    : Icons.remove_circle_outline_rounded,
-                                color: isCredit ? Colors.green : Colors.red,
-                              ),
+                          return AppSurfaceCard(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 10,
                             ),
-                            title: Text(
-                              txn.sourceType.replaceAll('_', ' ').toUpperCase(),
-                              style: const TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            subtitle: Text(
-                              dateStr,
-                              style: const TextStyle(fontSize: 11),
-                            ),
-                            trailing: Text(
-                              '${isCredit ? "+" : "-"}₹${txn.amount.toStringAsFixed(2)}',
-                              style: TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.bold,
-                                color: isCredit ? Colors.green : Colors.red,
-                              ),
+                            child: Row(
+                              children: [
+                                CircleAvatar(
+                                  backgroundColor: isCredit
+                                      ? const Color(0xFFE8F6EE)
+                                      : const Color(0xFFFDECEC),
+                                  child: Icon(
+                                    isCredit
+                                        ? Icons.add_circle_outline_rounded
+                                        : Icons.remove_circle_outline_rounded,
+                                    color: isCredit
+                                        ? AppConstants.successColor
+                                        : AppConstants.errorColor,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        txn.sourceType
+                                            .replaceAll('_', ' ')
+                                            .toUpperCase(),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: theme.textTheme.titleSmall,
+                                      ),
+                                      if (dateStr.isNotEmpty)
+                                        Text(
+                                          dateStr,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: theme.textTheme.bodySmall,
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  '${isCredit ? "+" : "-"}₹${txn.amount.toStringAsFixed(2)}',
+                                  style: theme.textTheme.titleMedium?.copyWith(
+                                    color: isCredit
+                                        ? AppConstants.successColor
+                                        : AppConstants.errorColor,
+                                  ),
+                                ),
+                              ],
                             ),
                           );
                         },
                       ),
-
-                // Payouts List
                 _payouts.isEmpty
-                    ? const Center(
-                        child: Text('No payout requests submitted yet.'),
+                    ? Center(
+                        child: Text(
+                          'No payout requests submitted yet.',
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: AppConstants.textSecondaryLight,
+                          ),
+                        ),
                       )
                     : ListView.separated(
                         padding: const EdgeInsets.all(AppConstants.paddingM),
@@ -320,44 +343,35 @@ class _WalletPageState extends ConsumerState<WalletPage>
                         itemBuilder: (ctx, i) {
                           final po = _payouts[i];
                           final dateStr = po.createdAt != null
-                              ? DateFormat(
-                                  'dd MMM yyyy, hh:mm a',
-                                ).format(po.createdAt!)
+                              ? DateFormat('dd MMM yyyy, hh:mm a')
+                                  .format(po.createdAt!)
                               : '';
 
-                          return Card(
-                            child: Padding(
-                              padding: const EdgeInsets.all(
-                                AppConstants.paddingM,
-                              ),
-                              child: Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Column(
+                          return AppSurfaceCard(
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Column(
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         '₹${po.amount.toStringAsFixed(2)}',
-                                        style: const TextStyle(
-                                          fontSize: 18,
-                                          fontWeight: FontWeight.bold,
-                                        ),
+                                        style: theme.textTheme.titleLarge,
                                       ),
                                       const SizedBox(height: 4),
                                       Text(
-                                        'Method: ${po.method.toUpperCase()} • $dateStr',
-                                        style: const TextStyle(
-                                          fontSize: 12,
-                                          color: Colors.grey,
-                                        ),
+                                        '${po.method.replaceAll('_', ' ').toUpperCase()} · $dateStr',
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: theme.textTheme.bodySmall,
                                       ),
                                     ],
                                   ),
-                                  StatusChip.forStatus(po.status),
-                                ],
-                              ),
+                                ),
+                                const SizedBox(width: 8),
+                                Flexible(child: StatusChip.forStatus(po.status)),
+                              ],
                             ),
                           );
                         },
@@ -366,6 +380,7 @@ class _WalletPageState extends ConsumerState<WalletPage>
             ),
           ),
         ],
+        ),
       ),
     );
   }

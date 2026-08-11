@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:yaazh_cabs/app/constants.dart';
+import 'package:yaazh_cabs/core/widgets/app_surface.dart';
 import 'package:yaazh_cabs/core/widgets/status_chip.dart';
 import 'package:yaazh_cabs/features/auth/presentation/auth_viewmodel.dart';
 
@@ -10,6 +11,7 @@ class ProfilePage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
     final user = ref.watch(authNotifierProvider).user;
 
     return Scaffold(
@@ -25,8 +27,12 @@ class ProfilePage extends ConsumerWidget {
         ],
       ),
       body: user == null
-          ? const Center(child: Text('No profile loaded.'))
-          : ListView(
+          ? Center(
+              child: Text('No profile loaded.', style: theme.textTheme.bodyMedium),
+            )
+          : SafeArea(
+              top: false,
+              child: ListView(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
               children: [
                 Container(
@@ -35,7 +41,7 @@ class ProfilePage extends ConsumerWidget {
                     gradient: const LinearGradient(
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
-                      colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
+                      colors: [AppConstants.navy, AppConstants.black],
                     ),
                     borderRadius: BorderRadius.circular(22),
                   ),
@@ -43,41 +49,40 @@ class ProfilePage extends ConsumerWidget {
                     children: [
                       CircleAvatar(
                         radius: 38,
-                        backgroundColor: AppConstants.accentColor,
+                        backgroundColor: AppConstants.gold,
                         child: Text(
                           user.name.isNotEmpty
                               ? user.name[0].toUpperCase()
                               : 'D',
-                          style: const TextStyle(
-                            fontSize: 28,
-                            fontWeight: FontWeight.w800,
-                            color: Colors.black,
+                          style: theme.textTheme.headlineMedium?.copyWith(
+                            color: AppConstants.black,
                           ),
                         ),
                       ),
                       const SizedBox(height: 12),
                       Text(
                         user.name,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 22,
-                          fontWeight: FontWeight.w800,
+                        textAlign: TextAlign.center,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.headlineSmall?.copyWith(
+                          color: AppConstants.white,
                         ),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         user.phone,
-                        style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.7),
-                          fontSize: 14,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: AppConstants.white.withValues(alpha: 0.72),
                         ),
                       ),
                       const SizedBox(height: 12),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        alignment: WrapAlignment.center,
                         children: [
                           StatusChip.forStatus(user.verificationStatus),
-                          const SizedBox(width: 8),
                           StatusChip.forStatus(user.onlineStatus),
                         ],
                       ),
@@ -85,25 +90,30 @@ class ProfilePage extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(height: 16),
-                _InfoCard(
-                  children: [
-                    _InfoRow(
-                      icon: Icons.star_rounded,
-                      iconColor: Colors.amber,
-                      label: 'Average rating',
-                      value: '${user.ratingAvg.toStringAsFixed(1)} ★',
-                    ),
-                    _InfoRow(
-                      icon: Icons.email_outlined,
-                      label: 'Email',
-                      value: user.email ?? 'Not specified',
-                    ),
-                    _InfoRow(
-                      icon: Icons.badge_outlined,
-                      label: 'Driver ID',
-                      value: user.id,
-                    ),
-                  ],
+                AppSurfaceCard(
+                  padding: EdgeInsets.zero,
+                  child: Column(
+                    children: [
+                      _InfoRow(
+                        icon: Icons.star_rounded,
+                        iconColor: AppConstants.gold,
+                        label: 'Average rating',
+                        value: '${user.ratingAvg.toStringAsFixed(1)} ★',
+                      ),
+                      const Divider(height: 1),
+                      _InfoRow(
+                        icon: Icons.email_outlined,
+                        label: 'Email',
+                        value: user.email ?? 'Not specified',
+                      ),
+                      const Divider(height: 1),
+                      _InfoRow(
+                        icon: Icons.badge_outlined,
+                        label: 'Driver ID',
+                        value: user.id,
+                      ),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 16),
                 ElevatedButton.icon(
@@ -119,31 +129,7 @@ class ProfilePage extends ConsumerWidget {
                 ),
               ],
             ),
-    );
-  }
-}
-
-class _InfoCard extends StatelessWidget {
-  final List<Widget> children;
-
-  const _InfoCard({required this.children});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-      ),
-      child: Column(
-        children: [
-          for (var i = 0; i < children.length; i++) ...[
-            if (i > 0) const Divider(height: 1),
-            children[i],
-          ],
-        ],
-      ),
+            ),
     );
   }
 }
@@ -163,22 +149,15 @@ class _InfoRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return ListTile(
-      leading: Icon(icon, color: iconColor ?? AppConstants.primaryColor),
-      title: Text(
-        label,
-        style: const TextStyle(
-          fontSize: 12,
-          color: AppConstants.textSecondaryLight,
-        ),
-      ),
+      leading: Icon(icon, color: iconColor ?? AppConstants.navy),
+      title: Text(label, style: theme.textTheme.bodySmall),
       subtitle: Text(
         value,
-        style: const TextStyle(
-          fontSize: 15,
-          fontWeight: FontWeight.w700,
-          color: AppConstants.textPrimaryLight,
-        ),
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+        style: theme.textTheme.titleMedium,
       ),
     );
   }

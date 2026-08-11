@@ -21,32 +21,35 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Password Recovery'),
-      ),
+      backgroundColor: AppConstants.bgLight,
+      appBar: AppBar(title: const Text('Password recovery')),
       body: SafeArea(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(AppConstants.paddingL),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               if (!_submitted) ...[
-                const Text(
-                  'Reset Driver Account Password',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                Text(
+                  'Reset your password',
+                  style: theme.textTheme.headlineSmall,
                 ),
                 const SizedBox(height: 8),
-                const Text(
-                  'Password reset is managed by fleet admin. Enter your registered phone so ops can verify your account, or call the operations desk.',
-                  style: TextStyle(color: Colors.grey),
+                Text(
+                  'Password reset is managed by fleet admin. Enter your registered phone so ops can verify your account.',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: AppConstants.textSecondaryLight,
+                  ),
                 ),
                 const SizedBox(height: 24),
                 TextFormField(
                   controller: _phoneController,
                   keyboardType: TextInputType.phone,
                   decoration: const InputDecoration(
-                    labelText: 'Phone Number',
+                    labelText: 'Phone number',
                     hintText: 'e.g. 9876543210',
                     prefixIcon: Icon(Icons.phone_rounded),
                   ),
@@ -55,27 +58,30 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                 ElevatedButton(
                   onPressed: () {
                     if (_phoneController.text.trim().isNotEmpty) {
-                      setState(() {
-                        _submitted = true;
-                      });
+                      setState(() => _submitted = true);
                     }
                   },
-                  child: const Text('SUBMIT RECOVERY REQUEST'),
+                  child: const Text('SUBMIT REQUEST'),
                 ),
               ] else ...[
-                const Icon(Icons.check_circle_outline_rounded,
-                    color: Color(0xFF10B981), size: 64),
+                const Icon(
+                  Icons.check_circle_outline_rounded,
+                  color: AppConstants.gold,
+                  size: 64,
+                ),
                 const SizedBox(height: 16),
-                const Text(
-                  'Request Submitted',
+                Text(
+                  'Request submitted',
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                  style: theme.textTheme.headlineSmall,
                 ),
                 const SizedBox(height: 8),
-                const Text(
+                Text(
                   'Your password reset request has been logged. Please contact fleet admin or check your SMS.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.grey),
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: AppConstants.textSecondaryLight,
+                  ),
                 ),
                 const SizedBox(height: 32),
                 ElevatedButton(

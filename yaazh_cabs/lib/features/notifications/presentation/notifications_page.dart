@@ -5,6 +5,8 @@ import '../../../app/constants.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/widgets/app_error_view.dart';
 import '../../../core/widgets/app_loading_view.dart';
+import '../../../core/widgets/app_state_pages.dart';
+import '../../../core/widgets/app_surface.dart';
 
 class NotificationsPage extends ConsumerStatefulWidget {
   const NotificationsPage({super.key});
@@ -51,6 +53,8 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     if (_loading) {
       return const Scaffold(
         body: AppLoadingView(message: 'Loading notifications...'),
@@ -68,43 +72,29 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
     }
 
     return Scaffold(
+      backgroundColor: AppConstants.bgLight,
       appBar: AppBar(
-        title: const Text('Driver Notifications'),
+        title: const Text('Notifications'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
+            icon: const Icon(Icons.refresh_rounded),
             onPressed: _fetchNotifications,
           ),
         ],
       ),
-      body: _notifications.isEmpty
-          ? Center(
-              child: Padding(
-                padding: const EdgeInsets.all(32.0),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.notifications_off_outlined,
-                        size: 64, color: Colors.grey),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'No Notifications Available',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'System notifications, booking assignments, and admin alerts will appear here.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.grey),
-                    ),
-                  ],
-                ),
-              ),
+      body: SafeArea(
+        top: false,
+        child: _notifications.isEmpty
+          ? const AppEmptyView(
+              icon: Icons.notifications_off_outlined,
+              title: 'No notifications',
+              message:
+                  'System notifications, booking assignments, and admin alerts will appear here.',
             )
           : ListView.separated(
               padding: const EdgeInsets.all(AppConstants.paddingM),
               itemCount: _notifications.length,
-              separatorBuilder: (ctx, i) => const Divider(),
+              separatorBuilder: (ctx, i) => const SizedBox(height: 10),
               itemBuilder: (ctx, i) {
                 final item = _notifications[i];
                 final title = item['title'] ?? 'Notification';
@@ -114,31 +104,56 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
                         .format(DateTime.parse(item['created_at'].toString()))
                     : '';
 
-                return ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: AppConstants.accentColor.withOpacity(0.2),
-                    child: const Icon(Icons.notifications_active_rounded,
-                        color: Colors.black),
-                  ),
-                  title: Text(
-                    title,
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                  ),
-                  subtitle: Column(
+                return AppSurfaceCard(
+                  child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const SizedBox(height: 4),
-                      Text(body, style: const TextStyle(fontSize: 13)),
-                      const SizedBox(height: 4),
-                      Text(
-                        createdAtStr,
-                        style: const TextStyle(fontSize: 11, color: Colors.grey),
+                      CircleAvatar(
+                        backgroundColor:
+                            AppConstants.gold.withValues(alpha: 0.18),
+                        child: const Icon(
+                          Icons.notifications_active_rounded,
+                          color: AppConstants.navy,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              title.toString(),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.titleMedium,
+                            ),
+                            if (body.toString().isNotEmpty) ...[
+                              const SizedBox(height: 4),
+                              Text(
+                                body.toString(),
+                                maxLines: 3,
+                                overflow: TextOverflow.ellipsis,
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  color: AppConstants.textSecondaryLight,
+                                ),
+                              ),
+                            ],
+                            if (createdAtStr.isNotEmpty) ...[
+                              const SizedBox(height: 6),
+                              Text(
+                                createdAtStr,
+                                style: theme.textTheme.bodySmall,
+                              ),
+                            ],
+                          ],
+                        ),
                       ),
                     ],
                   ),
                 );
               },
             ),
+      ),
     );
   }
 }

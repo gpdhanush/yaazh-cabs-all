@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../app/constants.dart';
+import '../../../core/widgets/app_surface.dart';
 
 class SupportPage extends StatefulWidget {
   const SupportPage({super.key});
@@ -21,78 +22,92 @@ class _SupportPageState extends State<SupportPage> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Fleet Support & Help'),
-      ),
-      body: SingleChildScrollView(
+      backgroundColor: AppConstants.bgLight,
+      appBar: AppBar(title: const Text('Fleet support')),
+      body: SafeArea(
+        top: false,
+        child: SingleChildScrollView(
         padding: const EdgeInsets.all(AppConstants.paddingM),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Quick Call Card
-            Card(
-              color: AppConstants.accentColor.withOpacity(0.15),
-              child: Padding(
-                padding: const EdgeInsets.all(AppConstants.paddingM),
-                child: Row(
-                  children: [
-                    const Icon(Icons.phone_in_talk_rounded,
-                        color: AppConstants.primaryColor, size: 36),
-                    const SizedBox(width: 14),
-                    const Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Emergency Operations Hotline',
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          SizedBox(height: 2),
-                          Text(
-                            '+91 98765 43210 (24/7 Support)',
-                            style: TextStyle(fontSize: 13, color: Colors.grey),
-                          ),
-                        ],
-                      ),
+            AppSurfaceCard(
+              color: AppConstants.gold.withValues(alpha: 0.12),
+              border: Border.all(
+                color: AppConstants.gold.withValues(alpha: 0.35),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.phone_in_talk_rounded,
+                    color: AppConstants.navy,
+                    size: 32,
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Operations hotline',
+                          style: theme.textTheme.titleMedium,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '+91 98765 43210 · 24/7',
+                          style: theme.textTheme.bodySmall,
+                        ),
+                      ],
                     ),
-                    ElevatedButton(
+                  ),
+                  const SizedBox(width: 8),
+                  SizedBox(
+                    width: 88,
+                    child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppConstants.accentColor,
-                        foregroundColor: Colors.black,
-                        minimumSize: const Size(60, 36),
+                        minimumSize: const Size(88, 40),
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
                       ),
                       onPressed: () {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Dialing fleet hotline...')),
+                          const SnackBar(
+                            content: Text('Dialing fleet hotline...'),
+                          ),
                         );
                       },
                       child: const Text('CALL'),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 24),
-
-            const Text(
-              'Submit Support Ticket',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
+            Text('Submit a ticket', style: theme.textTheme.titleLarge),
             const SizedBox(height: 12),
-
             if (!_submitted) ...[
               DropdownButtonFormField<String>(
-                value: _selectedCategory,
-                decoration: const InputDecoration(labelText: 'Issue Category'),
+                initialValue: _selectedCategory,
+                decoration: const InputDecoration(labelText: 'Issue category'),
                 items: const [
-                  DropdownMenuItem(value: 'trip_issue', child: Text('Trip / Customer Issue')),
-                  DropdownMenuItem(value: 'vehicle_breakdown', child: Text('Vehicle Maintenance / Breakdown')),
-                  DropdownMenuItem(value: 'payment_wallet', child: Text('Payment / Wallet Ledger Query')),
-                  DropdownMenuItem(value: 'app_bug', child: Text('App Feature / Technical Problem')),
+                  DropdownMenuItem(
+                    value: 'trip_issue',
+                    child: Text('Trip / customer issue'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'vehicle_breakdown',
+                    child: Text('Vehicle / breakdown'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'payment_wallet',
+                    child: Text('Payment / wallet'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'app_bug',
+                    child: Text('App / technical problem'),
+                  ),
                 ],
                 onChanged: (val) {
                   if (val != null) setState(() => _selectedCategory = val);
@@ -103,8 +118,9 @@ class _SupportPageState extends State<SupportPage> {
                 controller: _messageController,
                 maxLines: 4,
                 decoration: const InputDecoration(
-                  labelText: 'Issue Description',
-                  hintText: 'Describe the issue or assistance required in detail...',
+                  labelText: 'Issue description',
+                  hintText: 'Describe the issue in detail...',
+                  alignLabelWithHint: true,
                 ),
               ),
               const SizedBox(height: 24),
@@ -114,41 +130,42 @@ class _SupportPageState extends State<SupportPage> {
                     setState(() => _submitted = true);
                   }
                 },
-                child: const Text('LOG ISSUE FOR DISPATCH'),
+                child: const Text('LOG ISSUE'),
               ),
-              const SizedBox(height: 8),
-              const Text(
-                'Note: Driver support tickets are not yet available on the API. Use the hotline for urgent issues; this form keeps a local note for your shift.',
-                style: TextStyle(fontSize: 12, color: Colors.grey),
+              const SizedBox(height: 10),
+              Text(
+                'Urgent trip problems should also go to the operations hotline.',
+                style: theme.textTheme.bodySmall,
               ),
             ] else ...[
-              Container(
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: Colors.green.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.green),
+              AppSurfaceCard(
+                color: const Color(0xFFE8F6EE),
+                border: Border.all(
+                  color: AppConstants.successColor.withValues(alpha: 0.35),
                 ),
-                child: const Column(
+                child: Column(
                   children: [
-                    Icon(Icons.check_circle_outline_rounded,
-                        color: Colors.green, size: 48),
-                    SizedBox(height: 12),
-                    Text(
-                      'Issue Noted',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    const Icon(
+                      Icons.check_circle_outline_rounded,
+                      color: AppConstants.successColor,
+                      size: 48,
                     ),
-                    SizedBox(height: 4),
+                    const SizedBox(height: 12),
+                    Text('Issue noted', style: theme.textTheme.titleLarge),
+                    const SizedBox(height: 4),
                     Text(
                       'Please also call the operations hotline for time-sensitive trip problems.',
                       textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.grey),
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: AppConstants.textSecondaryLight,
+                      ),
                     ),
                   ],
                 ),
               ),
             ],
           ],
+        ),
         ),
       ),
     );

@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:yaazh_cabs/app/constants.dart';
+import 'package:yaazh_cabs/app/theme.dart';
+import 'package:yaazh_cabs/core/firebase/analytics_service.dart';
 import 'package:yaazh_cabs/core/network/connectivity_provider.dart';
 import 'package:yaazh_cabs/core/widgets/app_bottom_nav.dart';
 import 'package:yaazh_cabs/core/widgets/app_state_pages.dart';
@@ -27,9 +31,10 @@ import 'package:yaazh_cabs/features/trips/presentation/pages/trip_details_page.d
 import 'package:yaazh_cabs/features/trips/presentation/pages/trip_summary_page.dart';
 import 'package:yaazh_cabs/features/wallet/presentation/wallet_page.dart';
 
-final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
+final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
 final GlobalKey<NavigatorState> _shellNavigatorKey =
     GlobalKey<NavigatorState>();
+final pendingNotificationLocationProvider = StateProvider<String?>((ref) => null);
 
 class _AuthRefreshListenable extends ChangeNotifier {
   void ping() => notifyListeners();
@@ -43,9 +48,19 @@ final routerProvider = Provider<GoRouter>((ref) {
       refresh.ping();
     }
   });
+  ref.listen<String?>(pendingNotificationLocationProvider, (previous, next) {
+    if (next != null && next.isNotEmpty) {
+      refresh.ping();
+    }
+  });
+
+  final analyticsObserver = ref.read(analyticsServiceProvider).observer();
 
   final router = GoRouter(
-    navigatorKey: _rootNavigatorKey,
+    navigatorKey: rootNavigatorKey,
+    observers: [
+      if (analyticsObserver != null) analyticsObserver,
+    ],
     initialLocation: '/splash',
     refreshListenable: refresh,
     errorBuilder: (context, state) => NotFoundPage(
@@ -70,7 +85,20 @@ final routerProvider = Provider<GoRouter>((ref) {
       }
 
       if (status == AuthStatus.authenticated && (isLoggingIn || isSplash)) {
+        final pending = ref.read(pendingNotificationLocationProvider);
+        if (pending != null && pending.isNotEmpty) {
+          ref.read(pendingNotificationLocationProvider.notifier).state = null;
+          return pending;
+        }
         return '/home';
+      }
+
+      if (status == AuthStatus.authenticated) {
+        final pending = ref.read(pendingNotificationLocationProvider);
+        if (pending != null && pending.isNotEmpty && loc != pending) {
+          ref.read(pendingNotificationLocationProvider.notifier).state = null;
+          return pending;
+        }
       }
 
       if (status == AuthStatus.error && !isLoggingIn) {
@@ -246,19 +274,23 @@ class ScaffoldWithBottomNavBar extends ConsumerWidget {
     final selectedIndex = _calculateSelectedIndex(context);
     final online = ref.watch(isOnlineProvider);
 
-    return Scaffold(
-      body: Column(
-        children: [
-          OfflineBanner(
-            isOffline: !online,
-            onRetry: () => ref.invalidate(connectivityStatusProvider),
-          ),
-          Expanded(child: child),
-        ],
-      ),
-      bottomNavigationBar: AppBottomNav(
-        currentIndex: selectedIndex,
-        onTap: (index) => _onItemTapped(index, context),
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: AppTheme.statusOverlay,
+      child: Scaffold(
+        backgroundColor: AppConstants.bgLight,
+        body: Column(
+          children: [
+            OfflineBanner(
+              isOffline: !online,
+              onRetry: () => ref.invalidate(connectivityStatusProvider),
+            ),
+            Expanded(child: child),
+          ],
+        ),
+        bottomNavigationBar: AppBottomNav(
+          currentIndex: selectedIndex,
+          onTap: (index) => _onItemTapped(index, context),
+        ),
       ),
     );
   }

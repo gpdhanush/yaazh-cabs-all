@@ -89,7 +89,7 @@ class _ActiveTripPageState extends ConsumerState<ActiveTripPage> {
                 Container(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                  color: const Color(0xFF065F46),
+                  color: AppConstants.navy,
                   child: Row(
                     children: [
                       Container(
@@ -97,8 +97,8 @@ class _ActiveTripPageState extends ConsumerState<ActiveTripPage> {
                         height: 10,
                         decoration: BoxDecoration(
                           color: _isTracking
-                              ? Colors.lightGreenAccent
-                              : Colors.orangeAccent,
+                              ? AppConstants.gold
+                              : AppConstants.lightGrey,
                           shape: BoxShape.circle,
                         ),
                       ),
@@ -108,10 +108,13 @@ class _ActiveTripPageState extends ConsumerState<ActiveTripPage> {
                           _isTracking
                               ? 'GPS tracking active — location syncing'
                               : 'Waiting for GPS permission / signal',
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
-                            color: Colors.white,
+                            color: AppConstants.white,
                             fontSize: 13,
-                            fontWeight: FontWeight.bold,
+                            fontWeight: FontWeight.w700,
+                            height: 1.3,
                           ),
                         ),
                       ),
@@ -138,14 +141,19 @@ class _ActiveTripPageState extends ConsumerState<ActiveTripPage> {
                                     children: [
                                       Text(
                                         trip.bookingCode,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
                                         style: const TextStyle(
                                           fontSize: 18,
-                                          fontWeight: FontWeight.bold,
+                                          fontWeight: FontWeight.w800,
+                                          color: AppConstants.navy,
                                         ),
                                       ),
                                       const SizedBox(height: 4),
                                       Text(
-                                        'Passenger: ${trip.customerName}',
+                                        trip.customerName,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
                                         style: const TextStyle(
                                           fontSize: 14,
                                           color:
@@ -214,10 +222,10 @@ class _ActiveTripPageState extends ConsumerState<ActiveTripPage> {
                   padding: const EdgeInsets.all(AppConstants.paddingM),
                   child: ElevatedButton.icon(
                     icon: const Icon(Icons.flag_rounded),
-                    label: const Text('END RIDE (ENTER FINAL ODOMETER)'),
+                    label: const Text('END RIDE'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.redAccent,
-                      foregroundColor: Colors.white,
+                      backgroundColor: AppConstants.navy,
+                      foregroundColor: AppConstants.white,
                     ),
                     onPressed: () {
                       Navigator.of(context).push(

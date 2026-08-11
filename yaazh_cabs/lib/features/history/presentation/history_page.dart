@@ -5,6 +5,8 @@ import 'package:intl/intl.dart';
 import '../../../app/constants.dart';
 import '../../../core/widgets/app_error_view.dart';
 import '../../../core/widgets/app_loading_view.dart';
+import '../../../core/widgets/app_state_pages.dart';
+import '../../../core/widgets/app_surface.dart';
 import '../../../core/widgets/status_chip.dart';
 import '../../../core/widgets/trip_timeline.dart';
 import '../../trips/presentation/viewmodels/trip_list_viewmodel.dart';
@@ -18,29 +20,30 @@ class HistoryPage extends ConsumerStatefulWidget {
 }
 
 class _HistoryPageState extends ConsumerState<HistoryPage> {
-  String _selectedFilter = 'all'; // all, completed, cancelled
+  String _selectedFilter = 'all';
 
   @override
   Widget build(BuildContext context) {
     final tripsState = ref.watch(tripListNotifierProvider);
 
     return Scaffold(
+      backgroundColor: AppConstants.bgLight,
       appBar: AppBar(
-        title: const Text('Trip History'),
+        title: const Text('Trip history'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
+            icon: const Icon(Icons.refresh_rounded),
             onPressed: () =>
                 ref.read(tripListNotifierProvider.notifier).refresh(),
           ),
         ],
       ),
-      body: Column(
+      body: SafeArea(
+        top: false,
+        child: Column(
         children: [
-          // Filter Row
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            color: Theme.of(context).cardTheme.color,
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
             child: Row(
               children: [
                 _FilterChip(
@@ -63,18 +66,18 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
               ],
             ),
           ),
-          const Divider(height: 1),
-
           Expanded(
             child: tripsState.when(
-              loading: () => const AppLoadingView(message: 'Loading history...'),
+              loading: () =>
+                  const AppLoadingView(message: 'Loading history...'),
               error: (error, st) => AppErrorView(
                 message: error.toString(),
                 onRetry: () =>
                     ref.read(tripListNotifierProvider.notifier).fetchTrips(),
               ),
               data: (trips) {
-                var pastTrips = trips.where((t) => t.isCompleted || t.isCancelled).toList();
+                var pastTrips =
+                    trips.where((t) => t.isCompleted || t.isCancelled).toList();
 
                 if (_selectedFilter == 'completed') {
                   pastTrips = pastTrips.where((t) => t.isCompleted).toList();
@@ -83,47 +86,28 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
                 }
 
                 if (pastTrips.isEmpty) {
-                  return ListView(
-                    padding: const EdgeInsets.all(32),
-                    children: [
-                      const SizedBox(height: 60),
-                      Icon(
-                        Icons.history_rounded,
-                        size: 64,
-                        color: Colors.grey.shade400,
-                      ),
-                      const SizedBox(height: 16),
-                      const Text(
-                        'No Past Trips',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      const Text(
+                  return const AppEmptyView(
+                    icon: Icons.history_rounded,
+                    title: 'No past trips',
+                    message:
                         'Your completed or cancelled trips will appear here.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: Colors.grey),
-                      ),
-                    ],
                   );
                 }
 
                 return ListView.separated(
-                  padding: const EdgeInsets.all(AppConstants.paddingM),
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
                   itemCount: pastTrips.length,
-                  separatorBuilder: (context, index) => const SizedBox(height: 16),
+                  separatorBuilder: (context, index) =>
+                      const SizedBox(height: 12),
                   itemBuilder: (context, index) {
-                    final trip = pastTrips[index];
-                    return _HistoryTripCard(trip: trip);
+                    return _HistoryTripCard(trip: pastTrips[index]);
                   },
                 );
               },
             ),
           ),
         ],
+        ),
       ),
     );
   }
@@ -142,15 +126,30 @@ class _FilterChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return FilterChip(
-      label: Text(label),
-      selected: selected,
-      onSelected: (_) => onTap(),
-      selectedColor: AppConstants.accentColor,
-      checkmarkColor: Colors.black,
-      labelStyle: TextStyle(
-        color: selected ? Colors.black : Theme.of(context).colorScheme.onSurface,
-        fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+    return Expanded(
+      child: FilterChip(
+        label: SizedBox(
+          width: double.infinity,
+          child: Text(
+            label,
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+        selected: selected,
+        showCheckmark: false,
+        onSelected: (_) => onTap(),
+        selectedColor: AppConstants.gold,
+        backgroundColor: AppConstants.white,
+        side: BorderSide(
+          color: selected ? AppConstants.gold : AppConstants.lightGrey,
+        ),
+        labelStyle: TextStyle(
+          color: AppConstants.navy,
+          fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+          fontSize: 12,
+        ),
       ),
     );
   }
@@ -163,66 +162,62 @@ class _HistoryTripCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final formattedDate = trip.pickupAt != null
         ? DateFormat('dd MMM yyyy, hh:mm a').format(trip.pickupAt!)
         : 'Past trip';
 
-    return Card(
-      child: InkWell(
-        onTap: () => context.push('/summary/${trip.id}'),
-        borderRadius: BorderRadius.circular(AppConstants.borderRadiusM),
-        child: Padding(
-          padding: const EdgeInsets.all(AppConstants.paddingM),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    return AppSurfaceCard(
+      onTap: () => context.push('/summary/${trip.id}'),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    trip.bookingCode,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  StatusChip.forStatus(trip.status),
-                ],
+              Expanded(
+                child: Text(
+                  trip.bookingCode,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.titleMedium,
+                ),
               ),
-              const SizedBox(height: 4),
+              const SizedBox(width: 8),
+              Flexible(child: StatusChip.forStatus(trip.status)),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(formattedDate, style: theme.textTheme.bodySmall),
+          const Divider(height: 20),
+          TripTimeline(
+            pickupAddress: trip.pickupAddress,
+            dropAddress: trip.dropAddress,
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  '₹${trip.estimatedTotal.toStringAsFixed(0)}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.titleMedium,
+                ),
+              ),
               Text(
-                formattedDate,
-                style: const TextStyle(fontSize: 12, color: Colors.grey),
+                'Summary',
+                style: theme.textTheme.titleSmall?.copyWith(
+                  color: AppConstants.navy,
+                ),
               ),
-              const Divider(height: 20),
-              TripTimeline(
-                pickupAddress: trip.pickupAddress,
-                dropAddress: trip.dropAddress,
-              ),
-              const SizedBox(height: 12),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Total Fare: ₹${trip.estimatedTotal.toStringAsFixed(2)}',
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const Text(
-                    'View Summary →',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
-                      color: AppConstants.accentHover,
-                    ),
-                  ),
-                ],
+              const Icon(
+                Icons.chevron_right_rounded,
+                size: 18,
+                color: AppConstants.navy,
               ),
             ],
           ),
-        ),
+        ],
       ),
     );
   }

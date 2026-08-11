@@ -2,43 +2,52 @@ import 'package:flutter/material.dart';
 
 class AppConstants {
   static const String appName = 'Yaazh Cabs Driver';
-  
+
   // API Config
-  // Default to localhost for Android emulator / desktop
-  static const String defaultBaseUrl = 'https://luxe-motion-ride-1.onrender.com/api/v1';
-  
+  static const String defaultBaseUrl =
+      'https://luxe-motion-ride-1.onrender.com/api/v1';
+
   // Storage keys
   static const String tokenKey = 'driver_access_token';
   static const String refreshTokenKey = 'driver_refresh_token';
   static const String driverProfileKey = 'driver_profile_cache';
   static const String themeModeKey = 'app_theme_mode';
 
-  // Branding Colors
-  static const Color primaryColor = Color(0xFF0F172A); // Slate 900
-  static const Color primaryLight = Color(0xFF1E293B); // Slate 800
-  static const Color accentColor = Color(0xFFF59E0B); // Amber 500
-  static const Color accentHover = Color(0xFFD97706); // Amber 600
-  static const Color successColor = Color(0xFF10B981); // Emerald 500
-  static const Color errorColor = Color(0xFFEF4444); // Red 500
-  static const Color warningColor = Color(0xFFF97316); // Orange 500
-  static const Color infoColor = Color(0xFF3B82F6); // Blue 500
-  
-  // Surface Colors - Light
-  static const Color bgLight = Color(0xFFF8FAFC);
-  static const Color cardLight = Color(0xFFFFFFFF);
-  static const Color textPrimaryLight = Color(0xFF0F172A);
-  static const Color textSecondaryLight = Color(0xFF64748B);
+  // Black & Gold Elegance
+  static const Color white = Color(0xFFFFFFFF);
+  static const Color lightGrey = Color(0xFFE5E5E5);
+  static const Color gold = Color(0xFFFCA311);
+  static const Color navy = Color(0xFF14213D);
+  static const Color black = Color(0xFF000000);
 
-  // Surface Colors - Dark
-  static const Color bgDark = Color(0xFF0B0F19);
-  static const Color cardDark = Color(0xFF161E2E);
-  static const Color textPrimaryDark = Color(0xFFF8FAFC);
-  static const Color textSecondaryDark = Color(0xFF94A3B8);
+  // Branding
+  static const Color primaryColor = navy;
+  static const Color primaryLight = Color(0xFF1E3358);
+  static const Color accentColor = gold;
+  static const Color accentHover = Color(0xFFE08E0A);
+  static const Color successColor = Color(0xFF1B7F4E);
+  static const Color errorColor = Color(0xFFC0392B);
+  static const Color warningColor = gold;
+  static const Color infoColor = navy;
 
-  // Layout Tokens
+  // Surfaces — light
+  static const Color bgLight = Color(0xFFF4F4F4);
+  static const Color cardLight = white;
+  static const Color borderLight = lightGrey;
+  static const Color textPrimaryLight = navy;
+  static const Color textSecondaryLight = Color(0xFF5C6578);
+
+  // Surfaces — dark
+  static const Color bgDark = black;
+  static const Color cardDark = navy;
+  static const Color borderDark = Color(0xFF2A3A5C);
+  static const Color textPrimaryDark = white;
+  static const Color textSecondaryDark = Color(0xFFB8BDC8);
+
+  // Layout
   static const double borderRadiusS = 8.0;
-  static const double borderRadiusM = 12.0;
-  static const double borderRadiusL = 16.0;
+  static const double borderRadiusM = 14.0;
+  static const double borderRadiusL = 18.0;
   static const double borderRadiusXL = 24.0;
 
   static const double paddingS = 8.0;

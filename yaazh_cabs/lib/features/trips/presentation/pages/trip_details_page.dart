@@ -67,7 +67,9 @@ class _TripDetailsPageState extends ConsumerState<TripDetailsPage> {
           ),
         ],
       ),
-      body: tripState.when(
+      body: SafeArea(
+        top: false,
+        child: tripState.when(
         loading: () => const AppLoadingView(message: 'Loading trip…'),
         error: (error, st) => AppErrorView(
           message: error.toString(),
@@ -108,6 +110,7 @@ class _TripDetailsPageState extends ConsumerState<TripDetailsPage> {
             ),
           );
         },
+        ),
       ),
     );
   }
@@ -139,10 +142,10 @@ class _TripDetailsPageState extends ConsumerState<TripDetailsPage> {
       case 'on_the_way':
         return ElevatedButton.icon(
           icon: const Icon(Icons.location_on_rounded),
-          label: const Text('MARK ARRIVED AT PICKUP'),
+          label: const Text('MARK ARRIVED'),
           style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.blue.shade700,
-            foregroundColor: Colors.white,
+            backgroundColor: AppConstants.navy,
+            foregroundColor: AppConstants.white,
           ),
           onPressed: () async {
             final ok = await notifier.markArrived(trip.id);
@@ -162,8 +165,8 @@ class _TripDetailsPageState extends ConsumerState<TripDetailsPage> {
           icon: const Icon(Icons.play_arrow_rounded),
           label: const Text('START RIDE'),
           style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF059669),
-            foregroundColor: Colors.white,
+            backgroundColor: AppConstants.gold,
+            foregroundColor: AppConstants.black,
           ),
           onPressed: () {
             showDialog(
@@ -178,8 +181,8 @@ class _TripDetailsPageState extends ConsumerState<TripDetailsPage> {
           icon: const Icon(Icons.navigation_rounded),
           label: const Text('OPEN ACTIVE TRIP'),
           style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.redAccent,
-            foregroundColor: Colors.white,
+            backgroundColor: AppConstants.navy,
+            foregroundColor: AppConstants.white,
           ),
           onPressed: () {
             ref.read(tripLocationTrackerProvider).start(trip.id);
@@ -192,7 +195,7 @@ class _TripDetailsPageState extends ConsumerState<TripDetailsPage> {
           return ElevatedButton.icon(
             icon: const Icon(Icons.payments_rounded),
             label: Text(
-              'COLLECT PAYMENT (₹${trip.balanceDue.toStringAsFixed(2)})',
+              'COLLECT ₹${trip.balanceDue.toStringAsFixed(0)}',
             ),
             onPressed: () => context.push('/payment/${trip.id}'),
           );
@@ -217,12 +220,13 @@ class _TripHeaderCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppConstants.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        border: Border.all(color: AppConstants.lightGrey),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -232,20 +236,23 @@ class _TripHeaderCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   trip.bookingCode,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    color: AppConstants.navy,
                   ),
                 ),
               ),
-              StatusChip.forStatus(trip.status),
+              const SizedBox(width: 8),
+              Flexible(child: StatusChip.forStatus(trip.status)),
             ],
           ),
           const SizedBox(height: 8),
           Text(
             'Scheduled · $formattedDate',
-            style: const TextStyle(
-              fontSize: 13,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: theme.textTheme.bodySmall?.copyWith(
               color: AppConstants.textSecondaryLight,
             ),
           ),
@@ -277,18 +284,20 @@ class _PassengerCard extends StatelessWidget {
               children: [
                 Text(
                   trip.customerName,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: AppConstants.navy,
+                      ),
                 ),
                 if (trip.customerPhone.isNotEmpty)
                   Text(
                     trip.customerPhone,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: AppConstants.textSecondaryLight,
-                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: AppConstants.textSecondaryLight,
+                        ),
                   ),
               ],
             ),
@@ -327,8 +336,22 @@ class _FareCard extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(k),
-          Text(v, style: const TextStyle(fontWeight: FontWeight.w700)),
+          Expanded(
+            child: Text(
+              k,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(color: AppConstants.textSecondaryLight),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            v,
+            style: const TextStyle(
+              fontWeight: FontWeight.w700,
+              color: AppConstants.navy,
+            ),
+          ),
         ],
       ),
     );
@@ -351,9 +374,9 @@ class _SectionCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppConstants.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        border: Border.all(color: AppConstants.lightGrey),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -363,12 +386,9 @@ class _SectionCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   title,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0.6,
-                    color: AppConstants.textSecondaryLight,
-                  ),
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        color: AppConstants.textSecondaryLight,
+                      ),
                 ),
               ),
               if (trailing != null) trailing!,

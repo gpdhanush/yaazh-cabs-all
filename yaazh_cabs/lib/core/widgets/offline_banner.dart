@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:yaazh_cabs/app/constants.dart';
 
 class OfflineBanner extends StatelessWidget {
   final bool isOffline;
@@ -15,7 +16,7 @@ class OfflineBanner extends StatelessWidget {
     if (!isOffline) return const SizedBox.shrink();
 
     return Material(
-      color: const Color(0xFF7C2D12),
+      color: AppConstants.navy,
       child: SafeArea(
         bottom: false,
         child: InkWell(
