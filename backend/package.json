@@ -10,9 +10,9 @@
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "tsc -p tsconfig.build.json",
-    "start": "node --env-file=.env dist/server.js",
+    "start": "node dist/server.js",
     "worker": "tsx src/jobs/worker.ts",
-    "worker:prod": "node --env-file=.env dist/jobs/worker.js",
+    "worker:prod": "node dist/jobs/worker.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint .",
     "test": "vitest run",
