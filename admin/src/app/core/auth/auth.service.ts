@@ -3,6 +3,7 @@ import { Router } from '@angular/router';
 import { Observable, tap, catchError, throwError, map } from 'rxjs';
 import { ApiService } from '../api/api.service';
 import { AdminUser, AuthTokens } from '../api/api.types';
+import { FirebaseService } from '../firebase/firebase.service';
 
 const STORAGE_KEY = 'yaazh.admin.tokens';
 
@@ -10,6 +11,7 @@ const STORAGE_KEY = 'yaazh.admin.tokens';
 export class AuthService {
   private readonly api = inject(ApiService);
   private readonly router = inject(Router);
+  private readonly firebase = inject(FirebaseService);
 
   private readonly tokensSignal = signal<AuthTokens | null>(this.readStorage());
   readonly tokens = this.tokensSignal.asReadonly();
@@ -19,7 +21,10 @@ export class AuthService {
   login(email: string, password: string): Observable<AuthTokens> {
     return this.api.post<AuthTokens>('/api/v1/auth/admin/login', { email, password }).pipe(
       map((r) => r.data),
-      tap((data) => this.persist(data)),
+      tap((data) => {
+        this.persist(data);
+        void this.firebase.start();
+      }),
     );
   }
 
@@ -51,6 +56,7 @@ export class AuthService {
         error: () => undefined,
       });
     }
+    void this.firebase.stop();
     this.clear();
     void this.router.navigateByUrl('/login');
   }

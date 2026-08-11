@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:yaazh_customer/core/network/connectivity_provider.dart';
@@ -12,6 +13,7 @@ import 'package:yaazh_customer/features/auth/presentation/register_page.dart';
 import 'package:yaazh_customer/features/auth/presentation/splash_page.dart';
 import 'package:yaazh_customer/features/booking/domain/booking.dart';
 import 'package:yaazh_customer/features/booking/presentation/book_page.dart';
+import 'package:yaazh_customer/features/booking/presentation/booking_success_page.dart';
 import 'package:yaazh_customer/features/booking/presentation/confirm_booking_page.dart';
 import 'package:yaazh_customer/features/home/presentation/home_page.dart';
 import 'package:yaazh_customer/features/notifications/presentation/notifications_page.dart';
@@ -23,9 +25,11 @@ import 'package:yaazh_customer/features/support/presentation/support_detail_page
 import 'package:yaazh_customer/features/support/presentation/support_page.dart';
 import 'package:yaazh_customer/features/trips/presentation/trip_detail_page.dart';
 import 'package:yaazh_customer/features/trips/presentation/trips_page.dart';
+import 'package:yaazh_customer/features/trips/presentation/trips_viewmodel.dart';
 
-final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
+final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
 final GlobalKey<NavigatorState> _shellNavigatorKey = GlobalKey<NavigatorState>();
+final pendingNotificationLocationProvider = StateProvider<String?>((ref) => null);
 
 class _AuthRefreshListenable extends ChangeNotifier {
   void ping() => notifyListeners();
@@ -39,9 +43,19 @@ final routerProvider = Provider<GoRouter>((ref) {
       refresh.ping();
     }
   });
+  ref.listen<Booking?>(upcomingTripProvider, (previous, next) {
+    if (previous?.id != next?.id) {
+      refresh.ping();
+    }
+  });
+  ref.listen<String?>(pendingNotificationLocationProvider, (previous, next) {
+    if (next != null && next.isNotEmpty) {
+      refresh.ping();
+    }
+  });
 
   final router = GoRouter(
-    navigatorKey: _rootNavigatorKey,
+    navigatorKey: rootNavigatorKey,
     initialLocation: '/splash',
     refreshListenable: refresh,
     errorBuilder: (context, state) => NotFoundPage(
@@ -64,11 +78,29 @@ final routerProvider = Provider<GoRouter>((ref) {
       }
 
       if (status == AuthStatus.authenticated && (isAuthRoute || isSplash)) {
+        final pending = ref.read(pendingNotificationLocationProvider);
+        if (pending != null && pending.isNotEmpty) {
+          ref.read(pendingNotificationLocationProvider.notifier).state = null;
+          return pending;
+        }
         return '/home';
+      }
+
+      if (status == AuthStatus.authenticated) {
+        final pending = ref.read(pendingNotificationLocationProvider);
+        if (pending != null && pending.isNotEmpty && loc != pending) {
+          ref.read(pendingNotificationLocationProvider.notifier).state = null;
+          return pending;
+        }
       }
 
       if (status == AuthStatus.error && !isAuthRoute) {
         return '/login';
+      }
+
+      final active = ref.read(upcomingTripProvider);
+      if (active != null && loc == '/book/confirm') {
+        return '/trips/${active.id}';
       }
 
       return null;
@@ -105,7 +137,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/book/confirm',
-        parentNavigatorKey: _rootNavigatorKey,
+        parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) {
           final draft = state.extra;
           if (draft is! BookingDraft) {
@@ -115,40 +147,51 @@ final routerProvider = Provider<GoRouter>((ref) {
         },
       ),
       GoRoute(
+        path: '/book/success',
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) {
+          final booking = state.extra;
+          if (booking is! Booking) {
+            return NotFoundPage(onHome: () => context.go('/home'));
+          }
+          return BookingSuccessPage(booking: booking);
+        },
+      ),
+      GoRoute(
         path: '/trips/:bookingId',
-        parentNavigatorKey: _rootNavigatorKey,
+        parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => TripDetailPage(
           bookingId: state.pathParameters['bookingId']!,
         ),
       ),
       GoRoute(
         path: '/profile/edit',
-        parentNavigatorKey: _rootNavigatorKey,
+        parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const ProfileEditPage(),
       ),
       GoRoute(
         path: '/saved-places',
-        parentNavigatorKey: _rootNavigatorKey,
+        parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const SavedPlacesPage(),
       ),
       GoRoute(
         path: '/notifications',
-        parentNavigatorKey: _rootNavigatorKey,
+        parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const NotificationsPage(),
       ),
       GoRoute(
         path: '/settings',
-        parentNavigatorKey: _rootNavigatorKey,
+        parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const SettingsPage(),
       ),
       GoRoute(
         path: '/support',
-        parentNavigatorKey: _rootNavigatorKey,
+        parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const SupportPage(),
       ),
       GoRoute(
         path: '/support/:id',
-        parentNavigatorKey: _rootNavigatorKey,
+        parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => SupportDetailPage(
           ticketId: state.pathParameters['id']!,
         ),
@@ -164,10 +207,17 @@ final routerProvider = Provider<GoRouter>((ref) {
   return router;
 });
 
-class ScaffoldWithBottomNavBar extends ConsumerWidget {
+class ScaffoldWithBottomNavBar extends ConsumerStatefulWidget {
   final Widget child;
 
   const ScaffoldWithBottomNavBar({super.key, required this.child});
+
+  @override
+  ConsumerState<ScaffoldWithBottomNavBar> createState() => _ScaffoldWithBottomNavBarState();
+}
+
+class _ScaffoldWithBottomNavBarState extends ConsumerState<ScaffoldWithBottomNavBar> {
+  bool _exitDialogOpen = false;
 
   int _calculateSelectedIndex(BuildContext context) {
     final location = GoRouterState.of(context).matchedLocation;
@@ -190,24 +240,56 @@ class ScaffoldWithBottomNavBar extends ConsumerWidget {
     }
   }
 
+  Future<void> _onBackPressed() async {
+    if (_exitDialogOpen) return;
+    _exitDialogOpen = true;
+    final leave = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Exit Yaazh Cabs?'),
+        content: const Text('Are you sure you want to close the app?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Stay'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Exit'),
+          ),
+        ],
+      ),
+    );
+    _exitDialogOpen = false;
+    if (leave == true && mounted) {
+      SystemNavigator.pop();
+    }
+  }
+
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final selectedIndex = _calculateSelectedIndex(context);
     final online = ref.watch(isOnlineProvider);
 
-    return Scaffold(
-      body: Column(
-        children: [
-          OfflineBanner(
-            isOffline: !online,
-            onRetry: () => ref.invalidate(connectivityStatusProvider),
-          ),
-          Expanded(child: child),
-        ],
-      ),
-      bottomNavigationBar: AppBottomNav(
-        currentIndex: selectedIndex,
-        onTap: (index) => _onItemTapped(index, context),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _onBackPressed();
+      },
+      child: Scaffold(
+        body: Column(
+          children: [
+            OfflineBanner(
+              isOffline: !online,
+              onRetry: () => ref.invalidate(connectivityStatusProvider),
+            ),
+            Expanded(child: widget.child),
+          ],
+        ),
+        bottomNavigationBar: AppBottomNav(
+          currentIndex: selectedIndex,
+          onTap: (index) => _onItemTapped(index, context),
+        ),
       ),
     );
   }

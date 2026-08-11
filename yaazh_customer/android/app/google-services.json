@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "771197506607",
+    "project_id": "yaazh-customer",
+    "storage_bucket": "yaazh-customer.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:771197506607:android:36e3e056387a937bf022da",
+        "android_client_info": {
+          "package_name": "com.gk.yaazh_customer"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDgTAbUWEfhbb-6JKPDDDnPCoHC0eg4AFA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

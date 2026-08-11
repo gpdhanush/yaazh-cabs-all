@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:yaazh_customer/app/constants.dart';
+import 'package:yaazh_customer/core/notifications/push_notification_service.dart';
+import 'package:yaazh_customer/features/auth/presentation/auth_scaffold.dart';
 import 'package:yaazh_customer/features/auth/presentation/auth_viewmodel.dart';
 
 class RegisterPage extends ConsumerStatefulWidget {
@@ -34,11 +36,12 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
           name: _nameController.text.trim(),
           phone: _phoneController.text.trim(),
           password: _passwordController.text,
-          email: _emailController.text.trim().isEmpty
-              ? null
-              : _emailController.text.trim(),
+          email: _emailController.text.trim().isEmpty ? null : _emailController.text.trim(),
         );
-    if (success && mounted) context.go('/home');
+    if (success && mounted) {
+      await ref.read(pushNotificationServiceProvider).start();
+      if (mounted) context.go('/home');
+    }
   }
 
   @override
@@ -46,127 +49,108 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
     final authState = ref.watch(authNotifierProvider);
     final isLoading = authState.status == AuthStatus.loading;
 
-    return Scaffold(
-      backgroundColor: AppConstants.bgLight,
-      appBar: AppBar(title: const Text('Create account')),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(AppConstants.paddingL),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const Text(
-                'Ride with Yaazh',
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800),
-              ),
-              const SizedBox(height: 6),
-              const Text(
-                'Use your phone number to book, track, and manage trips.',
-                style: TextStyle(color: AppConstants.textSecondaryLight),
-              ),
-              const SizedBox(height: 24),
-              if (authState.status == AuthStatus.error &&
-                  authState.errorMessage != null) ...[
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: AppConstants.errorColor.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    authState.errorMessage!,
-                    style: const TextStyle(
-                      color: AppConstants.errorColor,
-                      fontWeight: FontWeight.w600,
-                    ),
+    return AuthScaffold(
+      showBack: true,
+      title: 'Create account',
+      subtitle: 'Use your phone number to book, track, and manage trips.',
+      footer: TextButton(
+        onPressed: () => context.go('/login'),
+        child: const Text('Already have an account? Sign in'),
+      ),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (authState.status == AuthStatus.error && authState.errorMessage != null) ...[
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppConstants.errorColor.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  authState.errorMessage!,
+                  style: const TextStyle(
+                    color: AppConstants.errorColor,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
-                const SizedBox(height: 16),
-              ],
-              TextFormField(
-                controller: _nameController,
-                textCapitalization: TextCapitalization.words,
-                decoration: const InputDecoration(
-                  labelText: 'Full name',
-                  prefixIcon: Icon(Icons.person_outline_rounded),
-                ),
-                validator: (value) {
-                  if (value == null || value.trim().length < 2) {
-                    return 'Enter your name';
-                  }
-                  return null;
-                },
               ),
-              const SizedBox(height: 14),
-              TextFormField(
-                controller: _phoneController,
-                keyboardType: TextInputType.phone,
-                decoration: const InputDecoration(
-                  labelText: 'Phone number',
-                  hintText: '9876543210',
-                  prefixIcon: Icon(Icons.phone_rounded),
-                ),
-                validator: (value) {
-                  if (value == null || value.trim().length < 10) {
-                    return 'Enter a valid 10-digit number';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 14),
-              TextFormField(
-                controller: _emailController,
-                keyboardType: TextInputType.emailAddress,
-                decoration: const InputDecoration(
-                  labelText: 'Email (optional)',
-                  prefixIcon: Icon(Icons.mail_outline_rounded),
-                ),
-              ),
-              const SizedBox(height: 14),
-              TextFormField(
-                controller: _passwordController,
-                obscureText: _obscurePassword,
-                decoration: InputDecoration(
-                  labelText: 'Password',
-                  prefixIcon: const Icon(Icons.lock_outline_rounded),
-                  suffixIcon: IconButton(
-                    icon: Icon(
-                      _obscurePassword
-                          ? Icons.visibility_off_outlined
-                          : Icons.visibility_outlined,
-                    ),
-                    onPressed: () =>
-                        setState(() => _obscurePassword = !_obscurePassword),
-                  ),
-                ),
-                validator: (value) {
-                  if (value == null || value.length < 6) {
-                    return 'Use at least 6 characters';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: isLoading ? null : _submit,
-                child: isLoading
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.black,
-                        ),
-                      )
-                    : const Text('CREATE ACCOUNT'),
-              ),
-              TextButton(
-                onPressed: () => context.go('/login'),
-                child: const Text('Already have an account? Sign in'),
-              ),
+              const SizedBox(height: 16),
             ],
-          ),
+            TextFormField(
+              controller: _nameController,
+              textCapitalization: TextCapitalization.words,
+              decoration: const InputDecoration(
+                labelText: 'Full name',
+                prefixIcon: Icon(Icons.person_outline_rounded),
+              ),
+              validator: (value) {
+                if (value == null || value.trim().length < 2) {
+                  return 'Enter your name';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 14),
+            TextFormField(
+              controller: _phoneController,
+              keyboardType: TextInputType.phone,
+              decoration: const InputDecoration(
+                labelText: 'Phone number',
+                hintText: '9876543210',
+                prefixIcon: Icon(Icons.phone_rounded),
+              ),
+              validator: (value) {
+                if (value == null || value.trim().length < 10) {
+                  return 'Enter a valid 10-digit number';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 14),
+            TextFormField(
+              controller: _emailController,
+              keyboardType: TextInputType.emailAddress,
+              decoration: const InputDecoration(
+                labelText: 'Email (optional)',
+                prefixIcon: Icon(Icons.mail_outline_rounded),
+              ),
+            ),
+            const SizedBox(height: 14),
+            TextFormField(
+              controller: _passwordController,
+              obscureText: _obscurePassword,
+              decoration: InputDecoration(
+                labelText: 'Password',
+                prefixIcon: const Icon(Icons.lock_outline_rounded),
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                  ),
+                  onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                ),
+              ),
+              validator: (value) {
+                if (value == null || value.length < 6) {
+                  return 'Use at least 6 characters';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 22),
+            ElevatedButton(
+              onPressed: isLoading ? null : _submit,
+              child: isLoading
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black),
+                    )
+                  : const Text('CREATE ACCOUNT'),
+            ),
+          ],
         ),
       ),
     );

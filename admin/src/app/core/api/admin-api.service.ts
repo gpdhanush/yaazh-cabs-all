@@ -37,6 +37,10 @@ export class AdminApiService {
     return this.api.post<Booking>(`${ADMIN}/bookings/${id}/assign-driver`, body).pipe(map((r) => r.data));
   }
 
+  registerDevice(body: { platform: 'web' | 'android' | 'ios'; fcm_token: string; app_version?: string }) {
+    return this.api.post<{ id: string }>(`${ADMIN}/devices`, body).pipe(map((r) => r.data));
+  }
+
   getBookingPayment(id: string): Observable<BookingPayment> {
     return this.api.get<BookingPayment>(`${ADMIN}/bookings/${id}/payment`).pipe(map((r) => r.data));
   }

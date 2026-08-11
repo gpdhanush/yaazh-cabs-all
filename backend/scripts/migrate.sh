@@ -26,6 +26,9 @@ mysql_cmd < database/migrations/002_routes_image_amount.sql
 echo "Applying booking odometer migration..."
 mysql_cmd < database/migrations/003_booking_odometer.sql
 
+echo "Applying utf8mb4 (₹ / Unicode) migration..."
+mysql_cmd < database/migrations/005_utf8mb4.sql
+
 echo "Generating Prisma client..."
 npx prisma generate
 

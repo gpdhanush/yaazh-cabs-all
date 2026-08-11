@@ -5,7 +5,7 @@ import { calculateFare, type FareBreakdown } from "../domain/fare.js";
 import { assertTransition, canCancel } from "../domain/booking-state-machine.js";
 import { bookingReference } from "../utils/crypto.js";
 import { AppError, ConflictError, NotFoundError, ValidationError } from "../errors/app-error.js";
-import { enqueueJob } from "../queues/job-queue.js";
+import { deliverBookingNotification } from "./fcm.service.js";
 import { mapService } from "./map.service.js";
 
 function dec(n: number) {
@@ -358,14 +358,16 @@ export const bookingService = {
       return created;
     });
 
-    await enqueueJob("notify_booking_created", {
-      booking_id: String(booking.id),
-      booking_reference: booking.booking_reference,
-      recipient_type: "customer",
-      customer_id: booking.customer_id != null ? String(booking.customer_id) : null,
-      title: "Booking received",
-      body: `Your booking ${booking.booking_reference} is pending confirmation. Pickup: ${booking.pickup_location}.`,
-    });
+    if (booking.customer_id) {
+      await deliverBookingNotification({
+        recipientType: "customer",
+        customerId: String(booking.customer_id),
+        bookingId: String(booking.id),
+        jobType: "notify_booking_created",
+        title: "Booking received",
+        body: `Your booking ${booking.booking_reference} is pending confirmation. Pickup: ${booking.pickup_location}.`,
+      });
+    }
 
     return serializeBooking(booking);
   },
@@ -515,24 +517,25 @@ export const bookingService = {
     const b = result.booking;
     const pickupTime = b.pickup_at.toISOString();
 
-    await enqueueJob("notify_driver_assigned", {
-      booking_id: String(b.id),
-      booking_reference: b.booking_reference,
-      offer_id: String(result.offerId),
-      recipient_type: "driver",
-      driver_id: String(params.driverId),
+    await deliverBookingNotification({
+      recipientType: "driver",
+      driverId: String(params.driverId),
+      bookingId: String(b.id),
+      jobType: "notify_driver_assigned",
       title: "New trip assigned",
       body: `Trip ${b.booking_reference}: ${b.pickup_location} → ${b.drop_location}. Pickup ${pickupTime}. Fare ≈ ₹${b.estimated_total?.toString() ?? "0"}.`,
     });
 
-    await enqueueJob("notify_booking_driver_assigned", {
-      booking_id: String(b.id),
-      booking_reference: b.booking_reference,
-      recipient_type: "customer",
-      customer_id: b.customer_id != null ? String(b.customer_id) : null,
-      title: "Driver assigned",
-      body: `Driver ${result.driver.name} (${result.driver.phone}) is assigned to your booking ${b.booking_reference}.`,
-    });
+    if (b.customer_id) {
+      await deliverBookingNotification({
+        recipientType: "customer",
+        customerId: String(b.customer_id),
+        bookingId: String(b.id),
+        jobType: "notify_booking_driver_assigned",
+        title: "Driver assigned",
+        body: `Driver ${result.driver.name} (${result.driver.phone}) is assigned to your booking ${b.booking_reference}.`,
+      });
+    }
 
     return serializeBooking(b);
   },
@@ -731,14 +734,16 @@ export const bookingService = {
       return updated;
     });
 
-    await enqueueJob("notify_booking_completed", {
-      booking_id: String(final.id),
-      booking_reference: final.booking_reference,
-      recipient_type: "customer",
-      customer_id: final.customer_id != null ? String(final.customer_id) : null,
-      title: "Trip completed",
-      body: `Your trip ${final.booking_reference} is complete. Thank you for riding with Yaazh Cabs.`,
-    });
+    if (final.customer_id) {
+      await deliverBookingNotification({
+        recipientType: "customer",
+        customerId: String(final.customer_id),
+        bookingId: String(final.id),
+        jobType: "notify_booking_completed",
+        title: "Trip completed",
+        body: `Your trip ${final.booking_reference} is complete. Thank you for riding with Yaazh Cabs.`,
+      });
+    }
 
     return serializeBooking(final);
   },
@@ -903,12 +908,25 @@ export const bookingService = {
       throw new AppError(403, "Forbidden.");
     }
     if (!canCancel(booking.status)) throw new ConflictError("Booking cannot be cancelled in current status.");
-    return this.transition({
+    const cancelled = await this.transition({
       bookingId,
       to: "cancelled",
       note: reason,
       actor,
     });
+    if (booking.customer_id) {
+      await deliverBookingNotification({
+        recipientType: "customer",
+        customerId: String(booking.customer_id),
+        bookingId: String(bookingId),
+        jobType: "notify_booking_cancelled",
+        title: "Booking cancelled",
+        body: reason
+          ? `Your booking ${booking.booking_reference} was cancelled. ${reason}`
+          : `Your booking ${booking.booking_reference} was cancelled.`,
+      });
+    }
+    return cancelled;
   },
 
   async acceptOffer(offerId: bigint, driverId: bigint) {
@@ -1002,14 +1020,16 @@ export const bookingService = {
       return updated;
     });
 
-    await enqueueJob("notify_booking_driver_assigned", {
-      booking_id: String(result.id),
-      booking_reference: result.booking_reference,
-      recipient_type: "customer",
-      customer_id: result.customer_id != null ? String(result.customer_id) : null,
-      title: "Driver assigned",
-      body: `A driver has accepted your booking ${result.booking_reference}.`,
-    });
+    if (result.customer_id) {
+      await deliverBookingNotification({
+        recipientType: "customer",
+        customerId: String(result.customer_id),
+        bookingId: String(result.id),
+        jobType: "notify_booking_driver_assigned",
+        title: "Driver assigned",
+        body: `A driver has accepted your booking ${result.booking_reference}.`,
+      });
+    }
 
     return serializeBooking(result);
   },

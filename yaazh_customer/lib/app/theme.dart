@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:yaazh_customer/app/constants.dart';
 
 class AppTheme {
@@ -31,6 +32,11 @@ class AppTheme {
         backgroundColor: AppConstants.cardLight,
         elevation: 0,
         centerTitle: false,
+        systemOverlayStyle: SystemUiOverlayStyle(
+          statusBarColor: AppConstants.primaryColor,
+          statusBarIconBrightness: Brightness.light,
+          statusBarBrightness: Brightness.dark,
+        ),
         iconTheme: IconThemeData(color: AppConstants.textPrimaryLight),
         titleTextStyle: TextStyle(
           color: AppConstants.textPrimaryLight,
@@ -147,6 +153,11 @@ class AppTheme {
         backgroundColor: AppConstants.cardDark,
         elevation: 0,
         centerTitle: false,
+        systemOverlayStyle: SystemUiOverlayStyle(
+          statusBarColor: AppConstants.primaryColor,
+          statusBarIconBrightness: Brightness.light,
+          statusBarBrightness: Brightness.dark,
+        ),
         iconTheme: IconThemeData(color: AppConstants.textPrimaryDark),
         titleTextStyle: TextStyle(
           color: AppConstants.textPrimaryDark,

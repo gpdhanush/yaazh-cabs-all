@@ -2,16 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:yaazh_customer/app/constants.dart';
 import 'package:yaazh_customer/core/location/location_service.dart';
 import 'package:yaazh_customer/core/location/place_search.dart';
 import 'package:yaazh_customer/core/network/api_exception.dart';
+import 'package:yaazh_customer/core/widgets/ya_network_image.dart';
 import 'package:yaazh_customer/features/booking/data/booking_repository.dart';
 import 'package:yaazh_customer/features/booking/domain/booking.dart';
 import 'package:yaazh_customer/features/home/data/catalog_repository.dart';
 import 'package:yaazh_customer/features/home/domain/catalog.dart';
 import 'package:yaazh_customer/features/profile/data/saved_places_repository.dart';
+import 'package:yaazh_customer/features/trips/presentation/trips_viewmodel.dart';
 
 const _tripTypes = <(String, String)>[
   ('one_way', 'One way'),
@@ -37,6 +40,10 @@ class _BookPageState extends ConsumerState<BookPage> {
   List<LatLng> _polyline = const [];
   Map<String, FareQuote> _quotes = {};
   bool _quoting = false;
+  bool _locating = true;
+  bool _pickupIsCurrent = true;
+  bool _mapReady = false;
+  LatLng? _pendingCenter;
   DateTime _pickupAt = DateTime.now().add(const Duration(minutes: 30));
 
   @override
@@ -45,43 +52,80 @@ class _BookPageState extends ConsumerState<BookPage> {
     Future.microtask(_initPickup);
   }
 
+  @override
+  void dispose() {
+    _mapController.dispose();
+    super.dispose();
+  }
+
+  void _onMapReady() {
+    _mapReady = true;
+    final pending = _pendingCenter;
+    if (pending != null) {
+      _pendingCenter = null;
+      _mapController.move(pending, 15);
+    }
+  }
+
+  void _moveMap(LatLng loc) {
+    if (!_mapReady) {
+      _pendingCenter = loc;
+      return;
+    }
+    try {
+      _mapController.move(loc, 15);
+    } catch (_) {
+      _mapReady = false;
+      _pendingCenter = loc;
+    }
+  }
+
   Future<void> _initPickup() async {
+    if (ref.read(upcomingTripProvider) != null) return;
+    setState(() => _locating = true);
     final loc = await ref.read(locationServiceProvider).getCurrentLatLng();
     if (!mounted) return;
     if (loc == null) {
-      setState(() {
-        _pickup = const PlaceSuggestion(
-          id: 'udumalpet',
-          label: 'Udumalpet',
-          latitude: 10.5847,
-          longitude: 77.2514,
-        );
-      });
+      setState(() => _locating = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Enable location so we can set your pickup pin.')),
+      );
       return;
     }
     final label = await ref.read(placeSearchProvider).reverseGeocode(loc);
     if (!mounted) return;
     setState(() {
+      _pickupIsCurrent = true;
+      _locating = false;
       _pickup = PlaceSuggestion(
         id: 'current',
-        label: label,
+        label: 'Current location',
+        secondary: label,
         latitude: loc.latitude,
         longitude: loc.longitude,
       );
     });
-    _mapController.move(loc, 14);
+    _moveMap(loc);
+    await _refreshRoute();
   }
 
   Future<void> _pickPlace({required bool isPickup}) async {
     final selected = await showModalBottomSheet<PlaceSuggestion>(
       context: context,
       isScrollControlled: true,
+      backgroundColor: Colors.transparent,
       builder: (_) => const _PlaceSearchSheet(),
     );
-    if (selected == null || selected.latLng == null) return;
+    if (selected == null) return;
+    if (selected.id == 'current') {
+      await _initPickup();
+      return;
+    }
+    if (selected.latLng == null) return;
     setState(() {
       if (isPickup) {
         _pickup = selected;
+        _pickupIsCurrent = false;
       } else {
         _drop = selected;
       }
@@ -101,10 +145,15 @@ class _BookPageState extends ConsumerState<BookPage> {
   }
 
   void _fitBounds(LatLng a, LatLng b) {
-    final bounds = LatLngBounds.fromPoints([a, b]);
-    _mapController.fitCamera(
-      CameraFit.bounds(bounds: bounds, padding: const EdgeInsets.all(72)),
-    );
+    if (!_mapReady) return;
+    try {
+      final bounds = LatLngBounds.fromPoints([a, b]);
+      _mapController.fitCamera(
+        CameraFit.bounds(bounds: bounds, padding: const EdgeInsets.fromLTRB(48, 48, 48, 280)),
+      );
+    } catch (_) {
+      _mapReady = false;
+    }
   }
 
   Future<void> _refreshQuotes() async {
@@ -142,7 +191,38 @@ class _BookPageState extends ConsumerState<BookPage> {
   }
 
   Future<void> _continue() async {
-    final pickup = _pickup;
+    final active = ref.read(upcomingTripProvider);
+    if (active != null) {
+      context.push('/trips/${active.id}');
+      return;
+    }
+
+    var pickup = _pickup;
+    if (_pickupIsCurrent || pickup?.latLng == null) {
+      final loc = await ref.read(locationServiceProvider).getCurrentLatLng();
+      if (loc == null) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Turn on GPS so the driver can find you.')),
+        );
+        return;
+      }
+      final label = await ref.read(placeSearchProvider).reverseGeocode(loc);
+      pickup = PlaceSuggestion(
+        id: 'current',
+        label: 'Current location',
+        secondary: label,
+        latitude: loc.latitude,
+        longitude: loc.longitude,
+      );
+      if (mounted) {
+        setState(() {
+          _pickup = pickup;
+          _pickupIsCurrent = true;
+        });
+      }
+    }
+
     final drop = _drop;
     final fleet = ref.read(vehicleCategoriesProvider).asData?.value ?? [];
     final vehicle = fleet.cast<VehicleCategory?>().firstWhere(
@@ -150,6 +230,7 @@ class _BookPageState extends ConsumerState<BookPage> {
           orElse: () => fleet.isEmpty ? null : fleet.first,
         );
     if (pickup?.latLng == null || drop?.latLng == null || vehicle == null) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Choose pickup, drop, and a vehicle')),
       );
@@ -157,7 +238,9 @@ class _BookPageState extends ConsumerState<BookPage> {
     }
     final quote = _quotes[vehicle.id];
     final draft = BookingDraft(
-      pickupLabel: pickup!.label,
+      pickupLabel: pickup!.secondary?.isNotEmpty == true
+          ? pickup.secondary!
+          : pickup.label,
       dropLabel: drop!.label,
       pickupLat: pickup.latitude!,
       pickupLng: pickup.longitude!,
@@ -168,24 +251,35 @@ class _BookPageState extends ConsumerState<BookPage> {
       vehicleName: vehicle.name,
       pickupAt: _pickupAt,
       quote: quote,
+      useCurrentLocation: _pickupIsCurrent,
     );
+    if (!mounted) return;
     context.push('/book/confirm', extra: draft);
   }
 
   @override
   Widget build(BuildContext context) {
+    final active = ref.watch(upcomingTripProvider);
+    if (active != null) {
+      _mapReady = false;
+      return _OngoingBookingGate(booking: active);
+    }
+
     final fleet = ref.watch(vehicleCategoriesProvider);
     final pickupPoint = _pickup?.latLng;
     final dropPoint = _drop?.latLng;
+    final selectedQuote = _selectedVehicleId == null ? null : _quotes[_selectedVehicleId!];
 
     return Scaffold(
+      backgroundColor: AppConstants.bgLight,
       body: Stack(
         children: [
           FlutterMap(
             mapController: _mapController,
             options: MapOptions(
               initialCenter: pickupPoint ?? AppConstants.defaultCenter,
-              initialZoom: 13,
+              initialZoom: 14,
+              onMapReady: _onMapReady,
             ),
             children: [
               TileLayer(
@@ -198,7 +292,7 @@ class _BookPageState extends ConsumerState<BookPage> {
                     Polyline(
                       points: _polyline,
                       color: AppConstants.accentColor,
-                      strokeWidth: 4.5,
+                      strokeWidth: 5,
                     ),
                   ],
                 ),
@@ -207,32 +301,62 @@ class _BookPageState extends ConsumerState<BookPage> {
                   if (pickupPoint != null)
                     Marker(
                       point: pickupPoint,
-                      width: 40,
-                      height: 40,
-                      child: const Icon(Icons.trip_origin_rounded, color: Color(0xFF16A34A), size: 30),
+                      width: 44,
+                      height: 44,
+                      child: const _MapPin(color: Color(0xFF16A34A), icon: Icons.my_location_rounded),
                     ),
                   if (dropPoint != null)
                     Marker(
                       point: dropPoint,
-                      width: 40,
-                      height: 40,
-                      child: const Icon(Icons.location_on_rounded, color: AppConstants.errorColor, size: 34),
+                      width: 44,
+                      height: 44,
+                      child: const _MapPin(color: AppConstants.errorColor, icon: Icons.location_on_rounded),
                     ),
                 ],
               ),
             ],
           ),
           SafeArea(
-            child: Align(
-              alignment: Alignment.topRight,
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: FloatingActionButton.small(
-                  heroTag: 'locate',
-                  backgroundColor: Colors.white,
-                  onPressed: _initPickup,
-                  child: const Icon(Icons.my_location_rounded, color: AppConstants.primaryColor),
-                ),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+              child: Row(
+                children: [
+                  Material(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    child: InkWell(
+                      onTap: () => context.go('/home'),
+                      borderRadius: BorderRadius.circular(14),
+                      child: const SizedBox(
+                        width: 44,
+                        height: 44,
+                        child: Icon(Icons.arrow_back_rounded),
+                      ),
+                    ),
+                  ),
+                  const Spacer(),
+                  Material(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    child: InkWell(
+                      onTap: _initPickup,
+                      borderRadius: BorderRadius.circular(14),
+                      child: SizedBox(
+                        width: 44,
+                        height: 44,
+                        child: _locating
+                            ? const Padding(
+                                padding: EdgeInsets.all(12),
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: AppConstants.accentHover,
+                                ),
+                              )
+                            : const Icon(Icons.my_location_rounded, color: AppConstants.primaryColor),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -241,14 +365,18 @@ class _BookPageState extends ConsumerState<BookPage> {
             child: _BookingSheet(
               pickup: _pickup,
               drop: _drop,
+              pickupIsCurrent: _pickupIsCurrent,
+              locating: _locating,
               tripType: _tripType,
               pickupAt: _pickupAt,
               quoting: _quoting,
               quotes: _quotes,
               selectedVehicleId: _selectedVehicleId,
+              selectedQuote: selectedQuote,
               fleet: fleet,
               onPickPickup: () => _pickPlace(isPickup: true),
               onPickDrop: () => _pickPlace(isPickup: false),
+              onUseCurrent: _initPickup,
               onTripType: (type) {
                 setState(() => _tripType = type);
                 _refreshQuotes();
@@ -280,17 +408,42 @@ class _BookPageState extends ConsumerState<BookPage> {
   }
 }
 
+class _MapPin extends StatelessWidget {
+  final Color color;
+  final IconData icon;
+
+  const _MapPin({required this.color, required this.icon});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(color: color.withValues(alpha: 0.35), blurRadius: 10, offset: const Offset(0, 3)),
+        ],
+      ),
+      child: Icon(icon, color: color, size: 22),
+    );
+  }
+}
+
 class _BookingSheet extends StatelessWidget {
   final PlaceSuggestion? pickup;
   final PlaceSuggestion? drop;
+  final bool pickupIsCurrent;
+  final bool locating;
   final String tripType;
   final DateTime pickupAt;
   final bool quoting;
   final Map<String, FareQuote> quotes;
   final String? selectedVehicleId;
+  final FareQuote? selectedQuote;
   final AsyncValue<List<VehicleCategory>> fleet;
   final VoidCallback onPickPickup;
   final VoidCallback onPickDrop;
+  final VoidCallback onUseCurrent;
   final ValueChanged<String> onTripType;
   final ValueChanged<String> onVehicle;
   final VoidCallback onWhen;
@@ -299,14 +452,18 @@ class _BookingSheet extends StatelessWidget {
   const _BookingSheet({
     required this.pickup,
     required this.drop,
+    required this.pickupIsCurrent,
+    required this.locating,
     required this.tripType,
     required this.pickupAt,
     required this.quoting,
     required this.quotes,
     required this.selectedVehicleId,
+    required this.selectedQuote,
     required this.fleet,
     required this.onPickPickup,
     required this.onPickDrop,
+    required this.onUseCurrent,
     required this.onTripType,
     required this.onVehicle,
     required this.onWhen,
@@ -316,124 +473,253 @@ class _BookingSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.58),
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.62),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
         boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.12), blurRadius: 24, offset: const Offset(0, -8)),
+          BoxShadow(color: Color(0x33000000), blurRadius: 28, offset: Offset(0, -8)),
         ],
       ),
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 10, 16, 20),
-        shrinkWrap: true,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Center(
-            child: Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: const Color(0xFFE2E8F0),
-                borderRadius: BorderRadius.circular(99),
-              ),
+          const SizedBox(height: 10),
+          Container(
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: const Color(0xFFE2E8F0),
+              borderRadius: BorderRadius.circular(99),
             ),
           ),
-          const SizedBox(height: 12),
-          _PlaceTile(
-            icon: Icons.trip_origin_rounded,
-            color: const Color(0xFF16A34A),
-            label: pickup?.label ?? 'Set pickup',
-            onTap: onPickPickup,
-          ),
-          const SizedBox(height: 8),
-          _PlaceTile(
-            icon: Icons.location_on_rounded,
-            color: AppConstants.errorColor,
-            label: drop?.label ?? 'Set drop',
-            onTap: onPickDrop,
-          ),
-          const SizedBox(height: 12),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
+          Flexible(
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
+              shrinkWrap: true,
               children: [
-                for (final type in _tripTypes) ...[
-                  ChoiceChip(
-                    label: Text(type.$2),
-                    selected: tripType == type.$1,
-                    onSelected: (_) => onTripType(type.$1),
-                    selectedColor: AppConstants.accentColor,
-                    labelStyle: TextStyle(
-                      fontWeight: FontWeight.w700,
-                      color: tripType == type.$1 ? Colors.black : null,
+                Row(
+                  children: [
+                    const Text('Book a cab', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+                    const Spacer(),
+                    if (pickupIsCurrent)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFDCFCE7),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          locating ? 'Locating…' : 'Live GPS',
+                          style: const TextStyle(
+                            color: Color(0xFF15803D),
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.fromLTRB(14, 12, 10, 12),
+                  decoration: BoxDecoration(
+                    color: AppConstants.bgLight,
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(color: AppConstants.borderLight),
+                  ),
+                  child: Row(
+                    children: [
+                      Column(
+                        children: [
+                          const Icon(Icons.my_location_rounded, size: 16, color: Color(0xFF16A34A)),
+                          Container(
+                            width: 2,
+                            height: 28,
+                            margin: const EdgeInsets.symmetric(vertical: 4),
+                            color: const Color(0xFFE2E8F0),
+                          ),
+                          const Icon(Icons.location_on_rounded, size: 16, color: AppConstants.errorColor),
+                        ],
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          children: [
+                            _StopRow(
+                              title: pickupIsCurrent ? 'Current location' : (pickup?.label ?? 'Set pickup'),
+                              subtitle: pickup?.secondary ?? (pickupIsCurrent ? 'Driver will come to your GPS pin' : 'Pickup point'),
+                              onTap: onPickPickup,
+                            ),
+                            const Divider(height: 16),
+                            _StopRow(
+                              title: drop?.label ?? 'Where to?',
+                              subtitle: drop?.secondary ?? 'Set drop location',
+                              onTap: onPickDrop,
+                              muted: drop == null,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (!pickupIsCurrent) ...[
+                  const SizedBox(height: 8),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton.icon(
+                      onPressed: onUseCurrent,
+                      icon: const Icon(Icons.gps_fixed_rounded, size: 18),
+                      label: const Text('Use my current location'),
                     ),
                   ),
-                  const SizedBox(width: 8),
                 ],
-              ],
-            ),
-          ),
-          const SizedBox(height: 8),
-          TextButton.icon(
-            onPressed: onWhen,
-            icon: const Icon(Icons.schedule_rounded),
-            label: Text(
-              'Pickup ${pickupAt.day}/${pickupAt.month} · '
-              '${pickupAt.hour.toString().padLeft(2, '0')}:${pickupAt.minute.toString().padLeft(2, '0')}',
-            ),
-          ),
-          const SizedBox(height: 4),
-          fleet.when(
-            data: (rows) => SizedBox(
-              height: 108,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                itemCount: rows.length,
-                separatorBuilder: (_, _) => const SizedBox(width: 10),
-                itemBuilder: (context, i) {
-                  final cat = rows[i];
-                  final selected = cat.id == selectedVehicleId;
-                  final quote = quotes[cat.id];
-                  return InkWell(
-                    onTap: () => onVehicle(cat.id),
-                    borderRadius: BorderRadius.circular(14),
-                    child: Ink(
-                      width: 150,
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(
-                          color: selected ? AppConstants.accentColor : AppConstants.borderLight,
-                          width: selected ? 2 : 1,
-                        ),
-                        color: selected
-                            ? AppConstants.accentColor.withValues(alpha: 0.08)
-                            : Theme.of(context).cardColor,
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(cat.name, style: const TextStyle(fontWeight: FontWeight.w800)),
-                          Text('${cat.seatingCapacity} seats', style: const TextStyle(fontSize: 12, color: AppConstants.textSecondaryLight)),
-                          const Spacer(),
-                          Text(
-                            quote != null ? '₹${quote.estimatedTotal.toStringAsFixed(0)}' : (quoting ? '…' : 'Quote'),
-                            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+                const SizedBox(height: 12),
+                SizedBox(
+                  height: 38,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: _tripTypes.length,
+                    separatorBuilder: (_, _) => const SizedBox(width: 8),
+                    itemBuilder: (context, i) {
+                      final type = _tripTypes[i];
+                      final selected = tripType == type.$1;
+                      return Material(
+                        color: selected ? AppConstants.accentColor : AppConstants.bgLight,
+                        borderRadius: BorderRadius.circular(20),
+                        child: InkWell(
+                          onTap: () => onTripType(type.$1),
+                          borderRadius: BorderRadius.circular(20),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                            child: Text(
+                              type.$2,
+                              style: TextStyle(
+                                fontWeight: FontWeight.w800,
+                                fontSize: 13,
+                                color: selected ? Colors.black : AppConstants.textSecondaryLight,
+                              ),
+                            ),
                           ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Material(
+                  color: AppConstants.bgLight,
+                  borderRadius: BorderRadius.circular(14),
+                  child: InkWell(
+                    onTap: onWhen,
+                    borderRadius: BorderRadius.circular(14),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.schedule_rounded, size: 20, color: AppConstants.accentHover),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              DateFormat('EEE, d MMM · h:mm a').format(pickupAt),
+                              style: const TextStyle(fontWeight: FontWeight.w700),
+                            ),
+                          ),
+                          const Text('Change', style: TextStyle(fontWeight: FontWeight.w700, color: AppConstants.accentHover)),
                         ],
                       ),
                     ),
-                  );
-                },
+                  ),
+                ),
+                const SizedBox(height: 14),
+                fleet.when(
+                  data: (rows) => SizedBox(
+                    height: 132,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: rows.length,
+                      separatorBuilder: (_, _) => const SizedBox(width: 10),
+                      itemBuilder: (context, i) {
+                        final cat = rows[i];
+                        final selected = cat.id == selectedVehicleId;
+                        final quote = quotes[cat.id];
+                        return Material(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          child: InkWell(
+                            onTap: () => onVehicle(cat.id),
+                            borderRadius: BorderRadius.circular(16),
+                            child: Ink(
+                              width: 148,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: selected ? AppConstants.accentColor : AppConstants.borderLight,
+                                  width: selected ? 2 : 1,
+                                ),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  YaNetworkImage(
+                                    url: cat.imageUrl,
+                                    height: 58,
+                                    width: 148,
+                                    fallbackIcon: Icons.directions_car_filled_rounded,
+                                    borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
+                                  ),
+                                  Padding(
+                                    padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          cat.name,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13),
+                                        ),
+                                        Text(
+                                          '${cat.seatingCapacity} seats',
+                                          style: const TextStyle(fontSize: 11, color: AppConstants.textSecondaryLight),
+                                        ),
+                                        Text(
+                                          quote != null
+                                              ? '₹${quote.estimatedTotal.toStringAsFixed(0)}'
+                                              : (quoting ? '…' : 'Quote'),
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.w800,
+                                            color: AppConstants.accentHover,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  loading: () => const LinearProgressIndicator(color: AppConstants.accentColor),
+                  error: (e, _) => Text(e.toString()),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+            child: ElevatedButton(
+              onPressed: onContinue,
+              child: Text(
+                selectedQuote == null
+                    ? 'CONTINUE'
+                    : 'CONTINUE · ₹${selectedQuote!.estimatedTotal.toStringAsFixed(0)}',
               ),
             ),
-            loading: () => const LinearProgressIndicator(color: AppConstants.accentColor),
-            error: (e, _) => Text(e.toString()),
-          ),
-          const SizedBox(height: 14),
-          ElevatedButton(
-            onPressed: onContinue,
-            child: const Text('CONTINUE'),
           ),
         ],
       ),
@@ -441,45 +727,49 @@ class _BookingSheet extends StatelessWidget {
   }
 }
 
-class _PlaceTile extends StatelessWidget {
-  final IconData icon;
-  final Color color;
-  final String label;
+class _StopRow extends StatelessWidget {
+  final String title;
+  final String subtitle;
   final VoidCallback onTap;
+  final bool muted;
 
-  const _PlaceTile({
-    required this.icon,
-    required this.color,
-    required this.label,
+  const _StopRow({
+    required this.title,
+    required this.subtitle,
     required this.onTap,
+    this.muted = false,
   });
 
   @override
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Ink(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-        decoration: BoxDecoration(
-          border: Border.all(color: AppConstants.borderLight),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Row(
-          children: [
-            Icon(icon, color: color, size: 20),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontWeight: FontWeight.w600),
-              ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w800,
+                    color: muted ? AppConstants.textSecondaryLight : AppConstants.textPrimaryLight,
+                  ),
+                ),
+                Text(
+                  subtitle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 12, color: AppConstants.textSecondaryLight),
+                ),
+              ],
             ),
-            const Icon(Icons.chevron_right_rounded, color: AppConstants.textSecondaryLight),
-          ],
-        ),
+          ),
+          const Icon(Icons.chevron_right_rounded, color: AppConstants.textSecondaryLight),
+        ],
       ),
     );
   }
@@ -527,8 +817,12 @@ class _PlaceSearchSheetState extends ConsumerState<_PlaceSearchSheet> {
   Widget build(BuildContext context) {
     return Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-      child: SizedBox(
-        height: MediaQuery.of(context).size.height * 0.7,
+      child: Container(
+        height: MediaQuery.of(context).size.height * 0.72,
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
         child: Column(
           children: [
             const SizedBox(height: 10),
@@ -538,7 +832,7 @@ class _PlaceSearchSheetState extends ConsumerState<_PlaceSearchSheet> {
               decoration: BoxDecoration(color: const Color(0xFFE2E8F0), borderRadius: BorderRadius.circular(99)),
             ),
             Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
               child: TextField(
                 controller: _controller,
                 autofocus: true,
@@ -549,20 +843,128 @@ class _PlaceSearchSheetState extends ConsumerState<_PlaceSearchSheet> {
                 onChanged: _search,
               ),
             ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              child: Material(
+                color: const Color(0xFFDCFCE7),
+                borderRadius: BorderRadius.circular(14),
+                child: InkWell(
+                  onTap: () => Navigator.of(context).pop(
+                    const PlaceSuggestion(id: 'current', label: 'Current location'),
+                  ),
+                  borderRadius: BorderRadius.circular(14),
+                  child: const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    child: Row(
+                      children: [
+                        Icon(Icons.my_location_rounded, color: Color(0xFF15803D)),
+                        SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            'Use my current location',
+                            style: TextStyle(fontWeight: FontWeight.w800, color: Color(0xFF15803D)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
             if (_loading) const LinearProgressIndicator(color: AppConstants.accentColor),
             Expanded(
-              child: ListView.builder(
+              child: ListView.separated(
                 itemCount: _results.length,
+                separatorBuilder: (_, _) => const Divider(height: 1, indent: 16, endIndent: 16),
                 itemBuilder: (context, i) {
                   final place = _results[i];
-                  return ListTile(
-                    leading: const Icon(Icons.place_outlined),
-                    title: Text(place.label, style: const TextStyle(fontWeight: FontWeight.w700)),
-                    subtitle: place.secondary == null ? null : Text(place.secondary!, maxLines: 1),
+                  return InkWell(
                     onTap: () => Navigator.of(context).pop(place),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.place_outlined, color: AppConstants.accentHover),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(place.label, style: const TextStyle(fontWeight: FontWeight.w700)),
+                                if (place.secondary != null)
+                                  Text(
+                                    place.secondary!,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(fontSize: 12, color: AppConstants.textSecondaryLight),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   );
                 },
               ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _OngoingBookingGate extends StatelessWidget {
+  final Booking booking;
+
+  const _OngoingBookingGate({required this.booking});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppConstants.bgLight,
+      body: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 88,
+              height: 88,
+              decoration: BoxDecoration(
+                color: AppConstants.accentColor.withValues(alpha: 0.16),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.local_taxi_rounded, size: 40, color: AppConstants.accentHover),
+            ),
+            const SizedBox(height: 22),
+            const Text(
+              'Trip already in progress',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              'Finish or cancel ${booking.bookingReference} before booking another cab.',
+              textAlign: TextAlign.center,
+              style: const TextStyle(height: 1.45, color: AppConstants.textSecondaryLight),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              '${booking.pickupLocation} → ${booking.dropLocation}',
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 28),
+            ElevatedButton(
+              onPressed: () => context.push('/trips/${booking.id}'),
+              child: const Text('VIEW ONGOING TRIP'),
+            ),
+            const SizedBox(height: 10),
+            OutlinedButton(
+              onPressed: () => context.go('/home'),
+              child: const Text('GO TO DASHBOARD'),
             ),
           ],
         ),

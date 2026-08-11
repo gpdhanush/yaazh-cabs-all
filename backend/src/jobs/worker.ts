@@ -2,6 +2,7 @@ import { hostname } from "node:os";
 import { prisma } from "../config/database.js";
 import { loadEnv } from "../config/env.js";
 import { claimJobs, completeJob, failJob } from "../queues/job-queue.js";
+import { deliverBookingNotification } from "../services/fcm.service.js";
 
 loadEnv();
 
@@ -56,20 +57,15 @@ async function handleJob(jobType: string, payload: Record<string, unknown>) {
     case "notify_booking_completed":
     case "send_notification": {
       // Persist an in-app notification log; FCM/SMS can plug in later using the same payload.
-      const env = loadEnv();
       const recipientType = inferRecipient(payload, jobType);
-      await prisma.notificationLogs.create({
-        data: {
-          recipient_type: recipientType,
-          customer_id: payload.customer_id ? BigInt(String(payload.customer_id)) : null,
-          driver_id: payload.driver_id ? BigInt(String(payload.driver_id)) : null,
-          booking_id: payload.booking_id ? BigInt(String(payload.booking_id)) : null,
-          channel: env.fcmEnabled ? "push" : "in_app",
-          title: String(payload.title ?? defaultTitle(jobType)),
-          body: String(payload.body ?? JSON.stringify(payload)),
-          delivery_status: "queued",
-          data_payload: payload as object,
-        },
+      await deliverBookingNotification({
+        recipientType,
+        customerId: payload.customer_id ? String(payload.customer_id) : null,
+        driverId: payload.driver_id ? String(payload.driver_id) : null,
+        bookingId: payload.booking_id ? String(payload.booking_id) : null,
+        jobType,
+        title: String(payload.title ?? defaultTitle(jobType)),
+        body: String(payload.body ?? JSON.stringify(payload)),
       });
       return;
     }

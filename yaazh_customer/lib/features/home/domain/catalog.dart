@@ -1,3 +1,5 @@
+import 'package:yaazh_customer/core/network/media_url.dart';
+
 class VehicleCategory {
   final String id;
   final String name;
@@ -31,7 +33,7 @@ class VehicleCategory {
       seatingCapacity: int.tryParse(json['seating_capacity']?.toString() ?? '') ?? 4,
       luggageCapacity: json['luggage_capacity']?.toString(),
       description: json['description']?.toString(),
-      imageUrl: json['image_url']?.toString(),
+      imageUrl: resolveMediaUrl(json['image_url']?.toString()),
       oneWayRatePerKm: double.tryParse(json['one_way_rate_per_km']?.toString() ?? '') ?? 0,
       roundTripRatePerKm: double.tryParse(json['round_trip_rate_per_km']?.toString() ?? '') ?? 0,
       driverBatta: double.tryParse(json['driver_batta']?.toString() ?? '') ?? 0,
@@ -74,7 +76,7 @@ class PopularRoute {
       distanceKm: double.tryParse(json['distance_km']?.toString() ?? '') ?? 0,
       durationMinutes: int.tryParse(json['duration_minutes']?.toString() ?? ''),
       startingFare: double.tryParse(json['starting_fare']?.toString() ?? ''),
-      imageUrl: json['image_url']?.toString(),
+      imageUrl: resolveMediaUrl(json['image_url']?.toString()),
       tag: json['tag']?.toString(),
     );
   }

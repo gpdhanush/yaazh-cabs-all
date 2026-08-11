@@ -9,7 +9,7 @@ import { ok } from "../../../utils/api-response.js";
 import { requireAuth, requirePermission, requireUser } from "../../../middleware/auth.js";
 import { bookingService, serializeBooking, getBookingPaymentSummary, recordBookingPayment, setBookingPaymentStatus } from "../../../services/booking.service.js";
 import { NotFoundError, ValidationError, ConflictError } from "../../../errors/app-error.js";
-import { enqueueJob } from "../../../queues/job-queue.js";
+import { deliverBookingNotification } from "../../../services/fcm.service.js";
 import type { TripType } from "@prisma/client";
 import { hashPassword } from "../../../utils/crypto.js";
 
@@ -440,6 +440,38 @@ function serializeVehicle(
 export const adminRoutes: FastifyPluginAsync = async (app) => {
   app.addHook("preHandler", requireAuth("admin"));
 
+  app.post("/devices", async (req, reply) => {
+    const user = requireUser(req);
+    const schema = z.object({
+      platform: z.enum(["android", "ios", "web"]),
+      fcm_token: z.string().min(10),
+      device_uuid: z.string().optional(),
+      app_version: z.string().optional(),
+    });
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) throw new ValidationError("Validation failed.", parsed.error.flatten());
+    const row = await prisma.appDevices.upsert({
+      where: { fcm_token: parsed.data.fcm_token },
+      create: {
+        user_type: "admin",
+        admin_user_id: user.id,
+        platform: parsed.data.platform,
+        fcm_token: parsed.data.fcm_token,
+        device_uuid: parsed.data.device_uuid,
+        app_version: parsed.data.app_version,
+        last_seen_at: new Date(),
+      },
+      update: {
+        admin_user_id: user.id,
+        user_type: "admin",
+        is_active: true,
+        last_seen_at: new Date(),
+        app_version: parsed.data.app_version,
+      },
+    });
+    return ok(reply, { id: String(row.id) }, "Device registered.", 201);
+  });
+
   app.get(
     "/dashboard",
     { preHandler: [requirePermission("dashboard.view")] },
@@ -611,14 +643,16 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
       });
       await audit(user.id, "booking.confirm", "bookings", String(id), null, data, req);
       const booking = await prisma.bookings.findUnique({ where: { id } });
-      await enqueueJob("notify_booking_confirmed", {
-        booking_id: String(id),
-        booking_reference: booking?.booking_reference,
-        recipient_type: "customer",
-        customer_id: booking?.customer_id != null ? String(booking.customer_id) : null,
-        title: "Booking confirmed",
-        body: `Your booking ${booking?.booking_reference ?? id} is confirmed. We will assign a driver shortly.`,
-      });
+      if (booking?.customer_id) {
+        await deliverBookingNotification({
+          recipientType: "customer",
+          customerId: String(booking.customer_id),
+          bookingId: String(id),
+          jobType: "notify_booking_confirmed",
+          title: "Booking confirmed",
+          body: `Your booking ${booking.booking_reference} is confirmed. We will assign a driver shortly.`,
+        });
+      }
       return ok(reply, data, "Booking confirmed.");
     },
   );
@@ -2234,8 +2268,15 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
     });
     const parsed = schema.safeParse(req.body);
     if (!parsed.success) throw new ValidationError("Validation failed.", parsed.error.flatten());
-    await enqueueJob("send_notification", parsed.data);
-    return ok(reply, { queued: true }, "Notification queued.");
+    const status = await deliverBookingNotification({
+      recipientType: parsed.data.recipient_type,
+      customerId: parsed.data.customer_id != null ? String(parsed.data.customer_id) : null,
+      driverId: parsed.data.driver_id != null ? String(parsed.data.driver_id) : null,
+      jobType: "send_notification",
+      title: parsed.data.title,
+      body: parsed.data.body,
+    });
+    return ok(reply, { delivery_status: status }, "Notification sent.");
   });
 
   app.get("/cms", { preHandler: [requirePermission("cms.manage")] }, async (_req, reply) => {

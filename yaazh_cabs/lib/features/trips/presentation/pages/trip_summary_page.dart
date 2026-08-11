@@ -11,10 +11,7 @@ import '../viewmodels/active_trip_viewmodel.dart';
 class TripSummaryPage extends ConsumerStatefulWidget {
   final String bookingId;
 
-  const TripSummaryPage({
-    super.key,
-    required this.bookingId,
-  });
+  const TripSummaryPage({super.key, required this.bookingId});
 
   @override
   ConsumerState<TripSummaryPage> createState() => _TripSummaryPageState();
@@ -67,7 +64,7 @@ class _TripSummaryPageState extends ConsumerState<TripSummaryPage> {
                           const Center(
                             child: Icon(
                               Icons.check_circle_rounded,
-                              color: const Color(0xFF059669),
+                              color: AppConstants.successColor,
                               size: 64,
                             ),
                           ),
@@ -91,32 +88,51 @@ class _TripSummaryPageState extends ConsumerState<TripSummaryPage> {
                           // Summary Card
                           Card(
                             child: Padding(
-                              padding: const EdgeInsets.all(AppConstants.paddingM),
+                              padding: const EdgeInsets.all(
+                                AppConstants.paddingM,
+                              ),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
                                     children: [
                                       const Text(
                                         'FARE & PAYMENT SUMMARY',
                                         style: TextStyle(
                                           fontSize: 12,
                                           fontWeight: FontWeight.bold,
-                                          color: AppConstants.textSecondaryLight,
+                                          color:
+                                              AppConstants.textSecondaryLight,
                                         ),
                                       ),
                                       StatusChip.forStatus(trip.paymentStatus),
                                     ],
                                   ),
                                   const Divider(height: 20),
-                                  _RowItem('Total Estimated Fare', '₹${trip.estimatedTotal.toStringAsFixed(2)}'),
-                                  _RowItem('Amount Collected', '₹${trip.amountPaid.toStringAsFixed(2)}'),
-                                  _RowItem('Balance Remaining', '₹${trip.balanceDue.toStringAsFixed(2)}'),
+                                  _RowItem(
+                                    'Total Estimated Fare',
+                                    '₹${trip.estimatedTotal.toStringAsFixed(2)}',
+                                  ),
+                                  _RowItem(
+                                    'Amount Collected',
+                                    '₹${trip.amountPaid.toStringAsFixed(2)}',
+                                  ),
+                                  _RowItem(
+                                    'Balance Remaining',
+                                    '₹${trip.balanceDue.toStringAsFixed(2)}',
+                                  ),
                                   if (trip.startOdometerKm != null)
-                                    _RowItem('Start Odometer', '${trip.startOdometerKm} km'),
+                                    _RowItem(
+                                      'Start Odometer',
+                                      '${trip.startOdometerKm} km',
+                                    ),
                                   if (trip.endOdometerKm != null)
-                                    _RowItem('End Odometer', '${trip.endOdometerKm} km'),
+                                    _RowItem(
+                                      'End Odometer',
+                                      '${trip.endOdometerKm} km',
+                                    ),
                                 ],
                               ),
                             ),
@@ -126,7 +142,9 @@ class _TripSummaryPageState extends ConsumerState<TripSummaryPage> {
                           // Route Summary Card
                           Card(
                             child: Padding(
-                              padding: const EdgeInsets.all(AppConstants.paddingM),
+                              padding: const EdgeInsets.all(
+                                AppConstants.paddingM,
+                              ),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
@@ -180,7 +198,10 @@ class _RowItem extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(label, style: const TextStyle(fontSize: 13)),
-          Text(value, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+          Text(
+            value,
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+          ),
         ],
       ),
     );

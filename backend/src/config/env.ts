@@ -43,7 +43,7 @@ export function buildDatabaseUrl(parts: {
   const user = encodeUriComponentSafe(parts.user);
   const password = parts.password ? encodeUriComponentSafe(parts.password) : "";
   const auth = password ? `${user}:${password}` : `${user}:`;
-  return `mysql://${auth}@${host}:${parts.port}/${parts.name}`;
+  return `mysql://${auth}@${host}:${parts.port}/${parts.name}?charset=utf8mb4`;
 }
 
 const envSchema = z

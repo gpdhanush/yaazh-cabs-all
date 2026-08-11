@@ -227,6 +227,7 @@ class BookingDraft {
   final String? couponCode;
   final String? specialNote;
   final FareQuote? quote;
+  final bool useCurrentLocation;
 
   const BookingDraft({
     required this.pickupLabel,
@@ -244,21 +245,26 @@ class BookingDraft {
     this.couponCode,
     this.specialNote,
     this.quote,
+    this.useCurrentLocation = true,
   });
 
   BookingDraft copyWith({
+    String? pickupLabel,
+    double? pickupLat,
+    double? pickupLng,
     DateTime? pickupAt,
     DateTime? returnAt,
     int? passengerCount,
     String? couponCode,
     String? specialNote,
     FareQuote? quote,
+    bool? useCurrentLocation,
   }) {
     return BookingDraft(
-      pickupLabel: pickupLabel,
+      pickupLabel: pickupLabel ?? this.pickupLabel,
       dropLabel: dropLabel,
-      pickupLat: pickupLat,
-      pickupLng: pickupLng,
+      pickupLat: pickupLat ?? this.pickupLat,
+      pickupLng: pickupLng ?? this.pickupLng,
       dropLat: dropLat,
       dropLng: dropLng,
       tripType: tripType,
@@ -270,6 +276,7 @@ class BookingDraft {
       couponCode: couponCode ?? this.couponCode,
       specialNote: specialNote ?? this.specialNote,
       quote: quote ?? this.quote,
+      useCurrentLocation: useCurrentLocation ?? this.useCurrentLocation,
     );
   }
 }

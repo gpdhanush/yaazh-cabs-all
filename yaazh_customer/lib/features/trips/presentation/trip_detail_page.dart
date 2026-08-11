@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -103,6 +104,40 @@ class _TripDetailPageState extends ConsumerState<TripDetailPage> {
     }
   }
 
+  Future<void> _goDashboard() async {
+    if (!mounted) return;
+    context.go('/home');
+  }
+
+  Future<bool> _confirmExit() async {
+    final leave = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Leave trip details?'),
+        content: const Text(
+          'Your booking will keep running. You can open it again from Trips anytime.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Stay'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Go to dashboard'),
+          ),
+        ],
+      ),
+    );
+    return leave == true;
+  }
+
+  Future<void> _onBackPressed() async {
+    final leave = await _confirmExit();
+    if (!leave || !mounted) return;
+    await _goDashboard();
+  }
+
   Future<void> _rate() async {
     try {
       await ref.read(bookingRepositoryProvider).rate(
@@ -126,13 +161,28 @@ class _TripDetailPageState extends ConsumerState<TripDetailPage> {
   Widget build(BuildContext context) {
     if (_error != null && _booking == null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Trip')),
+        appBar: AppBar(
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_rounded),
+            onPressed: _onBackPressed,
+          ),
+          title: const Text('Trip'),
+        ),
         body: AppErrorView(message: _error.toString(), onRetry: _load),
       );
     }
     final booking = _booking;
     if (booking == null) {
-      return const Scaffold(body: AppLoadingView(message: 'Loading trip…'));
+      return Scaffold(
+        appBar: AppBar(
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_rounded),
+            onPressed: _onBackPressed,
+          ),
+          title: const Text('Trip'),
+        ),
+        body: const AppLoadingView(message: 'Loading trip…'),
+      );
     }
 
     final pickup = booking.pickupLat != null && booking.pickupLng != null
@@ -145,8 +195,21 @@ class _TripDetailPageState extends ConsumerState<TripDetailPage> {
         ? LatLng(_driverLoc!.latitude!, _driverLoc!.longitude!)
         : null;
 
-    return Scaffold(
-      appBar: AppBar(title: Text(booking.bookingReference)),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _onBackPressed();
+      },
+      child: Scaffold(
+      appBar: AppBar(
+        automaticallyImplyLeading: false,
+        leading: IconButton(
+          tooltip: 'Back',
+          icon: const Icon(Icons.arrow_back_rounded),
+          onPressed: _onBackPressed,
+        ),
+        title: Text(booking.bookingReference),
+      ),
       body: ListView(
         children: [
           SizedBox(
@@ -234,30 +297,41 @@ class _TripDetailPageState extends ConsumerState<TripDetailPage> {
                   ),
                 ],
                 if (booking.statusHistory.isNotEmpty) ...[
-                  const SizedBox(height: 12),
-                  const Text('Status timeline', style: TextStyle(fontWeight: FontWeight.w800)),
-                  const SizedBox(height: 8),
-                  for (final item in booking.statusHistory)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: Text(
-                        '${item.newStatus.replaceAll('_', ' ')}'
-                        '${item.changedAt != null ? ' · ${DateFormat('d MMM, h:mm a').format(item.changedAt!.toLocal())}' : ''}',
-                        style: const TextStyle(color: AppConstants.textSecondaryLight),
+                  const SizedBox(height: 20),
+                  _StatusTimeline(items: booking.statusHistory),
+                ],
+                const SizedBox(height: 16),
+                if (booking.canCancel)
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: _cancel,
+                          style: OutlinedButton.styleFrom(
+                            minimumSize: const Size(0, 50),
+                            foregroundColor: AppConstants.errorColor,
+                            side: const BorderSide(color: AppConstants.errorColor),
+                          ),
+                          child: const Text('CANCEL TRIP'),
+                        ),
                       ),
-                    ),
-                ],
-                if (booking.canCancel) ...[
-                  const SizedBox(height: 16),
-                  OutlinedButton(
-                    onPressed: _cancel,
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppConstants.errorColor,
-                      side: const BorderSide(color: AppConstants.errorColor),
-                    ),
-                    child: const Text('CANCEL TRIP'),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: _goDashboard,
+                          style: ElevatedButton.styleFrom(
+                            minimumSize: const Size(0, 50),
+                          ),
+                          child: const Text('DASHBOARD'),
+                        ),
+                      ),
+                    ],
+                  )
+                else
+                  ElevatedButton(
+                    onPressed: _goDashboard,
+                    child: const Text('GO TO DASHBOARD'),
                   ),
-                ],
                 if (booking.isCompleted) ...[
                   const SizedBox(height: 20),
                   const Text('Rate this trip', style: TextStyle(fontWeight: FontWeight.w800)),
@@ -285,6 +359,270 @@ class _TripDetailPageState extends ConsumerState<TripDetailPage> {
           ),
         ],
       ),
+    ),
     );
   }
+}
+
+class _StatusTimeline extends StatelessWidget {
+  final List<StatusHistoryItem> items;
+
+  const _StatusTimeline({required this.items});
+
+  @override
+  Widget build(BuildContext context) {
+    final steps = items.reversed.toList();
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppConstants.borderLight),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'STATUS TIMELINE',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0.8,
+              color: AppConstants.textSecondaryLight,
+            ),
+          ),
+          const SizedBox(height: 16),
+          for (var i = 0; i < steps.length; i++)
+            _TimelineStep(
+              item: steps[i],
+              isLatest: i == 0,
+              isLast: i == steps.length - 1,
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TimelineStep extends StatelessWidget {
+  final StatusHistoryItem item;
+  final bool isLatest;
+  final bool isLast;
+
+  const _TimelineStep({
+    required this.item,
+    required this.isLatest,
+    required this.isLast,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final style = _timelineStyle(item.newStatus, isLatest);
+    final time = item.changedAt == null
+        ? ''
+        : DateFormat('d MMM · h:mm a').format(item.changedAt!.toLocal());
+
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 28,
+            child: Column(
+              children: [
+                Container(
+                  width: 28,
+                  height: 28,
+                  decoration: BoxDecoration(
+                    color: style.dot,
+                    shape: BoxShape.circle,
+                    boxShadow: isLatest
+                        ? [
+                            BoxShadow(
+                              color: style.dot.withValues(alpha: 0.28),
+                              blurRadius: 10,
+                              offset: const Offset(0, 3),
+                            ),
+                          ]
+                        : null,
+                  ),
+                  child: Icon(style.icon, size: 15, color: style.iconColor),
+                ),
+                if (!isLast)
+                  Expanded(
+                    child: Container(
+                      width: 2,
+                      margin: const EdgeInsets.symmetric(vertical: 4),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE2E8F0),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Padding(
+              padding: EdgeInsets.only(bottom: isLast ? 8 : 18),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          _statusLabel(item.newStatus),
+                          style: TextStyle(
+                            fontWeight: FontWeight.w800,
+                            fontSize: 14,
+                            color: style.title,
+                          ),
+                        ),
+                      ),
+                      if (time.isNotEmpty)
+                        Text(
+                          time,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: AppConstants.textSecondaryLight,
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    style.caption,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      height: 1.35,
+                      color: AppConstants.textSecondaryLight,
+                    ),
+                  ),
+                  if (item.note != null && item.note!.trim().isNotEmpty) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      item.note!.trim(),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontStyle: FontStyle.italic,
+                        color: AppConstants.textSecondaryLight,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TimelineStyle {
+  final Color dot;
+  final Color iconColor;
+  final Color title;
+  final IconData icon;
+  final String caption;
+
+  const _TimelineStyle({
+    required this.dot,
+    required this.iconColor,
+    required this.title,
+    required this.icon,
+    required this.caption,
+  });
+}
+
+_TimelineStyle _timelineStyle(String status, bool isLatest) {
+  final key = status.toLowerCase();
+  final past = !isLatest;
+
+  switch (key) {
+    case 'completed':
+    case 'paid':
+      return _TimelineStyle(
+        dot: const Color(0xFF16A34A),
+        iconColor: Colors.white,
+        title: const Color(0xFF166534),
+        icon: Icons.check_rounded,
+        caption: 'Trip completed successfully',
+      );
+    case 'cancelled':
+    case 'rejected':
+    case 'no_show':
+    case 'driver_rejected':
+      return _TimelineStyle(
+        dot: AppConstants.errorColor,
+        iconColor: Colors.white,
+        title: const Color(0xFFB91C1C),
+        icon: Icons.close_rounded,
+        caption: 'This booking was closed',
+      );
+    case 'confirmed':
+      return _TimelineStyle(
+        dot: past ? const Color(0xFF16A34A) : AppConstants.accentColor,
+        iconColor: past ? Colors.white : Colors.black,
+        title: AppConstants.textPrimaryLight,
+        icon: past ? Icons.check_rounded : Icons.verified_rounded,
+        caption: 'Booking confirmed',
+      );
+    case 'driver_notified':
+    case 'driver_accepted':
+    case 'driver_assigned':
+      return _TimelineStyle(
+        dot: past ? const Color(0xFF16A34A) : const Color(0xFF2563EB),
+        iconColor: Colors.white,
+        title: AppConstants.textPrimaryLight,
+        icon: past ? Icons.check_rounded : Icons.local_taxi_rounded,
+        caption: 'A driver has been assigned',
+      );
+    case 'on_the_way':
+      return _TimelineStyle(
+        dot: past ? const Color(0xFF16A34A) : const Color(0xFF2563EB),
+        iconColor: Colors.white,
+        title: AppConstants.textPrimaryLight,
+        icon: past ? Icons.check_rounded : Icons.near_me_rounded,
+        caption: 'Driver is heading to pickup',
+      );
+    case 'arrived':
+      return _TimelineStyle(
+        dot: past ? const Color(0xFF16A34A) : AppConstants.accentColor,
+        iconColor: past ? Colors.white : Colors.black,
+        title: AppConstants.textPrimaryLight,
+        icon: past ? Icons.check_rounded : Icons.place_rounded,
+        caption: 'Driver has arrived',
+      );
+    case 'trip_started':
+      return _TimelineStyle(
+        dot: past ? const Color(0xFF16A34A) : AppConstants.accentColor,
+        iconColor: past ? Colors.white : Colors.black,
+        title: AppConstants.textPrimaryLight,
+        icon: past ? Icons.check_rounded : Icons.directions_car_rounded,
+        caption: 'Your ride is in progress',
+      );
+    case 'pending':
+    default:
+      return _TimelineStyle(
+        dot: past ? const Color(0xFF16A34A) : AppConstants.accentColor,
+        iconColor: past ? Colors.white : Colors.black,
+        title: AppConstants.textPrimaryLight,
+        icon: past ? Icons.check_rounded : Icons.schedule_rounded,
+        caption: 'Waiting for confirmation',
+      );
+  }
+}
+
+String _statusLabel(String status) {
+  return status
+      .split('_')
+      .where((part) => part.isNotEmpty)
+      .map((part) => '${part[0].toUpperCase()}${part.substring(1)}')
+      .join(' ');
 }

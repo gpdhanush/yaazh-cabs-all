@@ -1,4 +1,3 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -6,9 +5,8 @@ import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:yaazh_customer/app/constants.dart';
 import 'package:yaazh_customer/core/widgets/app_error_view.dart';
-import 'package:yaazh_customer/core/widgets/status_chip.dart';
+import 'package:yaazh_customer/core/widgets/ya_network_image.dart';
 import 'package:yaazh_customer/features/auth/presentation/auth_viewmodel.dart';
-import 'package:yaazh_customer/features/booking/domain/booking.dart';
 import 'package:yaazh_customer/features/home/data/catalog_repository.dart';
 import 'package:yaazh_customer/features/home/domain/catalog.dart';
 import 'package:yaazh_customer/features/trips/presentation/trips_viewmodel.dart';
@@ -24,9 +22,16 @@ class HomePage extends ConsumerWidget {
     final fleet = ref.watch(vehicleCategoriesProvider);
     final config = ref.watch(appConfigProvider);
     final firstName = (user?.name ?? 'there').split(' ').first;
+    void openBook() {
+      if (upcoming != null) {
+        context.push('/trips/${upcoming.id}');
+      } else {
+        context.go('/book');
+      }
+    }
 
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: AppConstants.bgLight,
       body: RefreshIndicator(
         color: AppConstants.accentColor,
         onRefresh: () async {
@@ -37,18 +42,23 @@ class HomePage extends ConsumerWidget {
         },
         child: CustomScrollView(
           slivers: [
-            SliverToBoxAdapter(child: _HeroHeader(firstName: firstName)),
-            if (upcoming != null)
-              SliverToBoxAdapter(child: _UpcomingCard(booking: upcoming)),
             SliverToBoxAdapter(
-              child: _SectionHeader(
-                title: 'Popular routes',
-                onSeeAll: () => context.go('/book'),
+              child: _HeroHeader(firstName: firstName, onSearch: openBook),
+            ),
+            SliverToBoxAdapter(
+              child: _QuickActions(
+                onBook: openBook,
+                onTrips: () => context.go('/trips'),
+                onPlaces: () => context.push('/saved-places'),
+                onSupport: () => context.push('/support'),
               ),
+            ),
+            const SliverToBoxAdapter(
+              child: _SectionHeader(title: 'Popular routes'),
             ),
             SliverToBoxAdapter(
               child: routes.when(
-                data: (rows) => _RouteStrip(routes: rows),
+                data: (rows) => _RouteStrip(routes: rows, onOpen: openBook),
                 loading: () => const _HScrollSkeleton(),
                 error: (e, _) => Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -59,15 +69,12 @@ class HomePage extends ConsumerWidget {
                 ),
               ),
             ),
-            SliverToBoxAdapter(
-              child: _SectionHeader(
-                title: 'Our fleet',
-                onSeeAll: () => context.go('/book'),
-              ),
+            const SliverToBoxAdapter(
+              child: _SectionHeader(title: 'Our fleet'),
             ),
             SliverToBoxAdapter(
               child: fleet.when(
-                data: (rows) => _FleetStrip(categories: rows),
+                data: (rows) => _FleetStrip(categories: rows, onOpen: openBook),
                 loading: () => const _HScrollSkeleton(),
                 error: (e, _) => Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -84,7 +91,7 @@ class HomePage extends ConsumerWidget {
                 orElse: () => const SizedBox(height: 24),
               ),
             ),
-            const SliverToBoxAdapter(child: SizedBox(height: 32)),
+            const SliverToBoxAdapter(child: SizedBox(height: 36)),
           ],
         ),
       ),
@@ -94,45 +101,55 @@ class HomePage extends ConsumerWidget {
 
 class _HeroHeader extends StatelessWidget {
   final String firstName;
+  final VoidCallback onSearch;
 
-  const _HeroHeader({required this.firstName});
+  const _HeroHeader({required this.firstName, required this.onSearch});
 
   @override
   Widget build(BuildContext context) {
+    final today = DateFormat('EEEE, d MMM').format(DateTime.now());
     return Container(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
       decoration: const BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
+          colors: [Color(0xFF0B1220), Color(0xFF1E293B)],
         ),
-        borderRadius: BorderRadius.vertical(bottom: Radius.circular(28)),
       ),
-      child: SafeArea(
-        bottom: false,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 18, 12, 0),
+            child: Row(
               children: [
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
+                        today.toUpperCase(),
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.5),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.8,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
                         'Hi, $firstName',
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 26,
                           fontWeight: FontWeight.w800,
+                          letterSpacing: -0.4,
                         ),
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Where are you heading today?',
+                        'Book a cab from Udumalpet',
                         style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.7),
+                          color: Colors.white.withValues(alpha: 0.68),
                           fontSize: 14,
                         ),
                       ),
@@ -145,91 +162,176 @@ class _HeroHeader extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 20),
-            Material(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              child: InkWell(
-                onTap: () => context.go('/book'),
-                borderRadius: BorderRadius.circular(16),
-                child: const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                  child: Row(
-                    children: [
-                      Icon(Icons.search_rounded, color: AppConstants.textSecondaryLight),
-                      SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          'Search pickup & drop',
-                          style: TextStyle(
-                            color: AppConstants.textSecondaryLight,
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
+          ),
+          const SizedBox(height: 22),
+          Transform.translate(
+            offset: const Offset(0, 22),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Material(
+                color: Colors.white,
+                elevation: 10,
+                shadowColor: Colors.black.withValues(alpha: 0.14),
+                borderRadius: BorderRadius.circular(20),
+                child: InkWell(
+                  onTap: onSearch,
+                  borderRadius: BorderRadius.circular(20),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 14, 16),
+                    child: Row(
+                      children: [
+                        Column(
+                          children: [
+                            Container(
+                              width: 10,
+                              height: 10,
+                              decoration: const BoxDecoration(
+                                color: Color(0xFF16A34A),
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            Container(
+                              width: 2,
+                              height: 22,
+                              margin: const EdgeInsets.symmetric(vertical: 3),
+                              color: const Color(0xFFE2E8F0),
+                            ),
+                            const Icon(Icons.location_on_rounded, size: 14, color: AppConstants.errorColor),
+                          ],
+                        ),
+                        const SizedBox(width: 12),
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Pickup',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppConstants.textSecondaryLight,
+                                ),
+                              ),
+                              Text(
+                                'Current location',
+                                style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
+                              ),
+                              SizedBox(height: 10),
+                              Text(
+                                'Drop',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppConstants.textSecondaryLight,
+                                ),
+                              ),
+                              Text(
+                                'Where are you going?',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 15,
+                                  color: AppConstants.textSecondaryLight,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                      ),
-                      Icon(Icons.arrow_forward_rounded, color: AppConstants.accentHover),
-                    ],
+                        Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color: AppConstants.accentColor,
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: const Icon(Icons.search_rounded, color: Colors.black),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 }
 
-class _UpcomingCard extends StatelessWidget {
-  final Booking booking;
+class _QuickActions extends StatelessWidget {
+  final VoidCallback onBook;
+  final VoidCallback onTrips;
+  final VoidCallback onPlaces;
+  final VoidCallback onSupport;
 
-  const _UpcomingCard({required this.booking});
+  const _QuickActions({
+    required this.onBook,
+    required this.onTrips,
+    required this.onPlaces,
+    required this.onSupport,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final when = booking.pickupAt != null
-        ? DateFormat('EEE, d MMM · h:mm a').format(booking.pickupAt!.toLocal())
-        : 'Scheduled';
-
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
-      child: InkWell(
-        onTap: () => context.push('/trips/${booking.id}'),
-        borderRadius: BorderRadius.circular(18),
-        child: Ink(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Theme.of(context).cardColor,
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: AppConstants.accentColor.withValues(alpha: 0.4)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  const Text(
-                    'Upcoming trip',
-                    style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
-                  ),
-                  const Spacer(),
-                  StatusChip.forStatus(booking.status),
-                ],
+      padding: const EdgeInsets.fromLTRB(16, 40, 16, 0),
+      child: Row(
+        children: [
+          _Action(icon: Icons.local_taxi_rounded, label: 'Book', onTap: onBook),
+          _Action(icon: Icons.receipt_long_rounded, label: 'Trips', onTap: onTrips),
+          _Action(icon: Icons.bookmark_rounded, label: 'Places', onTap: onPlaces),
+          _Action(icon: Icons.headset_mic_rounded, label: 'Help', onTap: onSupport),
+        ],
+      ),
+    );
+  }
+}
+
+class _Action extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  const _Action({required this.icon, required this.label, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4),
+        child: Material(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(16),
+            child: Ink(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AppConstants.borderLight),
               ),
-              const SizedBox(height: 10),
-              Text(when, style: const TextStyle(color: AppConstants.textSecondaryLight)),
-              const SizedBox(height: 8),
-              Text(
-                '${booking.pickupLocation} → ${booking.dropLocation}',
-                style: const TextStyle(fontWeight: FontWeight.w600),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                child: Column(
+                  children: [
+                    Container(
+                      width: 38,
+                      height: 38,
+                      decoration: BoxDecoration(
+                        color: AppConstants.accentColor.withValues(alpha: 0.16),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(icon, size: 20, color: AppConstants.accentHover),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      label,
+                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
+                    ),
+                  ],
+                ),
               ),
-              const SizedBox(height: 12),
-              Text(
-                '₹${booking.estimatedTotal.toStringAsFixed(0)} · ${booking.bookingReference}',
-                style: const TextStyle(fontWeight: FontWeight.w700),
-              ),
-            ],
+            ),
           ),
         ),
       ),
@@ -239,30 +341,23 @@ class _UpcomingCard extends StatelessWidget {
 
 class _SectionHeader extends StatelessWidget {
   final String title;
-  final VoidCallback? onSeeAll;
 
-  const _SectionHeader({required this.title, this.onSeeAll});
+  const _SectionHeader({required this.title});
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 24, 12, 10),
-      child: Row(
-        children: [
-          Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
-          const Spacer(),
-          if (onSeeAll != null)
-            TextButton(onPressed: onSeeAll, child: const Text('See all')),
-        ],
-      ),
+      padding: const EdgeInsets.fromLTRB(20, 26, 20, 12),
+      child: Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
     );
   }
 }
 
 class _RouteStrip extends StatelessWidget {
   final List<PopularRoute> routes;
+  final VoidCallback onOpen;
 
-  const _RouteStrip({required this.routes});
+  const _RouteStrip({required this.routes, required this.onOpen});
 
   @override
   Widget build(BuildContext context) {
@@ -273,7 +368,7 @@ class _RouteStrip extends StatelessWidget {
       );
     }
     return SizedBox(
-      height: 148,
+      height: 188,
       child: ListView.separated(
         padding: const EdgeInsets.symmetric(horizontal: 16),
         scrollDirection: Axis.horizontal,
@@ -281,38 +376,86 @@ class _RouteStrip extends StatelessWidget {
         separatorBuilder: (_, _) => const SizedBox(width: 12),
         itemBuilder: (context, i) {
           final route = routes[i];
-          return InkWell(
-            onTap: () => context.go('/book'),
-            borderRadius: BorderRadius.circular(16),
-            child: Ink(
-              width: 220,
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: Theme.of(context).cardColor,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppConstants.borderLight),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    route.title,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
+          return Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: onOpen,
+              borderRadius: BorderRadius.circular(20),
+              child: Ink(
+                width: 236,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: AppConstants.borderLight),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(19),
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      YaNetworkImage(
+                        url: route.imageUrl,
+                        height: 188,
+                        width: 236,
+                        fallbackIcon: Icons.route_rounded,
+                      ),
+                      const DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [Colors.transparent, Color(0xCC0F172A)],
+                          ),
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (route.startingFare != null)
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: AppConstants.accentColor,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  'From ₹${route.startingFare!.toStringAsFixed(0)}',
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w800,
+                                    color: Colors.black,
+                                  ),
+                                ),
+                              ),
+                            const Spacer(),
+                            Text(
+                              route.title,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w800,
+                                fontSize: 16,
+                                height: 1.2,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              '${route.distanceKm.toStringAsFixed(0)} km'
+                              '${route.durationMinutes != null ? ' · ${route.durationMinutes} min' : ''}',
+                              style: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.78),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
-                  const Spacer(),
-                  Text(
-                    '${route.distanceKm.toStringAsFixed(0)} km'
-                    '${route.durationMinutes != null ? ' · ${route.durationMinutes} min' : ''}',
-                    style: const TextStyle(color: AppConstants.textSecondaryLight, fontSize: 13),
-                  ),
-                  if (route.startingFare != null)
-                    Text(
-                      'From ₹${route.startingFare!.toStringAsFixed(0)}',
-                      style: const TextStyle(fontWeight: FontWeight.w700, color: AppConstants.accentHover),
-                    ),
-                ],
+                ),
               ),
             ),
           );
@@ -324,8 +467,9 @@ class _RouteStrip extends StatelessWidget {
 
 class _FleetStrip extends StatelessWidget {
   final List<VehicleCategory> categories;
+  final VoidCallback onOpen;
 
-  const _FleetStrip({required this.categories});
+  const _FleetStrip({required this.categories, required this.onOpen});
 
   @override
   Widget build(BuildContext context) {
@@ -336,7 +480,7 @@ class _FleetStrip extends StatelessWidget {
       );
     }
     return SizedBox(
-      height: 168,
+      height: 198,
       child: ListView.separated(
         padding: const EdgeInsets.symmetric(horizontal: 16),
         scrollDirection: Axis.horizontal,
@@ -344,40 +488,57 @@ class _FleetStrip extends StatelessWidget {
         separatorBuilder: (_, _) => const SizedBox(width: 12),
         itemBuilder: (context, i) {
           final cat = categories[i];
-          return InkWell(
-            onTap: () => context.go('/book'),
-            borderRadius: BorderRadius.circular(16),
-            child: Ink(
-              width: 160,
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Theme.of(context).cardColor,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppConstants.borderLight),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (cat.imageUrl != null && cat.imageUrl!.isNotEmpty)
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(10),
-                      child: CachedNetworkImage(
-                        imageUrl: cat.imageUrl!,
-                        height: 64,
-                        width: double.infinity,
-                        fit: BoxFit.cover,
-                        errorWidget: (_, _, _) => const Icon(Icons.directions_car_rounded),
+          return Material(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(18),
+            child: InkWell(
+              onTap: onOpen,
+              borderRadius: BorderRadius.circular(18),
+              child: Ink(
+                width: 164,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: AppConstants.borderLight),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    YaNetworkImage(
+                      url: cat.imageUrl,
+                      height: 108,
+                      width: 164,
+                      fallbackIcon: Icons.directions_car_filled_rounded,
+                      borderRadius: const BorderRadius.vertical(top: Radius.circular(17)),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            cat.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontWeight: FontWeight.w800),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '${cat.seatingCapacity} seats',
+                            style: const TextStyle(fontSize: 12, color: AppConstants.textSecondaryLight),
+                          ),
+                          Text(
+                            '₹${cat.oneWayRatePerKm.toStringAsFixed(0)}/km',
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w800,
+                              color: AppConstants.accentHover,
+                            ),
+                          ),
+                        ],
                       ),
-                    )
-                  else
-                    const Icon(Icons.directions_car_filled_rounded, size: 36, color: AppConstants.accentHover),
-                  const Spacer(),
-                  Text(cat.name, style: const TextStyle(fontWeight: FontWeight.w800)),
-                  Text(
-                    '${cat.seatingCapacity} seats · ₹${cat.oneWayRatePerKm.toStringAsFixed(0)}/km',
-                    style: const TextStyle(fontSize: 12, color: AppConstants.textSecondaryLight),
-                  ),
-                ],
+                    ),
+                  ],
+                ),
               ),
             ),
           );
@@ -397,37 +558,49 @@ class _SupportCard extends StatelessWidget {
   Widget build(BuildContext context) {
     if (phone == null || phone!.isEmpty) return const SizedBox(height: 16);
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
-      child: InkWell(
-        onTap: () => launchUrl(Uri.parse('tel:$phone')),
-        borderRadius: BorderRadius.circular(16),
-        child: Ink(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: const Color(0xFF0F172A),
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Row(
-            children: [
-              const Icon(Icons.headset_mic_rounded, color: AppConstants.accentColor),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Need help booking?',
-                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800),
-                    ),
-                    Text(
-                      hours ?? 'Call our Udumalpet desk',
-                      style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 12),
-                    ),
-                  ],
+      padding: const EdgeInsets.fromLTRB(16, 26, 16, 0),
+      child: Material(
+        color: const Color(0xFF0F172A),
+        borderRadius: BorderRadius.circular(20),
+        child: InkWell(
+          onTap: () => launchUrl(Uri.parse('tel:$phone')),
+          borderRadius: BorderRadius.circular(20),
+          child: Padding(
+            padding: const EdgeInsets.all(18),
+            child: Row(
+              children: [
+                Container(
+                  width: 46,
+                  height: 46,
+                  decoration: BoxDecoration(
+                    color: AppConstants.accentColor.withValues(alpha: 0.16),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: const Icon(Icons.headset_mic_rounded, color: AppConstants.accentColor),
                 ),
-              ),
-              Text(phone!, style: const TextStyle(color: AppConstants.accentColor, fontWeight: FontWeight.w800)),
-            ],
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Need help booking?',
+                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        hours ?? 'Call our Udumalpet desk',
+                        style: TextStyle(color: Colors.white.withValues(alpha: 0.68), fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ),
+                Text(
+                  phone!,
+                  style: const TextStyle(color: AppConstants.accentColor, fontWeight: FontWeight.w800),
+                ),
+              ],
+            ),
           ),
         ),
       ),

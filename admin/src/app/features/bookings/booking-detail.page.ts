@@ -155,8 +155,7 @@ import { canAssignDriver, statusLabel, statusTone } from '../../shared/status-ch
           <section class="ya-page-card bk-panel">
             <h3 class="bk-panel__title">Assign driver</h3>
             <p class="bk-panel__hint">
-              Assigns the driver to this trip and sends them an in-app notification (same channel as customer alerts).
-              The driver can close the trip when it is finished.
+              Assigns the driver to this trip and immediately pushes a notification to both the driver app and the customer app.
             </p>
             @if (canAssign(b.status)) {
               <div class="bk-assign-row">
@@ -464,7 +463,7 @@ export class BookingDetailPage implements OnInit {
     this.api.assignDriver(b.id, { driver_id: this.driverId }).subscribe({
       next: () => {
         this.busy.set(false);
-        this.snack.open('Driver assigned — driver & customer notified', 'OK', { duration: 3200 });
+        this.snack.open('Driver assigned. Customer and driver have been notified.', 'OK', { duration: 3200 });
         this.load(b.id);
       },
       error: (err: unknown) => {

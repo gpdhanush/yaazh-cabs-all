@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:yaazh_cabs/app/constants.dart';
 
 class OfflineBanner extends StatelessWidget {
   final bool isOffline;

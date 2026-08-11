@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:yaazh_customer/app/constants.dart';
+import 'package:yaazh_customer/core/location/location_service.dart';
 import 'package:yaazh_customer/core/network/api_exception.dart';
 import 'package:yaazh_customer/features/booking/data/booking_repository.dart';
 import 'package:yaazh_customer/features/booking/domain/booking.dart';
@@ -41,18 +42,41 @@ class _ConfirmBookingPageState extends ConsumerState<ConfirmBookingPage> {
   }
 
   Future<void> _submit() async {
+    final active = ref.read(upcomingTripProvider);
+    if (active != null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('You already have an ongoing trip (${active.bookingReference}).')),
+      );
+      context.push('/trips/${active.id}');
+      return;
+    }
     setState(() => _submitting = true);
     try {
-      final booking = await ref.read(bookingRepositoryProvider).createBooking(
-            _draft.copyWith(
-              passengerCount: _passengers,
-              couponCode: _couponController.text.trim(),
-              specialNote: _noteController.text.trim(),
-            ),
-          );
+      var draft = _draft.copyWith(
+        passengerCount: _passengers,
+        couponCode: _couponController.text.trim(),
+        specialNote: _noteController.text.trim(),
+      );
+      final here = await ref.read(locationServiceProvider).getCurrentLatLng();
+      if (here != null && draft.useCurrentLocation) {
+        draft = draft.copyWith(
+          pickupLat: here.latitude,
+          pickupLng: here.longitude,
+        );
+      } else if (here == null && draft.useCurrentLocation) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Turn on GPS so the driver can find your pickup.')),
+        );
+        setState(() => _submitting = false);
+        return;
+      }
+      _draft = draft;
+      final booking = await ref.read(bookingRepositoryProvider).createBooking(draft);
       await ref.read(tripListProvider.notifier).refresh();
       if (!mounted) return;
-      context.go('/trips/${booking.id}');
+      context.go('/book/success', extra: booking);
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -82,7 +106,13 @@ class _ConfirmBookingPageState extends ConsumerState<ConfirmBookingPage> {
                 Text(_draft.tripType.replaceAll('_', ' ').toUpperCase(),
                     style: const TextStyle(color: AppConstants.textSecondaryLight, fontWeight: FontWeight.w700)),
                 const SizedBox(height: 14),
-                _Line(icon: Icons.trip_origin_rounded, color: const Color(0xFF16A34A), text: _draft.pickupLabel),
+                _Line(
+                  icon: Icons.trip_origin_rounded,
+                  color: const Color(0xFF16A34A),
+                  text: _draft.useCurrentLocation
+                      ? '${_draft.pickupLabel} · live GPS'
+                      : _draft.pickupLabel,
+                ),
                 const SizedBox(height: 8),
                 _Line(icon: Icons.location_on_rounded, color: AppConstants.errorColor, text: _draft.dropLabel),
                 const SizedBox(height: 12),

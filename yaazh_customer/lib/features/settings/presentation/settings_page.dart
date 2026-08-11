@@ -20,24 +20,49 @@ class SettingsPage extends ConsumerWidget {
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
         children: [
           if (user != null) ...[
-            ListTile(
-              tileColor: Theme.of(context).cardColor,
+            Material(
+              color: Theme.of(context).cardColor,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
                 side: const BorderSide(color: AppConstants.borderLight),
               ),
-              leading: CircleAvatar(
-                backgroundColor: AppConstants.accentColor,
-                child: Text(
-                  user.name.isNotEmpty ? user.name[0].toUpperCase() : 'Y',
-                  style: const TextStyle(fontWeight: FontWeight.w800, color: Colors.black),
+              child: InkWell(
+                onTap: () => context.push('/profile/edit'),
+                borderRadius: BorderRadius.circular(16),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        backgroundColor: AppConstants.accentColor,
+                        child: Text(
+                          user.name.isNotEmpty ? user.name[0].toUpperCase() : 'Y',
+                          style: const TextStyle(fontWeight: FontWeight.w800, color: Colors.black),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(user.name, style: const TextStyle(fontWeight: FontWeight.w800)),
+                            Text(
+                              user.phone,
+                              style: const TextStyle(
+                                color: AppConstants.textSecondaryLight,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () => context.push('/profile/edit'),
+                        child: const Text('Edit'),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              title: Text(user.name, style: const TextStyle(fontWeight: FontWeight.w800)),
-              subtitle: Text(user.phone),
-              trailing: TextButton(
-                onPressed: () => context.push('/profile/edit'),
-                child: const Text('Edit'),
               ),
             ),
             const SizedBox(height: 20),
@@ -52,12 +77,13 @@ class SettingsPage extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 8),
-          Container(
-            decoration: BoxDecoration(
-              color: Theme.of(context).cardColor,
+          Material(
+            color: Theme.of(context).cardColor,
+            shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppConstants.borderLight),
+              side: const BorderSide(color: AppConstants.borderLight),
             ),
+            clipBehavior: Clip.antiAlias,
             child: Column(
               children: [
                 _ThemeTile(
@@ -81,15 +107,25 @@ class SettingsPage extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 20),
-          ListTile(
-            tileColor: Theme.of(context).cardColor,
+          Material(
+            color: Theme.of(context).cardColor,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
               side: const BorderSide(color: AppConstants.borderLight),
             ),
-            leading: const Icon(Icons.info_outline_rounded),
-            title: const Text('App version', style: TextStyle(fontWeight: FontWeight.w700)),
-            trailing: const Text('1.0.0', style: TextStyle(color: AppConstants.textSecondaryLight)),
+            child: const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline_rounded),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: Text('App version', style: TextStyle(fontWeight: FontWeight.w700)),
+                  ),
+                  Text(AppConstants.appVersion, style: TextStyle(color: AppConstants.textSecondaryLight)),
+                ],
+              ),
+            ),
           ),
           const SizedBox(height: 28),
           OutlinedButton.icon(
@@ -125,12 +161,21 @@ class _ThemeTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
+    return InkWell(
       onTap: onTap,
-      title: Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
-      trailing: Icon(
-        selected ? Icons.check_circle_rounded : Icons.circle_outlined,
-        color: selected ? AppConstants.accentHover : AppConstants.textSecondaryLight,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
+            ),
+            Icon(
+              selected ? Icons.check_circle_rounded : Icons.circle_outlined,
+              color: selected ? AppConstants.accentHover : AppConstants.textSecondaryLight,
+            ),
+          ],
+        ),
       ),
     );
   }

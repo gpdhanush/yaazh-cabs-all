@@ -3,14 +3,18 @@ import 'package:latlong2/latlong.dart';
 
 class AppConstants {
   static const String appName = 'Yaazh Cabs';
+  static const String appVersion = '1.0.0';
+  static const String appLogo = 'assets/img/app-logo.png';
 
-  static const String defaultBaseUrl = 'http://10.0.2.2:3000/api/v1';
+  static const String defaultBaseUrl =
+      'https://luxe-motion-ride-1.onrender.com/api/v1';
 
   static const String tokenKey = 'customer_access_token';
   static const String refreshTokenKey = 'customer_refresh_token';
   static const String profileCacheKey = 'customer_profile_cache';
   static const String themeModeKey = 'app_theme_mode';
 
+  static const Color splashColor = Color(0xFF0B0E1B);
   static const Color primaryColor = Color(0xFF0F172A);
   static const Color primaryLight = Color(0xFF1E293B);
   static const Color accentColor = Color(0xFFF59E0B);

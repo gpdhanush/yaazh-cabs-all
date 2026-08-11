@@ -4,7 +4,7 @@ import { prisma } from "../../../config/database.js";
 import { ok } from "../../../utils/api-response.js";
 import { requireAuth, requireUser } from "../../../middleware/auth.js";
 import { bookingService, serializeBooking } from "../../../services/booking.service.js";
-import { NotFoundError, ValidationError, ForbiddenError } from "../../../errors/app-error.js";
+import { NotFoundError, ValidationError, ForbiddenError, ConflictError } from "../../../errors/app-error.js";
 import type { TripType } from "@prisma/client";
 
 export const customerRoutes: FastifyPluginAsync = async (app) => {
@@ -162,6 +162,29 @@ export const customerRoutes: FastifyPluginAsync = async (app) => {
     if (!parsed.success) throw new ValidationError("Validation failed.", parsed.error.flatten());
     const profile = await prisma.customers.findUnique({ where: { id: user.id } });
     if (!profile) throw new NotFoundError();
+    const active = await prisma.bookings.findFirst({
+      where: {
+        customer_id: user.id,
+        status: {
+          in: [
+            "pending",
+            "confirmed",
+            "driver_notified",
+            "driver_accepted",
+            "driver_assigned",
+            "on_the_way",
+            "arrived",
+            "trip_started",
+          ],
+        },
+      },
+      select: { id: true, booking_reference: true },
+    });
+    if (active) {
+      throw new ConflictError(
+        `You already have an ongoing booking (${active.booking_reference}). Finish or cancel it before booking again.`,
+      );
+    }
     const d = parsed.data;
     const data = await bookingService.create({
       customerId: user.id,

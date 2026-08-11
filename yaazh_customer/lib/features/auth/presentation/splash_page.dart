@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:yaazh_customer/app/constants.dart';
+import 'package:yaazh_customer/core/notifications/push_notification_service.dart';
+import 'package:yaazh_customer/core/widgets/app_logo.dart';
 import 'package:yaazh_customer/features/auth/presentation/auth_viewmodel.dart';
 
 class SplashPage extends ConsumerStatefulWidget {
@@ -19,11 +22,15 @@ class _SplashPageState extends ConsumerState<SplashPage> {
   }
 
   Future<void> _boot() async {
+    await Future<void>.delayed(const Duration(milliseconds: 700));
+    if (!mounted) return;
     await ref.read(authNotifierProvider.notifier).checkAuthSession();
     if (!mounted) return;
 
     final status = ref.read(authNotifierProvider).status;
     if (status == AuthStatus.authenticated) {
+      await ref.read(pushNotificationServiceProvider).start();
+      if (!mounted) return;
       context.go('/home');
     } else {
       context.go('/login');
@@ -32,53 +39,64 @@ class _SplashPageState extends ConsumerState<SplashPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppConstants.primaryColor,
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: AppConstants.accentColor,
-                borderRadius: BorderRadius.circular(20),
+    final bottom = MediaQuery.paddingOf(context).bottom;
+
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: const SystemUiOverlayStyle(
+        statusBarColor: AppConstants.splashColor,
+        statusBarIconBrightness: Brightness.light,
+        statusBarBrightness: Brightness.dark,
+        systemNavigationBarColor: AppConstants.splashColor,
+        systemNavigationBarIconBrightness: Brightness.light,
+      ),
+      child: Scaffold(
+        backgroundColor: AppConstants.splashColor,
+        body: SizedBox.expand(
+          child: Column(
+            children: [
+              const Spacer(flex: 5),
+              const AppLogo(size: 168),
+              const SizedBox(height: 20),
+              const Text(
+                AppConstants.appName,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 28,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 0.3,
+                ),
               ),
-              child: const Icon(
-                Icons.local_taxi_rounded,
-                size: 48,
-                color: Colors.black,
+              const SizedBox(height: 6),
+              Text(
+                'Book your ride',
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.58),
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
-            ),
-            const SizedBox(height: 24),
-            const Text(
-              'Yaazh Cabs',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 28,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 0.5,
+              const SizedBox(height: 28),
+              const SizedBox(
+                width: 22,
+                height: 22,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.2,
+                  color: AppConstants.accentColor,
+                ),
               ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'Book your ride',
-              style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.7),
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
+              const Spacer(flex: 4),
+              Text(
+                'Version ${AppConstants.appVersion}',
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.42),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.4,
+                ),
               ),
-            ),
-            const SizedBox(height: 40),
-            const SizedBox(
-              width: 28,
-              height: 28,
-              child: CircularProgressIndicator(
-                strokeWidth: 2.5,
-                color: AppConstants.accentColor,
-              ),
-            ),
-          ],
+              SizedBox(height: 16 + bottom),
+            ],
+          ),
         ),
       ),
     );
