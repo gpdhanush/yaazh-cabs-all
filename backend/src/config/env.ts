@@ -1,4 +1,21 @@
+import { existsSync } from "node:fs";
+import { resolve } from "node:path";
 import { z } from "zod";
+
+/** `tsx` loads .env automatically; `node dist/server.js` does not. */
+function loadDotEnvFile() {
+  if (typeof process.loadEnvFile !== "function") return;
+  const candidates = [
+    resolve(process.cwd(), ".env"),
+    resolve(process.cwd(), "backend/.env"),
+  ];
+  for (const file of candidates) {
+    if (existsSync(file)) {
+      process.loadEnvFile(file);
+      return;
+    }
+  }
+}
 
 const bool = (v: string | undefined, fallback: boolean) => {
   if (v === undefined || v === "") return fallback;
@@ -109,9 +126,10 @@ export type Env = z.output<typeof envSchema> & {
 
 let cached: Env | null = null;
 
-export function loadEnv(raw: NodeJS.ProcessEnv = process.env): Env {
+export function loadEnv(raw?: NodeJS.ProcessEnv): Env {
   if (cached) return cached;
-  const parsed = envSchema.parse(raw);
+  if (!raw) loadDotEnvFile();
+  const parsed = envSchema.parse(raw ?? process.env);
 
   // Prisma reads process.env.DATABASE_URL
   process.env.DATABASE_URL = parsed.DATABASE_URL;

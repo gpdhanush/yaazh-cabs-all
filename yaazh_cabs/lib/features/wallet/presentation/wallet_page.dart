@@ -83,7 +83,9 @@ class _WalletPageState extends ConsumerState<WalletPage>
             const SizedBox(height: 16),
             TextFormField(
               controller: amountController,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
               decoration: const InputDecoration(
                 labelText: 'Amount (₹)',
                 hintText: 'Enter amount to withdraw',
@@ -96,7 +98,10 @@ class _WalletPageState extends ConsumerState<WalletPage>
               decoration: const InputDecoration(labelText: 'Payout Method'),
               items: const [
                 DropdownMenuItem(value: 'upi', child: Text('UPI Transfer')),
-                DropdownMenuItem(value: 'bank_transfer', child: Text('Bank Transfer')),
+                DropdownMenuItem(
+                  value: 'bank_transfer',
+                  child: Text('Bank Transfer'),
+                ),
                 DropdownMenuItem(value: 'cash', child: Text('Cash Handout')),
               ],
               onChanged: (val) {
@@ -115,20 +120,23 @@ class _WalletPageState extends ConsumerState<WalletPage>
               final amt = double.tryParse(amountController.text.trim());
               if (amt == null || amt <= 0) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Please enter a valid payout amount.')),
+                  const SnackBar(
+                    content: Text('Please enter a valid payout amount.'),
+                  ),
                 );
                 return;
               }
               Navigator.of(ctx).pop();
               try {
-                await ref.read(walletRepositoryProvider).requestPayout(
-                      amount: amt,
-                      method: selectedMethod,
-                    );
+                await ref
+                    .read(walletRepositoryProvider)
+                    .requestPayout(amount: amt, method: selectedMethod);
                 _fetchWalletData();
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Payout request submitted successfully!')),
+                    const SnackBar(
+                      content: Text('Payout request submitted successfully!'),
+                    ),
                   );
                 }
               } catch (e) {
@@ -159,10 +167,7 @@ class _WalletPageState extends ConsumerState<WalletPage>
     if (_errorMessage != null) {
       return Scaffold(
         appBar: AppBar(title: const Text('Wallet')),
-        body: AppErrorView(
-          message: _errorMessage!,
-          onRetry: _fetchWalletData,
-        ),
+        body: AppErrorView(message: _errorMessage!, onRetry: _fetchWalletData),
       );
     }
 
@@ -184,11 +189,8 @@ class _WalletPageState extends ConsumerState<WalletPage>
             margin: const EdgeInsets.all(AppConstants.paddingM),
             padding: const EdgeInsets.all(AppConstants.paddingL),
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  AppConstants.primaryColor,
-                  AppConstants.primaryLight,
-                ],
+              gradient: const LinearGradient(
+                colors: [AppConstants.primaryColor, AppConstants.primaryLight],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -224,7 +226,10 @@ class _WalletPageState extends ConsumerState<WalletPage>
                 ),
                 const SizedBox(height: 16),
                 ElevatedButton.icon(
-                  icon: const Icon(Icons.account_balance_outlined, color: Colors.black),
+                  icon: const Icon(
+                    Icons.account_balance_outlined,
+                    color: Colors.black,
+                  ),
                   label: const Text('REQUEST PAYOUT'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppConstants.accentColor,
@@ -251,7 +256,9 @@ class _WalletPageState extends ConsumerState<WalletPage>
               children: [
                 // Transactions List
                 _transactions.isEmpty
-                    ? const Center(child: Text('No wallet transactions recorded.'))
+                    ? const Center(
+                        child: Text('No wallet transactions recorded.'),
+                      )
                     : ListView.separated(
                         padding: const EdgeInsets.all(AppConstants.paddingM),
                         itemCount: _transactions.length,
@@ -260,7 +267,9 @@ class _WalletPageState extends ConsumerState<WalletPage>
                           final txn = _transactions[i];
                           final isCredit = txn.transactionType == 'credit';
                           final dateStr = txn.createdAt != null
-                              ? DateFormat('dd MMM yyyy, hh:mm a').format(txn.createdAt!)
+                              ? DateFormat(
+                                  'dd MMM yyyy, hh:mm a',
+                                ).format(txn.createdAt!)
                               : '';
 
                           return ListTile(
@@ -282,7 +291,10 @@ class _WalletPageState extends ConsumerState<WalletPage>
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
-                            subtitle: Text(dateStr, style: const TextStyle(fontSize: 11)),
+                            subtitle: Text(
+                              dateStr,
+                              style: const TextStyle(fontSize: 11),
+                            ),
                             trailing: Text(
                               '${isCredit ? "+" : "-"}₹${txn.amount.toStringAsFixed(2)}',
                               style: TextStyle(
@@ -297,25 +309,34 @@ class _WalletPageState extends ConsumerState<WalletPage>
 
                 // Payouts List
                 _payouts.isEmpty
-                    ? const Center(child: Text('No payout requests submitted yet.'))
+                    ? const Center(
+                        child: Text('No payout requests submitted yet.'),
+                      )
                     : ListView.separated(
                         padding: const EdgeInsets.all(AppConstants.paddingM),
                         itemCount: _payouts.length,
-                        separatorBuilder: (ctx, i) => const SizedBox(height: 12),
+                        separatorBuilder: (ctx, i) =>
+                            const SizedBox(height: 12),
                         itemBuilder: (ctx, i) {
                           final po = _payouts[i];
                           final dateStr = po.createdAt != null
-                              ? DateFormat('dd MMM yyyy, hh:mm a').format(po.createdAt!)
+                              ? DateFormat(
+                                  'dd MMM yyyy, hh:mm a',
+                                ).format(po.createdAt!)
                               : '';
 
                           return Card(
                             child: Padding(
-                              padding: const EdgeInsets.all(AppConstants.paddingM),
+                              padding: const EdgeInsets.all(
+                                AppConstants.paddingM,
+                              ),
                               child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
                                   Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         '₹${po.amount.toStringAsFixed(2)}',

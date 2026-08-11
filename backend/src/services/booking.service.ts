@@ -912,7 +912,7 @@ export const bookingService = {
   },
 
   async acceptOffer(offerId: bigint, driverId: bigint) {
-    return prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx) => {
       const offer = await tx.bookingDriverOffers.findUnique({ where: { id: offerId } });
       if (!offer || offer.driver_id !== driverId) throw new NotFoundError("Offer not found.");
       if (offer.status !== "sent" && offer.status !== "seen") {
