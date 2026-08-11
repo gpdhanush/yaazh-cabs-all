@@ -1,0 +1,123 @@
+import 'package:flutter/material.dart';
+import 'package:yaazh_customer/app/constants.dart';
+
+class AppBottomNav extends StatelessWidget {
+  final int currentIndex;
+  final ValueChanged<int> onTap;
+
+  const AppBottomNav({
+    super.key,
+    required this.currentIndex,
+    required this.onTap,
+  });
+
+  static const _items = <_NavItem>[
+    _NavItem(Icons.home_outlined, Icons.home_rounded, 'Home'),
+    _NavItem(Icons.local_taxi_outlined, Icons.local_taxi_rounded, 'Book'),
+    _NavItem(Icons.receipt_long_outlined, Icons.receipt_long_rounded, 'Trips'),
+    _NavItem(Icons.person_outline_rounded, Icons.person_rounded, 'Profile'),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? AppConstants.cardDark : Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 20,
+            offset: const Offset(0, -4),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
+          child: Row(
+            children: List.generate(_items.length, (index) {
+              final item = _items[index];
+              final selected = index == currentIndex;
+              return Expanded(
+                child: _NavButton(
+                  item: item,
+                  selected: selected,
+                  onTap: () => onTap(index),
+                ),
+              );
+            }),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _NavItem {
+  final IconData icon;
+  final IconData selectedIcon;
+  final String label;
+
+  const _NavItem(this.icon, this.selectedIcon, this.label);
+}
+
+class _NavButton extends StatelessWidget {
+  final _NavItem item;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _NavButton({
+    required this.item,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: item.label,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOutCubic,
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          decoration: BoxDecoration(
+            color: selected
+                ? AppConstants.accentColor.withValues(alpha: 0.16)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                selected ? item.selectedIcon : item.icon,
+                size: 24,
+                color: selected
+                    ? AppConstants.accentHover
+                    : AppConstants.textSecondaryLight,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                item.label,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: selected ? FontWeight.w800 : FontWeight.w500,
+                  color: selected
+                      ? Theme.of(context).colorScheme.onSurface
+                      : AppConstants.textSecondaryLight,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}

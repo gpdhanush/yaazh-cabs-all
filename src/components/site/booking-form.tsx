@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { format } from "date-fns";
 import {
   CalendarDays,
@@ -28,10 +28,19 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { LocationField } from "@/components/site/location-field";
+import { LocationField, type LocationValue } from "@/components/site/location-field";
 import { cn } from "@/lib/utils";
 import { tripTypes, vehicles, pickupPlaces, BOOKING_FARE_NOTE, ADMIN_WHATSAPP, ADMIN_EMAIL } from "@/lib/site-data";
-import { makeRef, saveBooking, type Booking } from "@/lib/bookings";
+import { cacheBooking } from "@/lib/bookings";
+import {
+  ApiError,
+  createBooking,
+  getVehicleCategories,
+  isApiConfigured,
+  toApiTripType,
+  type VehicleCategory,
+} from "@/lib/api";
+import { coordsForPlace } from "@/lib/location-search";
 
 const times = Array.from({ length: 48 }, (_, i) => {
   const h = Math.floor(i / 2);
@@ -40,8 +49,6 @@ const times = Array.from({ length: 48 }, (_, i) => {
   const hh = h % 12 === 0 ? 12 : h % 12;
   return `${String(hh).padStart(2, "0")}:${m} ${ampm}`;
 });
-
-const vehicleOptions = vehicles.map((v) => `${v.name} — ₹${v.perKm}/km`);
 
 function Field({
   label,
@@ -182,7 +189,34 @@ type FormErrors = {
   vehicle?: string;
 };
 
-function buildMessage(b: Booking) {
+type DoneBooking = {
+  ref: string;
+  name: string;
+  mobile: string;
+  pickup: string;
+  drop: string;
+  date: string;
+  time: string;
+  vehicle: string;
+  perKm: number;
+  trip: string;
+  estimate: number;
+};
+
+function parsePickupAt(date: Date, timeLabel: string): Date {
+  const match = timeLabel.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  if (!match) return date;
+  let hour = Number(match[1]);
+  const minute = Number(match[2]);
+  const ampm = match[3]!.toUpperCase();
+  if (ampm === "PM" && hour < 12) hour += 12;
+  if (ampm === "AM" && hour === 12) hour = 0;
+  const out = new Date(date);
+  out.setHours(hour, minute, 0, 0);
+  return out;
+}
+
+function buildMessage(b: DoneBooking) {
   return [
     `New cab booking — ${b.ref}`,
     `Name: ${b.name}`,
@@ -197,19 +231,32 @@ function buildMessage(b: Booking) {
   ].join("\n");
 }
 
+function shortVehicleName(name: string) {
+  const lower = name.toLowerCase();
+  if (lower.includes("sedan") || lower.includes("dzire")) return "Dzire";
+  if (lower.includes("ertiga")) return "Ertiga";
+  if (lower.includes("innova")) return "Innova";
+  if (lower.includes("crysta") || lower.includes("suv")) return "SUV";
+  if (lower.includes("tempo")) return "Tempo Traveller";
+  return name;
+}
+
 export function BookingForm() {
   const [name, setName] = useState("");
   const [mobile, setMobile] = useState("");
   const [pickup, setPickup] = useState("");
   const [drop, setDrop] = useState("");
+  const [pickupMeta, setPickupMeta] = useState<LocationValue | null>(null);
+  const [dropMeta, setDropMeta] = useState<LocationValue | null>(null);
   const [date, setDate] = useState<Date | undefined>();
   const [time, setTime] = useState("");
-  const [vehicle, setVehicle] = useState("");
+  const [vehicleId, setVehicleId] = useState("");
   const [trip, setTrip] = useState("One Way");
   const [errors, setErrors] = useState<FormErrors>({});
   const [loading, setLoading] = useState(false);
   const [dateOpen, setDateOpen] = useState(false);
-  const [done, setDone] = useState<Booking | null>(null);
+  const [done, setDone] = useState<DoneBooking | null>(null);
+  const [categories, setCategories] = useState<VehicleCategory[]>([]);
 
   const today = useMemo(() => {
     const d = new Date();
@@ -217,7 +264,44 @@ export function BookingForm() {
     return d;
   }, []);
 
-  const submit = (e: React.FormEvent) => {
+  useEffect(() => {
+    if (!isApiConfigured()) return;
+    getVehicleCategories()
+      .then((rows) => {
+        setCategories(rows);
+        if (rows[0]) setVehicleId((current) => current || rows[0]!.id);
+      })
+      .catch(() => {
+        /* static fallback */
+      });
+  }, []);
+
+  const vehicleOptions = useMemo(() => {
+    if (categories.length) {
+      return categories.map((c) => ({
+        id: c.id,
+        label: `${shortVehicleName(c.name)} — ₹${c.one_way_rate_per_km}/km`,
+        name: shortVehicleName(c.name),
+        perKm: c.one_way_rate_per_km,
+        base: 0,
+      }));
+    }
+    return vehicles.map((v) => ({
+      id: v.id,
+      label: `${v.name} — ₹${v.perKm}/km`,
+      name: v.name,
+      perKm: v.perKm,
+      base: v.base,
+    }));
+  }, [categories]);
+
+  useEffect(() => {
+    if (!vehicleId && vehicleOptions[0]) setVehicleId(vehicleOptions[0].id);
+  }, [vehicleId, vehicleOptions]);
+
+  const selectedVehicle = vehicleOptions.find((v) => v.id === vehicleId) ?? vehicleOptions[0];
+
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     const next: FormErrors = {};
     const cleanMobile = mobile.replace(/\D/g, "");
@@ -229,40 +313,74 @@ export function BookingForm() {
     if (pickup && drop && pickup.trim() === drop.trim()) next.drop = "Drop must differ from pickup";
     if (!date) next.date = "Choose a pickup date";
     if (!time) next.time = "Pickup time is mandatory";
-    if (!vehicle) next.vehicle = "Select a vehicle";
+    if (!selectedVehicle) next.vehicle = "Select a vehicle";
     setErrors(next);
-    if (Object.keys(next).length) return;
+    if (Object.keys(next).length || !selectedVehicle || !date) return;
 
-    const picked = vehicles.find((v) => vehicle.startsWith(v.name))!;
-    const booking: Booking = {
-      ref: makeRef(),
-      name: name.trim(),
-      mobile: cleanMobile,
-      pickup: pickup.trim(),
-      drop: drop.trim(),
-      date: date ? format(date, "dd MMM yyyy") : "",
-      time,
-      vehicle: picked.name,
-      perKm: picked.perKm,
-      trip,
-      estimate: picked.base + picked.perKm * 60,
-      createdAt: Date.now(),
-    };
+    const pickupAt = parsePickupAt(date, time);
+    const pickupCoords =
+      pickupMeta?.latitude != null && pickupMeta.longitude != null
+        ? { latitude: pickupMeta.latitude, longitude: pickupMeta.longitude }
+        : coordsForPlace(pickup);
+    const dropCoords =
+      dropMeta?.latitude != null && dropMeta.longitude != null
+        ? { latitude: dropMeta.latitude, longitude: dropMeta.longitude }
+        : coordsForPlace(drop);
 
     setLoading(true);
-    window.setTimeout(() => {
-      setLoading(false);
-      saveBooking(booking);
-      setDone(booking);
-      window.open(
-        `https://wa.me/${ADMIN_WHATSAPP}?text=${encodeURIComponent(buildMessage(booking))}`,
-        "_blank",
-        "noopener",
-      );
-      toast.success(`Booking ${booking.ref} sent to our team`, {
-        description: "WhatsApp opened with your trip details. We'll call you shortly.",
+    try {
+      if (!isApiConfigured()) {
+        throw new ApiError("Booking API is not configured. Set VITE_API_URL and rebuild.", 503);
+      }
+
+      const created = await createBooking({
+        vehicle_category_id: selectedVehicle.id,
+        trip_type: toApiTripType(trip),
+        customer_name: name.trim(),
+        customer_phone: cleanMobile,
+        pickup_location: pickup.trim(),
+        drop_location: drop.trim(),
+        pickup_city: pickup.trim(),
+        drop_city: drop.trim(),
+        pickup_latitude: pickupCoords?.latitude ?? null,
+        pickup_longitude: pickupCoords?.longitude ?? null,
+        drop_latitude: dropCoords?.latitude ?? null,
+        drop_longitude: dropCoords?.longitude ?? null,
+        pickup_at: pickupAt.toISOString(),
       });
-    }, 900);
+
+      const booking: DoneBooking = {
+        ref: created.booking_reference,
+        name: name.trim(),
+        mobile: cleanMobile,
+        pickup: pickup.trim(),
+        drop: drop.trim(),
+        date: format(date, "dd MMM yyyy"),
+        time,
+        vehicle: selectedVehicle.name,
+        perKm: selectedVehicle.perKm,
+        trip,
+        estimate: Number(created.estimated_total) || selectedVehicle.base + selectedVehicle.perKm * 60,
+      };
+
+      cacheBooking({
+        ref: booking.ref,
+        phone: booking.mobile,
+        name: booking.name,
+        pickup: booking.pickup,
+        drop: booking.drop,
+        createdAt: Date.now(),
+      });
+      setDone(booking);
+      toast.success(`Booking ${booking.ref} confirmed`, {
+        description: "Saved with our desk. Track status or notify us on WhatsApp.",
+      });
+    } catch (err) {
+      const message = err instanceof ApiError ? err.message : "Could not create booking. Try again.";
+      toast.error(message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (done) {
@@ -273,10 +391,13 @@ export function BookingForm() {
 
     return (
       <div className="w-full rounded-2xl border border-border bg-card p-5 shadow-sm md:p-6">
-        <p className="text-sm font-semibold uppercase tracking-[0.18em] text-success">Booking sent</p>
+        <p className="text-sm font-semibold uppercase tracking-[0.18em] text-success">Booking received</p>
         <p className="mt-3 font-data text-2xl font-semibold text-foreground">{done.ref}</p>
         <p className="mt-2 text-sm text-body">
           {done.trip} · {done.pickup} → {done.drop} · {done.date}, {done.time} · {done.vehicle}
+        </p>
+        <p className="mt-1 text-sm font-medium text-foreground">
+          Estimated fare: ₹{done.estimate.toLocaleString("en-IN")}
         </p>
         <p className="mt-3 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-xs text-warning">
           {BOOKING_FARE_NOTE}
@@ -289,7 +410,7 @@ export function BookingForm() {
             rel="noopener"
             className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-xs font-semibold uppercase tracking-[0.12em] text-primary-foreground"
           >
-            <MessageCircle className="size-4" /> Resend on WhatsApp
+            <MessageCircle className="size-4" /> Notify on WhatsApp
           </a>
           <a
             href={mailHref}
@@ -328,7 +449,7 @@ export function BookingForm() {
           <p className="text-sm font-semibold uppercase tracking-[0.16em] text-foreground">
             Book your ride
           </p>
-          <p className="mt-1 text-xs text-muted-foreground">Fill details — we confirm on WhatsApp</p>
+          <p className="mt-1 text-xs text-muted-foreground">Fill details — we confirm shortly</p>
         </div>
         <span className="rounded-full border border-success/30 bg-success/10 px-3 py-1 text-[10px] font-medium text-success sm:text-[11px]">
           24×7 · Instant confirmation
@@ -369,7 +490,10 @@ export function BookingForm() {
         <LocationField
           label="Pickup location"
           value={pickup}
-          onChange={setPickup}
+          onChange={(v, meta) => {
+            setPickup(v);
+            setPickupMeta(meta ?? (v ? { label: v, ...(coordsForPlace(v) ?? {}) } : null));
+          }}
           error={errors.pickup}
           icon={<MapPin />}
           fixedOptions={pickupPlaces}
@@ -378,7 +502,10 @@ export function BookingForm() {
         <LocationField
           label="Drop location"
           value={drop}
-          onChange={setDrop}
+          onChange={(v, meta) => {
+            setDrop(v);
+            setDropMeta(meta ?? (v ? { label: v, ...(coordsForPlace(v) ?? {}) } : null));
+          }}
           error={errors.drop}
           icon={<Navigation />}
         />
@@ -422,9 +549,12 @@ export function BookingForm() {
 
         <SelectField
           label="Vehicle & rate"
-          value={vehicle}
-          onChange={setVehicle}
-          options={vehicleOptions}
+          value={selectedVehicle?.label ?? ""}
+          onChange={(label) => {
+            const hit = vehicleOptions.find((v) => v.label === label);
+            if (hit) setVehicleId(hit.id);
+          }}
+          options={vehicleOptions.map((v) => v.label)}
           error={errors.vehicle}
           searchable={false}
         />
@@ -444,11 +574,11 @@ export function BookingForm() {
       >
         {loading ? (
           <>
-            <Loader2 className="size-4 animate-spin" /> Sending to our team
+            <Loader2 className="size-4 animate-spin" /> Creating booking
           </>
         ) : (
           <>
-            <Search className="size-4" /> Book &amp; notify on WhatsApp
+            <Search className="size-4" /> Confirm booking
           </>
         )}
       </button>

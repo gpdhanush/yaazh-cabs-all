@@ -1,0 +1,16 @@
+# Optional local MySQL only — NOT required for cPanel production.
+services:
+  mysql:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: yaazh_cab_booking
+    ports:
+      - "3306:3306"
+    volumes:
+      - yaazh_mysql:/var/lib/mysql
+    command: ["--default-authentication-plugin=mysql_native_password", "--character-set-server=utf8mb4", "--collation-server=utf8mb4_unicode_ci"]
+
+volumes:
+  yaazh_mysql:

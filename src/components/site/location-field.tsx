@@ -4,12 +4,18 @@ import { useEffect, useId, useRef, useState } from "react";
 import { ChevronDown, Loader2, MapPin, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { places as popularPlaces } from "@/lib/site-data";
-import { searchLocations, type LocationSuggestion } from "@/lib/location-search";
+import { coordsForPlace, searchLocations, type LocationSuggestion } from "@/lib/location-search";
+
+export type LocationValue = {
+  label: string;
+  latitude?: number;
+  longitude?: number;
+};
 
 type Props = {
   label: string;
   value: string;
-  onChange: (value: string) => void;
+  onChange: (value: string, meta?: LocationValue) => void;
   error?: string | undefined;
   icon?: React.ReactNode;
   /** When set, only these options can be chosen (same dropdown UI as drop). */
@@ -18,11 +24,15 @@ type Props = {
 };
 
 function toSuggestions(options: string[], secondary = "Pickup point"): LocationSuggestion[] {
-  return options.map((label) => ({
-    id: `fixed-${label}`,
-    label,
-    secondary,
-  }));
+  return options.map((label) => {
+    const known = coordsForPlace(label);
+    return {
+      id: `fixed-${label}`,
+      label,
+      secondary,
+      ...(known ?? {}),
+    };
+  });
 }
 
 export function LocationField({
@@ -78,7 +88,12 @@ export function LocationField({
   }, []);
 
   const pick = (item: LocationSuggestion) => {
-    onChange(item.label);
+    const meta: LocationValue = {
+      label: item.label,
+      ...(item.latitude != null ? { latitude: item.latitude } : {}),
+      ...(item.longitude != null ? { longitude: item.longitude } : {}),
+    };
+    onChange(item.label, meta);
     setQuery(item.label);
     setOpen(false);
   };
@@ -89,7 +104,15 @@ export function LocationField({
 
   const popular =
     !isFixed && query.trim().length < 2
-      ? popularPlaces.map((p) => ({ id: `popular-${p}`, label: p, secondary: "Popular route" }))
+      ? popularPlaces.map((p) => {
+          const known = coordsForPlace(p);
+          return {
+            id: `popular-${p}`,
+            label: p,
+            secondary: "Popular route",
+            ...(known ?? {}),
+          };
+        })
       : [];
 
   const list = isFixed

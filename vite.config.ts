@@ -16,9 +16,16 @@ export default defineConfig({
     tanstackStart({
       // Redirect TanStack Start's bundled server entry to src/server.ts
       server: { entry: "server" },
+      // SPA shell for cPanel shared hosting (static Apache, no Node for the website)
+      spa: {
+        enabled: true,
+      },
     }),
     viteReact(),
     tailwindcss(),
-    nitro(),
+    nitro({
+      // Static-friendly public assets; API stays on backend subdomain
+      preset: "node-server",
+    }),
   ],
 });

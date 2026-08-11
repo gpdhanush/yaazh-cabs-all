@@ -1,0 +1,16 @@
+node_modules/
+dist/
+.env
+.env.local
+*.log
+coverage/
+.DS_Store
+storage/private/**
+!storage/private/.gitkeep
+storage/public/**
+!storage/public/.gitkeep
+firebase-service-account.json
+*.pem
+.idea/
+.vscode/
+tmp/

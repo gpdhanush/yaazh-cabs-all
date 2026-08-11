@@ -1,10 +1,68 @@
 import { places as popularPlaces } from "@/lib/site-data";
+import { getCities, isApiConfigured } from "@/lib/api";
 
 export type LocationSuggestion = {
   id: string;
   label: string;
   secondary?: string;
+  latitude?: number;
+  longitude?: number;
 };
+
+let cachedCityNames: string[] | null = null;
+let citiesPromise: Promise<string[]> | null = null;
+
+async function loadCityNames(): Promise<string[]> {
+  if (cachedCityNames) return cachedCityNames;
+  if (!isApiConfigured()) {
+    cachedCityNames = popularPlaces;
+    return cachedCityNames;
+  }
+  if (!citiesPromise) {
+    citiesPromise = getCities({ perPage: 100 })
+      .then((rows) => {
+        const names = rows.map((c) => c.name).filter(Boolean);
+        cachedCityNames = names.length ? [...new Set([...names, ...popularPlaces])] : popularPlaces;
+        return cachedCityNames;
+      })
+      .catch(() => {
+        cachedCityNames = popularPlaces;
+        return cachedCityNames;
+      });
+  }
+  return citiesPromise;
+}
+
+/** Approximate coords for common Tamil Nadu pickups / drops (fare estimate). */
+const PLACE_COORDS: Record<string, { lat: number; lng: number }> = {
+  Udumalpet: { lat: 10.5847, lng: 77.2514 },
+  Pollachi: { lat: 10.6587, lng: 77.0089 },
+  Coimbatore: { lat: 11.0168, lng: 76.9558 },
+  "Coimbatore Airport": { lat: 11.0297, lng: 77.0434 },
+  Palani: { lat: 10.4503, lng: 77.5209 },
+  Ooty: { lat: 11.4064, lng: 76.6932 },
+  Kodaikanal: { lat: 10.2381, lng: 77.4892 },
+  Munnar: { lat: 10.0889, lng: 77.0595 },
+  Madurai: { lat: 9.9252, lng: 78.1198 },
+  Tiruppur: { lat: 11.1085, lng: 77.3411 },
+  Theni: { lat: 10.0104, lng: 77.4777 },
+  Erode: { lat: 11.341, lng: 77.7172 },
+  Karur: { lat: 10.9601, lng: 78.0766 },
+  Valparai: { lat: 10.3269, lng: 76.951 },
+  Dindigul: { lat: 10.3673, lng: 77.9803 },
+  Chennai: { lat: 13.0827, lng: 80.2707 },
+  Bengaluru: { lat: 12.9716, lng: 77.5946 },
+  Kochi: { lat: 9.9312, lng: 76.2673 },
+  Dharapuram: { lat: 10.7381, lng: 77.532 },
+  Madathukulam: { lat: 10.562, lng: 77.363 },
+  Anaimalai: { lat: 10.583, lng: 76.933 },
+  Amaravathi: { lat: 10.403, lng: 77.267 },
+};
+
+export function coordsForPlace(label: string): { latitude: number; longitude: number } | null {
+  const hit = PLACE_COORDS[label.trim()];
+  return hit ? { latitude: hit.lat, longitude: hit.lng } : null;
+}
 
 type GooglePrediction = {
   place_id: string;
@@ -81,11 +139,16 @@ async function searchGoogle(query: string): Promise<LocationSuggestion[]> {
           return;
         }
         resolve(
-          predictions.slice(0, 8).map((p) => ({
-            id: p.place_id,
-            label: p.structured_formatting?.main_text || p.description,
-            secondary: p.structured_formatting?.secondary_text || p.description,
-          })),
+          predictions.slice(0, 8).map((p) => {
+            const label = p.structured_formatting?.main_text || p.description;
+            const known = coordsForPlace(label);
+            return {
+              id: p.place_id,
+              label,
+              secondary: p.structured_formatting?.secondary_text || p.description,
+              ...(known ?? {}),
+            };
+          }),
         );
       },
     );
@@ -104,6 +167,7 @@ async function searchNominatim(query: string): Promise<LocationSuggestion[]> {
   if (!res.ok) return [];
   const data = (await res.json()) as {
     features?: Array<{
+      geometry?: { coordinates?: [number, number] };
       properties?: {
         osm_id?: number;
         name?: string;
@@ -120,36 +184,41 @@ async function searchNominatim(query: string): Promise<LocationSuggestion[]> {
       const p = feature.properties ?? {};
       const label = p.name || p.city || p.street || query;
       const secondary = [p.street, p.city, p.state, p.country].filter(Boolean).join(", ");
+      const coords = feature.geometry?.coordinates;
       return {
         id: `photon-${p.osm_id ?? index}-${label}`,
         label,
         secondary: secondary || "India",
+        ...(coords
+          ? { longitude: coords[0], latitude: coords[1] }
+          : coordsForPlace(label) ?? {}),
       };
     })
     .filter((item) => item.label.trim().length > 0);
 }
 
-function searchPopular(query: string): LocationSuggestion[] {
+function searchPopular(query: string, cityNames: string[]): LocationSuggestion[] {
+  const source = cityNames.length ? cityNames : popularPlaces;
   const q = query.trim().toLowerCase();
+  const mapPlace = (p: string): LocationSuggestion => {
+    const known = coordsForPlace(p);
+    return {
+      id: `popular-${p}`,
+      label: p,
+      secondary: "Popular destination",
+      ...(known ?? {}),
+    };
+  };
   if (!q) {
-    return popularPlaces.slice(0, 8).map((p) => ({
-      id: `popular-${p}`,
-      label: p,
-      secondary: "Popular destination",
-    }));
+    return source.slice(0, 8).map(mapPlace);
   }
-  return popularPlaces
-    .filter((p) => p.toLowerCase().includes(q))
-    .map((p) => ({
-      id: `popular-${p}`,
-      label: p,
-      secondary: "Popular destination",
-    }));
+  return source.filter((p) => p.toLowerCase().includes(q)).map(mapPlace);
 }
 
 export async function searchLocations(query: string): Promise<LocationSuggestion[]> {
   const q = query.trim();
-  const popular = searchPopular(q);
+  const cityNames = await loadCityNames();
+  const popular = searchPopular(q, cityNames);
 
   if (q.length < 2) return popular;
 
@@ -177,5 +246,5 @@ export async function searchLocations(query: string): Promise<LocationSuggestion
 
   return popular.length
     ? popular
-    : [{ id: `custom-${q}`, label: q, secondary: "Use this location" }];
+    : [{ id: `custom-${q}`, label: q, secondary: "Use this location", ...(coordsForPlace(q) ?? {}) }];
 }

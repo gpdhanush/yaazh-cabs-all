@@ -1,14 +1,15 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { getFaqs, isApiConfigured, type PublicFaq } from "@/lib/api";
 
-
-const faqs = [
+export const FALLBACK_FAQS = [
   {
     q: "How do I book a cab with Yaazh Cabs?",
     a: "Fill the booking form on this page or call 93600 55761. We confirm your cab, driver name and number on WhatsApp within minutes.",
@@ -35,7 +36,24 @@ const faqs = [
   },
 ];
 
+function toDisplay(rows: PublicFaq[]) {
+  return rows.map((f) => ({ q: f.question, a: f.answer, id: f.id }));
+}
+
 export function FAQ() {
+  const [faqs, setFaqs] = useState(FALLBACK_FAQS.map((f, i) => ({ ...f, id: `fallback-${i}` })));
+
+  useEffect(() => {
+    if (!isApiConfigured()) return;
+    getFaqs()
+      .then((rows) => {
+        if (rows.length) setFaqs(toDisplay(rows));
+      })
+      .catch(() => {
+        /* keep fallback */
+      });
+  }, []);
+
   return (
     <section id="faq" className="py-16 md:py-28">
       <div className="mx-auto max-w-3xl px-5 md:px-8">
@@ -49,7 +67,7 @@ export function FAQ() {
         <div className="mt-10">
           <Accordion type="single" collapsible className="w-full">
             {faqs.map((f, i) => (
-              <AccordionItem key={f.q} value={`item-${i}`} className="border-border">
+              <AccordionItem key={f.id} value={`item-${i}`} className="border-border">
                 <AccordionTrigger className="text-left font-display text-base font-semibold hover:text-brand hover:no-underline">
                   {f.q}
                 </AccordionTrigger>
@@ -68,7 +86,7 @@ export function FAQ() {
 export const faqJsonLd = {
   "@context": "https://schema.org",
   "@type": "FAQPage",
-  mainEntity: faqs.map((f) => ({
+  mainEntity: FALLBACK_FAQS.map((f) => ({
     "@type": "Question",
     name: f.q,
     acceptedAnswer: { "@type": "Answer", text: f.a },

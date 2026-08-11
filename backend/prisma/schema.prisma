@@ -1,0 +1,1305 @@
+enum DeliveryStatus {
+  pending
+  queued
+  sent
+  delivered
+  failed
+  skipped
+}
+
+enum DocumentType {
+  license
+  aadhaar
+  pan
+  rc
+  insurance
+  permit
+  pollution
+  fitness
+  profile_photo
+  other
+}
+
+enum BookingStatus {
+  pending
+  confirmed
+  driver_notified
+  driver_accepted
+  driver_rejected
+  driver_assigned
+  on_the_way
+  arrived
+  trip_started
+  completed
+  cancelled
+  rejected
+  no_show
+}
+
+enum ChargeType {
+  base_fare
+  distance
+  minimum_fare
+  driver_batta
+  extra_km
+  extra_hour
+  toll
+  parking
+  permit
+  night
+  waiting
+  discount
+  gst
+  other
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum PreferredLanguage {
+  en
+  ta
+}
+
+enum CustomerAppStatus {
+  active
+  blocked
+  deleted
+}
+
+enum DriverOnlineStatus {
+  offline
+  online
+  busy
+}
+
+enum DriverAvailabilityStatus {
+  available
+  on_trip
+  on_leave
+  suspended
+}
+
+enum DriverVerificationStatus {
+  pending
+  approved
+  rejected
+  blocked
+}
+
+enum AuthUserType {
+  customer
+  driver
+  admin
+}
+
+enum OtpPurpose {
+  login
+  register
+  forgot_password
+  verify_phone
+  verify_email
+}
+
+enum DevicePlatform {
+  android
+  ios
+  web
+}
+
+enum SavedPlaceLabel {
+  home
+  work
+  other
+}
+
+enum FuelType {
+  petrol
+  diesel
+  cng
+  electric
+  hybrid
+  other
+}
+
+enum DocumentVerificationStatus {
+  pending
+  approved
+  rejected
+  expired
+}
+
+enum TripType {
+  one_way
+  round_trip
+  airport
+  outstation
+  local_rental
+}
+
+enum DiscountType {
+  flat
+  percentage
+}
+
+enum CancellationTripType {
+  one_way
+  round_trip
+  airport
+  outstation
+  local_rental
+  all
+}
+
+enum ActorType {
+  customer
+  driver
+  admin
+  system
+}
+
+enum CancellationFeeType {
+  flat
+  percentage
+  none
+}
+
+enum BookingSource {
+  website
+  admin
+  phone
+  whatsapp
+  customer_app
+  driver_app
+}
+
+enum PaymentStatus {
+  unpaid
+  partial
+  paid
+  refunded
+  failed
+}
+
+enum OfferType {
+  manual_assign
+  broadcast
+  nearby_driver
+}
+
+enum OfferStatus {
+  sent
+  seen
+  accepted
+  rejected
+  expired
+  cancelled
+}
+
+enum ChangedByType {
+  system
+  admin
+  customer
+  driver
+}
+
+enum PaymentMethod {
+  cash
+  upi
+  card
+  netbanking
+  wallet
+  bank_transfer
+  other
+}
+
+enum PaymentType {
+  advance
+  partial
+  final
+  refund
+  other
+}
+
+enum PaymentRecordStatus {
+  pending
+  success
+  failed
+  refunded
+}
+
+enum ChargeAmountType {
+  estimated
+  final
+}
+
+enum InvoiceStatus {
+  draft
+  issued
+  paid
+  partially_paid
+  cancelled
+}
+
+enum WalletTxnType {
+  credit
+  debit
+}
+
+enum PayoutMethod {
+  cash
+  upi
+  bank_transfer
+  other
+}
+
+enum PayoutStatus {
+  pending
+  approved
+  paid
+  rejected
+  cancelled
+}
+
+enum ApprovalStatus {
+  pending
+  approved
+  rejected
+}
+
+enum EnquiryStatus {
+  new
+  in_progress
+  closed
+  spam
+}
+
+enum CmsPageType {
+  static
+  service
+  policy
+  landing
+}
+
+enum PublishStatus {
+  draft
+  published
+  archived
+}
+
+enum FaqRelatedType {
+  general
+  route
+  service
+}
+
+enum SeoEntityType {
+  home
+  cms_page
+  blog_post
+  route
+  vehicle_category
+  custom
+}
+
+enum NotificationChannel {
+  push
+  in_app
+  email
+  sms
+  whatsapp
+}
+
+enum NotificationRecipientType {
+  customer
+  driver
+  admin
+  all
+}
+
+enum NotificationSenderType {
+  system
+  admin
+}
+
+enum NotificationLogRecipientType {
+  customer
+  driver
+  admin
+}
+
+enum ConfigValueType {
+  string
+  number
+  boolean
+  json
+}
+
+enum AppType {
+  customer_app
+  driver_app
+  admin_web
+  user_website
+}
+
+enum RemoteConfigAppType {
+  customer_app
+  driver_app
+  admin_web
+  user_website
+  all
+}
+
+enum RemoteConfigPlatform {
+  android
+  ios
+  web
+  all
+}
+
+enum SupportRaisedBy {
+  customer
+  driver
+  admin
+}
+
+enum TicketPriority {
+  low
+  medium
+  high
+  urgent
+}
+
+enum TicketStatus {
+  open
+  in_progress
+  waiting_for_user
+  resolved
+  closed
+}
+
+enum TicketSenderType {
+  customer
+  driver
+  admin
+  system
+}
+
+enum IdempotencyUserType {
+  customer
+  driver
+  admin
+  public
+}
+
+enum JobStatus {
+  pending
+  processing
+  completed
+  failed
+  cancelled
+}
+
+model AdminRoles {
+  id BigInt @id @default(autoincrement())
+  name String @db.VarChar(80) @unique
+  description String? @db.VarChar(255)
+  is_active Boolean @default(true)
+  created_at DateTime @db.Timestamp(0) @default(now())
+  updated_at DateTime? @db.Timestamp(0) @updatedAt
+  @@map("admin_roles")
+}
+
+model Permissions {
+  id BigInt @id @default(autoincrement())
+  module String @db.VarChar(80)
+  action String @db.VarChar(80)
+  label String @db.VarChar(120)
+  created_at DateTime @db.Timestamp(0) @default(now())
+  @@unique([module, action])
+  @@map("permissions")
+}
+
+model RolePermissions {
+  role_id BigInt
+  permission_id BigInt
+  @@id([role_id, permission_id])
+  @@map("role_permissions")
+}
+
+model AdminUsers {
+  id BigInt @id @default(autoincrement())
+  role_id BigInt
+  name String @db.VarChar(120)
+  email String @db.VarChar(150) @unique
+  phone String? @db.VarChar(20) @unique
+  password_hash String @db.VarChar(255)
+  avatar_url String? @db.VarChar(500)
+  is_active Boolean @default(true)
+  last_login_at DateTime? @db.DateTime(0)
+  created_at DateTime @db.Timestamp(0) @default(now())
+  updated_at DateTime? @db.Timestamp(0) @updatedAt
+  @@index([role_id, is_active])
+  @@map("admin_users")
+}
+
+model Customers {
+  id BigInt @id @default(autoincrement())
+  name String @db.VarChar(120)
+  email String? @db.VarChar(150)
+  phone String @db.VarChar(20) @unique
+  alternate_phone String? @db.VarChar(20)
+  password_hash String? @db.VarChar(255)
+  profile_image_url String? @db.VarChar(500)
+  address String? @db.Text
+  city String? @db.VarChar(100)
+  preferred_language PreferredLanguage @default(en)
+  referral_code String? @db.VarChar(40) @unique
+  referred_by_customer_id BigInt?
+  email_verified_at DateTime? @db.DateTime(0)
+  phone_verified_at DateTime? @db.DateTime(0)
+  last_login_at DateTime? @db.DateTime(0)
+  app_status CustomerAppStatus @default(active)
+  is_active Boolean @default(true)
+  created_at DateTime @db.Timestamp(0) @default(now())
+  updated_at DateTime? @db.Timestamp(0) @updatedAt
+  @@index([email])
+  @@index([app_status, is_active])
+  @@map("customers")
+}
+
+model Drivers {
+  id BigInt @id @default(autoincrement())
+  name String @db.VarChar(120)
+  phone String @db.VarChar(20) @unique
+  email String? @db.VarChar(150)
+  password_hash String? @db.VarChar(255)
+  profile_image_url String? @db.VarChar(500)
+  license_no String? @db.VarChar(80)
+  license_expiry_date DateTime? @db.Date
+  address String? @db.Text
+  online_status DriverOnlineStatus @default(offline)
+  availability_status DriverAvailabilityStatus @default(available)
+  current_latitude Decimal? @db.Decimal(10, 7)
+  current_longitude Decimal? @db.Decimal(10, 7)
+  last_location_at DateTime? @db.DateTime(0)
+  rating_avg Decimal @db.Decimal(3, 2) @default(0.00)
+  total_completed_trips Int @default(0)
+  email_verified_at DateTime? @db.DateTime(0)
+  phone_verified_at DateTime? @db.DateTime(0)
+  last_login_at DateTime? @db.DateTime(0)
+  verification_status DriverVerificationStatus @default(pending)
+  is_active Boolean @default(true)
+  created_at DateTime @db.Timestamp(0) @default(now())
+  updated_at DateTime? @db.Timestamp(0) @updatedAt
+  @@index([verification_status, online_status, availability_status])
+  @@index([online_status, availability_status, last_location_at])
+  @@map("drivers")
+}
+
+model AuthOtpRequests {
+  id BigInt @id @default(autoincrement())
+  user_type AuthUserType
+  phone String? @db.VarChar(20)
+  email String? @db.VarChar(150)
+  otp_hash String @db.VarChar(255)
+  purpose OtpPurpose @default(login)
+  expires_at DateTime @db.DateTime(0)
+  verified_at DateTime? @db.DateTime(0)
+  attempts Int @db.UnsignedTinyInt @default(0)
+  ip_address String? @db.VarChar(45)
+  user_agent String? @db.VarChar(500)
+  created_at DateTime @db.Timestamp(0) @default(now())
+  @@index([user_type, phone, purpose, expires_at])
+  @@index([user_type, email, purpose, expires_at])
+  @@index([created_at])
+  @@map("auth_otp_requests")
+}
+
+model AppDevices {
+  id BigInt @id @default(autoincrement())
+  user_type AuthUserType
+  customer_id BigInt?
+  driver_id BigInt?
+  admin_user_id BigInt?
+  platform DevicePlatform
+  device_uuid String? @db.VarChar(120)
+  fcm_token String @db.VarChar(500)
+  app_version String? @db.VarChar(40)
+  os_version String? @db.VarChar(80)
+  device_model String? @db.VarChar(120)
+  locale String? @db.VarChar(20)
+  timezone String? @db.VarChar(80) @default("Asia/Kolkata")
+  is_active Boolean @default(true)
+  last_seen_at DateTime? @db.DateTime(0)
+  created_at DateTime @db.Timestamp(0) @default(now())
+  updated_at DateTime? @db.Timestamp(0) @updatedAt
+  @@unique([fcm_token])
+  @@index([user_type, customer_id, driver_id, admin_user_id])
+  @@index([platform, is_active])
+  @@map("app_devices")
+}
+
+model CustomerSavedPlaces {
+  id BigInt @id @default(autoincrement())
+  customer_id BigInt
+  label SavedPlaceLabel @default(other)
+  title String @db.VarChar(120)
+  address String @db.VarChar(500)
+  latitude Decimal? @db.Decimal(10, 7)
+  longitude Decimal? @db.Decimal(10, 7)
+  is_default Boolean @default(false)
+  created_at DateTime @db.Timestamp(0) @default(now())
+  updated_at DateTime? @db.Timestamp(0) @updatedAt
+  @@index([customer_id])
+  @@map("customer_saved_places")
+}
+
+model VehicleCategories {
+  id BigInt @id @default(autoincrement())
+  name String @db.VarChar(100)
+  slug String @db.VarChar(120) @unique
+  seating_capacity Int @db.UnsignedTinyInt
+  luggage_capacity String? @db.VarChar(80)
+  description String? @db.Text
+  image_url String? @db.VarChar(500)
+  one_way_rate_per_km Decimal @db.Decimal(10, 2) @default(0.00)
+  round_trip_rate_per_km Decimal @db.Decimal(10, 2) @default(0.00)
+  driver_batta Decimal @db.Decimal(10, 2) @default(0.00)
+  minimum_km_per_day Decimal @db.Decimal(10, 2) @default(0.00)
+  display_order Int @default(0)
+  is_active Boolean @default(true)
+  created_at DateTime @db.Timestamp(0) @default(now())
+  updated_at DateTime? @db.Timestamp(0) @updatedAt
+  @@index([is_active, display_order])
+  @@map("vehicle_categories")
+}
+
+model Vehicles {
+  id BigInt @id @default(autoincrement())
+  category_id BigInt
+  vehicle_name String @db.VarChar(120)
+  registration_no String? @db.VarChar(50) @unique
+  model_name String? @db.VarChar(120)
+  color String? @db.VarChar(60)
+  fuel_type FuelType @default(diesel)
+  rc_expiry_date DateTime? @db.Date
+  insurance_expiry_date DateTime? @db.Date
+  permit_expiry_date DateTime? @db.Date
+  pollution_expiry_date DateTime? @db.Date
+  is_active Boolean @default(true)
+  created_at DateTime @db.Timestamp(0) @default(now())
+  updated_at DateTime? @db.Timestamp(0) @updatedAt
+  @@index([category_id, is_active])
+  @@index([rc_expiry_date, insurance_expiry_date, permit_expiry_date, pollution_expiry_date])
+  @@map("vehicles")
+}
+
+model DriverVehicleAssignments {
+  id BigInt @id @default(autoincrement())
+  driver_id BigInt
+  vehicle_id BigInt
+  assigned_from DateTime @db.DateTime(0)
+  assigned_to DateTime? @db.DateTime(0)
+  is_current Boolean @default(true)
+  /// MySQL GENERATED ALWAYS AS (…) STORED — read-only
+  current_driver_key BigInt? @default(dbgenerated())
+  /// MySQL GENERATED ALWAYS AS (…) STORED — read-only
+  current_vehicle_key BigInt? @default(dbgenerated())
+  created_at DateTime @db.Timestamp(0) @default(now())
+  updated_at DateTime? @db.Timestamp(0) @updatedAt
+  @@unique([current_driver_key])
+  @@unique([current_vehicle_key])
+  @@index([driver_id, assigned_from])
+  @@index([vehicle_id, assigned_from])
+  @@map("driver_vehicle_assignments")
+}
+
+model DriverDocuments {
+  id BigInt @id @default(autoincrement())
+  driver_id BigInt
+  vehicle_id BigInt?
+  document_type DocumentType
+  document_no String? @db.VarChar(120)
+  file_url String @db.VarChar(500)
+  expiry_date DateTime? @db.Date
+  verification_status DocumentVerificationStatus @default(pending)
+  rejection_reason String? @db.Text
+  verified_by_admin_id BigInt?
+  verified_at DateTime? @db.DateTime(0)
+  created_at DateTime @db.Timestamp(0) @default(now())
+  updated_at DateTime? @db.Timestamp(0) @updatedAt
+  @@index([driver_id, document_type, verification_status, expiry_date])
+  @@index([vehicle_id, document_type, verification_status, expiry_date])
+  @@map("driver_documents")
+}
+
+model Cities {
+  id BigInt @id @default(autoincrement())
+  name String @db.VarChar(120)
+  slug String @db.VarChar(140) @unique
+  state String @db.VarChar(120) @default("Tamil Nadu")
+  latitude Decimal? @db.Decimal(10, 7)
+  longitude Decimal? @db.Decimal(10, 7)
+  is_airport Boolean @default(false)
+  is_active Boolean @default(true)
+  created_at DateTime @db.Timestamp(0) @default(now())
+  updated_at DateTime? @db.Timestamp(0) @updatedAt
+  @@index([name, is_active])
+  @@map("cities")
+}
+
+model Routes {
+  id BigInt @id @default(autoincrement())
+  pickup_city_id BigInt
+  drop_city_id BigInt
+  slug String @db.VarChar(180) @unique
+  title String @db.VarChar(180)
+  distance_km Decimal @db.Decimal(10, 2) @default(0.00)
+  duration_minutes Int?
+  route_map_embed_url String? @db.Text
+  content String? @db.LongText
+  faq_content String? @db.LongText
+  image_url String? @db.VarChar(500)
+  amount Decimal? @db.Decimal(10, 2)
+  is_popular Boolean @default(false)
+  is_active Boolean @default(true)
+  created_at DateTime @db.Timestamp(0) @default(now())
+  updated_at DateTime? @db.Timestamp(0) @updatedAt
+  @@unique([pickup_city_id, drop_city_id])
+  @@index([is_popular, is_active])
+  @@map("routes")
+}
+
+model TariffPlans {
+  id BigInt @id @default(autoincrement())
+  vehicle_category_id BigInt
+  trip_type TripType
+  route_id BigInt?
+  rate_per_km Decimal @db.Decimal(10, 2)
+  base_fare Decimal @db.Decimal(10, 2) @default(0.00)
+  driver_batta Decimal @db.Decimal(10, 2) @default(0.00)
+  minimum_km Decimal @db.Decimal(10, 2) @default(0.00)
+  minimum_fare Decimal @db.Decimal(10, 2) @default(0.00)
+  extra_km_rate Decimal @db.Decimal(10, 2) @default(0.00)
+  extra_hour_rate Decimal @db.Decimal(10, 2) @default(0.00)
+  night_charge Decimal @db.Decimal(10, 2) @default(0.00)
+  waiting_charge_per_hour Decimal @db.Decimal(10, 2) @default(0.00)
+  permit_charge Decimal @db.Decimal(10, 2) @default(0.00)
+  toll_included Boolean @default(false)
+  parking_included Boolean @default(false)
+  gst_percentage Decimal @db.Decimal(5, 2) @default(0.00)
+  effective_from DateTime @db.Date
+  effective_to DateTime? @db.Date
+  is_active Boolean @default(true)
+  created_at DateTime @db.Timestamp(0) @default(now())
+  updated_at DateTime? @db.Timestamp(0) @updatedAt
+  @@index([vehicle_category_id, trip_type, route_id, is_active, effective_from])
+  @@map("tariff_plans")
+}
+
+model Coupons {
+  id BigInt @id @default(autoincrement())
+  code String @db.VarChar(50) @unique
+  title String @db.VarChar(150)
+  discount_type DiscountType
+  discount_value Decimal @db.Decimal(10, 2)
+  max_discount_amount Decimal? @db.Decimal(10, 2)
+  min_booking_amount Decimal @db.Decimal(10, 2) @default(0.00)
+  usage_limit Int?
+  per_customer_limit Int?
+  used_count Int @default(0)
+  valid_from DateTime @db.DateTime(0)
+  valid_to DateTime @db.DateTime(0)
+  is_active Boolean @default(true)
+  created_at DateTime @db.Timestamp(0) @default(now())
+  updated_at DateTime? @db.Timestamp(0) @updatedAt
+  @@index([is_active, valid_from, valid_to])
+  @@map("coupons")
+}
+
+model CancellationPolicies {
+  id BigInt @id @default(autoincrement())
+  name String @db.VarChar(120)
+  trip_type CancellationTripType @default(all)
+  cancelled_by_type ActorType
+  minimum_hours_before_pickup Decimal @db.Decimal(6, 2) @default(0.00)
+  cancellation_fee_type CancellationFeeType @default(none)
+  cancellation_fee_value Decimal @db.Decimal(10, 2) @default(0.00)
+  max_fee_amount Decimal? @db.Decimal(10, 2)
+  priority Int @default(0)
+  is_active Boolean @default(true)
+  created_at DateTime @db.Timestamp(0) @default(now())
+  updated_at DateTime? @db.Timestamp(0) @updatedAt
+  @@index([trip_type, cancelled_by_type, is_active, priority])
+  @@map("cancellation_policies")
+}
+
+model Bookings {
+  id BigInt @id @default(autoincrement())
+  booking_reference String @db.VarChar(30) @unique
+  customer_id BigInt?
+  assigned_driver_id BigInt?
+  assigned_vehicle_id BigInt?
+  vehicle_category_id BigInt
+  route_id BigInt?
+  coupon_id BigInt?
+  trip_type TripType
+  booking_source BookingSource @default(website)
+  customer_name String @db.VarChar(120)
+  customer_phone String @db.VarChar(20)
+  customer_email String? @db.VarChar(150)
+  pickup_location String @db.VarChar(255)
+  drop_location String @db.VarChar(255)
+  pickup_city String? @db.VarChar(120)
+  drop_city String? @db.VarChar(120)
+  pickup_latitude Decimal? @db.Decimal(10, 7)
+  pickup_longitude Decimal? @db.Decimal(10, 7)
+  drop_latitude Decimal? @db.Decimal(10, 7)
+  drop_longitude Decimal? @db.Decimal(10, 7)
+  pickup_at DateTime @db.DateTime(0)
+  return_at DateTime? @db.DateTime(0)
+  passenger_count Int? @db.UnsignedTinyInt
+  luggage_note String? @db.VarChar(255)
+  special_note String? @db.Text
+  estimated_distance_km Decimal @db.Decimal(10, 2) @default(0.00)
+  actual_distance_km Decimal? @db.Decimal(10, 2)
+  start_odometer_km Decimal? @db.Decimal(10, 2)
+  end_odometer_km Decimal? @db.Decimal(10, 2)
+  estimated_duration_minutes Int?
+  actual_duration_minutes Int?
+  rate_per_km Decimal @db.Decimal(10, 2) @default(0.00)
+  base_fare Decimal @db.Decimal(10, 2) @default(0.00)
+  driver_batta Decimal @db.Decimal(10, 2) @default(0.00)
+  minimum_fare Decimal @db.Decimal(10, 2) @default(0.00)
+  extra_km_charge Decimal @db.Decimal(10, 2) @default(0.00)
+  extra_hour_charge Decimal @db.Decimal(10, 2) @default(0.00)
+  toll_amount Decimal @db.Decimal(10, 2) @default(0.00)
+  parking_amount Decimal @db.Decimal(10, 2) @default(0.00)
+  permit_amount Decimal @db.Decimal(10, 2) @default(0.00)
+  night_charge Decimal @db.Decimal(10, 2) @default(0.00)
+  waiting_charge Decimal @db.Decimal(10, 2) @default(0.00)
+  discount_amount Decimal @db.Decimal(10, 2) @default(0.00)
+  gst_percentage Decimal @db.Decimal(5, 2) @default(0.00)
+  gst_amount Decimal @db.Decimal(10, 2) @default(0.00)
+  estimated_total Decimal @db.Decimal(10, 2) @default(0.00)
+  final_total Decimal? @db.Decimal(10, 2)
+  payment_status PaymentStatus @default(unpaid)
+  status BookingStatus @default(pending)
+  cancellation_reason String? @db.Text
+  cancelled_by_type ActorType?
+  admin_note String? @db.Text
+  confirmed_at DateTime? @db.DateTime(0)
+  completed_at DateTime? @db.DateTime(0)
+  cancelled_at DateTime? @db.DateTime(0)
+  created_by_admin_id BigInt?
+  created_at DateTime @db.Timestamp(0) @default(now())
+  updated_at DateTime? @db.Timestamp(0) @updatedAt
+  @@index([status, pickup_at])
+  @@index([customer_id, created_at])
+  @@index([assigned_driver_id, pickup_at])
+  @@index([customer_phone])
+  @@index([payment_status])
+  @@index([created_at])
+  @@map("bookings")
+}
+
+model BookingDriverOffers {
+  id BigInt @id @default(autoincrement())
+  booking_id BigInt
+  driver_id BigInt
+  vehicle_id BigInt?
+  offer_type OfferType @default(manual_assign)
+  offered_fare Decimal? @db.Decimal(10, 2)
+  status OfferStatus @default(sent)
+  rejection_reason String? @db.VarChar(255)
+  sent_by_admin_id BigInt?
+  sent_at DateTime @default(now()) @db.DateTime(0)
+  seen_at DateTime? @db.DateTime(0)
+  responded_at DateTime? @db.DateTime(0)
+  expires_at DateTime? @db.DateTime(0)
+  created_at DateTime @db.Timestamp(0) @default(now())
+  updated_at DateTime? @db.Timestamp(0) @updatedAt
+  @@index([booking_id, driver_id, created_at])
+  @@index([status, expires_at])
+  @@map("booking_driver_offers")
+}
+
+model BookingStatusHistory {
+  id BigInt @id @default(autoincrement())
+  booking_id BigInt
+  old_status String? @db.VarChar(50)
+  new_status String @db.VarChar(50)
+  note String? @db.Text
+  changed_by_type ChangedByType @default(system)
+  changed_by_admin_id BigInt?
+  changed_by_customer_id BigInt?
+  changed_by_driver_id BigInt?
+  changed_at DateTime @db.Timestamp(0) @default(now())
+  @@index([booking_id, changed_at])
+  @@map("booking_status_history")
+}
+
+model TripEvents {
+  id BigInt @id @default(autoincrement())
+  booking_id BigInt
+  driver_id BigInt?
+  event_type String?
+  event_note String? @db.Text
+  latitude Decimal? @db.Decimal(10, 7)
+  longitude Decimal? @db.Decimal(10, 7)
+  event_payload Json?
+  created_by_type ChangedByType @default(system)
+  created_by_admin_id BigInt?
+  created_at DateTime @db.Timestamp(0) @default(now())
+  @@index([booking_id, created_at])
+  @@index([driver_id, created_at])
+  @@index([event_type, created_at])
+  @@map("trip_events")
+}
+
+model DriverLocations {
+  id BigInt @id @default(autoincrement())
+  driver_id BigInt
+  booking_id BigInt?
+  latitude Decimal @db.Decimal(10, 7)
+  longitude Decimal @db.Decimal(10, 7)
+  heading Decimal? @db.Decimal(6, 2)
+  speed_kmph Decimal? @db.Decimal(6, 2)
+  accuracy_meters Decimal? @db.Decimal(8, 2)
+  battery_percentage Int? @db.UnsignedTinyInt
+  recorded_at DateTime @db.DateTime(0)
+  created_at DateTime @db.Timestamp(0) @default(now())
+  @@index([driver_id, recorded_at])
+  @@index([booking_id, recorded_at])
+  @@map("driver_locations")
+}
+
+model Payments {
+  id BigInt @id @default(autoincrement())
+  booking_id BigInt
+  payment_reference String? @db.VarChar(120) @unique
+  gateway String? @db.VarChar(80)
+  method PaymentMethod @default(cash)
+  payment_type PaymentType @default(other)
+  amount Decimal @db.Decimal(10, 2)
+  currency String @default("INR") @db.VarChar(10)
+  status PaymentRecordStatus @default(pending)
+  paid_at DateTime? @db.DateTime(0)
+  gateway_response Json?
+  created_at DateTime @db.Timestamp(0) @default(now())
+  updated_at DateTime? @db.Timestamp(0) @updatedAt
+  @@index([booking_id, status, created_at])
+  @@index([status, created_at])
+  @@map("payments")
+}
+
+model BookingCharges {
+  id BigInt @id @default(autoincrement())
+  booking_id BigInt
+  charge_type ChargeType
+  amount_type ChargeAmountType @default(final)
+  description String? @db.VarChar(255)
+  amount Decimal @db.Decimal(10, 2)
+  created_at DateTime @db.Timestamp(0) @default(now())
+  @@index([booking_id, amount_type, charge_type])
+  @@map("booking_charges")
+}
+
+model BookingInvoices {
+  id BigInt @id @default(autoincrement())
+  booking_id BigInt @unique
+  invoice_number String @db.VarChar(80) @unique
+  invoice_date DateTime @db.Date
+  subtotal Decimal @db.Decimal(10, 2) @default(0.00)
+  discount_amount Decimal @db.Decimal(10, 2) @default(0.00)
+  taxable_amount Decimal @db.Decimal(10, 2) @default(0.00)
+  gst_percentage Decimal @db.Decimal(5, 2) @default(0.00)
+  gst_amount Decimal @db.Decimal(10, 2) @default(0.00)
+  total_amount Decimal @db.Decimal(10, 2) @default(0.00)
+  amount_paid Decimal @db.Decimal(10, 2) @default(0.00)
+  balance_amount Decimal @db.Decimal(10, 2) @default(0.00)
+  currency String @default("INR") @db.VarChar(10)
+  status InvoiceStatus @default(draft)
+  pdf_url String? @db.VarChar(500)
+  issued_at DateTime? @db.DateTime(0)
+  created_at DateTime @db.Timestamp(0) @default(now())
+  updated_at DateTime? @db.Timestamp(0) @updatedAt
+  @@index([invoice_date, status])
+  @@map("booking_invoices")
+}
+
+model DriverWalletTransactions {
+  id BigInt @id @default(autoincrement())
+  driver_id BigInt
+  booking_id BigInt?
+  transaction_type WalletTxnType
+  source_type String?
+  amount Decimal @db.Decimal(10, 2)
+  balance_after Decimal? @db.Decimal(10, 2)
+  reference_code String? @db.VarChar(120)
+  note String? @db.VarChar(255)
+  created_by_admin_id BigInt?
+  created_at DateTime @db.Timestamp(0) @default(now())
+  @@index([driver_id, created_at])
+  @@index([booking_id])
+  @@index([reference_code])
+  @@map("driver_wallet_transactions")
+}
+
+model DriverPayouts {
+  id BigInt @id @default(autoincrement())
+  driver_id BigInt
+  payout_reference String? @db.VarChar(120) @unique
+  amount Decimal @db.Decimal(10, 2)
+  method PayoutMethod @default(upi)
+  status PayoutStatus @default(pending)
+  requested_at DateTime? @db.DateTime(0)
+  approved_by_admin_id BigInt?
+  approved_at DateTime? @db.DateTime(0)
+  paid_at DateTime? @db.DateTime(0)
+  rejection_reason String? @db.Text
+  created_at DateTime @db.Timestamp(0) @default(now())
+  updated_at DateTime? @db.Timestamp(0) @updatedAt
+  @@index([driver_id, created_at])
+  @@index([status, created_at])
+  @@map("driver_payouts")
+}
+
+model TripRatings {
+  id BigInt @id @default(autoincrement())
+  booking_id BigInt @unique
+  customer_id BigInt?
+  driver_id BigInt?
+  customer_rating Int? @db.UnsignedTinyInt
+  customer_review String? @db.Text
+  driver_rating Int? @db.UnsignedTinyInt
+  driver_review String? @db.Text
+  created_at DateTime @db.Timestamp(0) @default(now())
+  updated_at DateTime? @db.Timestamp(0) @updatedAt
+  @@index([driver_id, created_at])
+  @@map("trip_ratings")
+}
+
+model Testimonials {
+  id BigInt @id @default(autoincrement())
+  booking_id BigInt?
+  customer_id BigInt?
+  customer_name String @db.VarChar(120)
+  customer_phone String? @db.VarChar(20)
+  rating Int @db.UnsignedTinyInt
+  review String @db.Text
+  admin_reply String? @db.Text
+  approval_status ApprovalStatus @default(pending)
+  is_featured Boolean @default(false)
+  approved_by_admin_id BigInt?
+  approved_at DateTime? @db.DateTime(0)
+  created_at DateTime @db.Timestamp(0) @default(now())
+  updated_at DateTime? @db.Timestamp(0) @updatedAt
+  @@index([approval_status, is_featured])
+  @@map("testimonials")
+}
+
+model ContactEnquiries {
+  id BigInt @id @default(autoincrement())
+  name String @db.VarChar(120)
+  email String? @db.VarChar(150)
+  phone String? @db.VarChar(20)
+  subject String? @db.VarChar(180)
+  message String @db.Text
+  status EnquiryStatus @default(new)
+  assigned_admin_id BigInt?
+  admin_note String? @db.Text
+  created_at DateTime @db.Timestamp(0) @default(now())
+  updated_at DateTime? @db.Timestamp(0) @updatedAt
+  @@index([status, created_at])
+  @@map("contact_enquiries")
+}
+
+model CmsPages {
+  id BigInt @id @default(autoincrement())
+  title String @db.VarChar(180)
+  slug String @db.VarChar(200) @unique
+  page_type CmsPageType @default(static)
+  excerpt String? @db.Text
+  content String? @db.LongText
+  banner_image_url String? @db.VarChar(500)
+  status PublishStatus @default(draft)
+  published_at DateTime? @db.DateTime(0)
+  created_by_admin_id BigInt?
+  updated_by_admin_id BigInt?
+  created_at DateTime @db.Timestamp(0) @default(now())
+  updated_at DateTime? @db.Timestamp(0) @updatedAt
+  @@index([status, published_at])
+  @@map("cms_pages")
+}
+
+model BlogPosts {
+  id BigInt @id @default(autoincrement())
+  title String @db.VarChar(200)
+  slug String @db.VarChar(220) @unique
+  excerpt String? @db.Text
+  content String @db.LongText
+  featured_image_url String? @db.VarChar(500)
+  status PublishStatus @default(draft)
+  published_at DateTime? @db.DateTime(0)
+  author_admin_id BigInt?
+  created_at DateTime @db.Timestamp(0) @default(now())
+  updated_at DateTime? @db.Timestamp(0) @updatedAt
+  @@index([status, published_at])
+  @@map("blog_posts")
+}
+
+model Faqs {
+  id BigInt @id @default(autoincrement())
+  question String @db.VarChar(255)
+  answer String @db.Text
+  category String? @db.VarChar(100)
+  related_type FaqRelatedType @default(general)
+  route_id BigInt?
+  cms_page_id BigInt?
+  display_order Int @default(0)
+  is_active Boolean @default(true)
+  created_at DateTime @db.Timestamp(0) @default(now())
+  updated_at DateTime? @db.Timestamp(0) @updatedAt
+  @@index([related_type, is_active, display_order])
+  @@map("faqs")
+}
+
+model SeoMeta {
+  id BigInt @id @default(autoincrement())
+  entity_type SeoEntityType
+  entity_id BigInt?
+  url_path String @db.VarChar(255) @unique
+  meta_title String? @db.VarChar(255)
+  meta_description String? @db.VarChar(500)
+  canonical_url String? @db.VarChar(500)
+  og_title String? @db.VarChar(255)
+  og_description String? @db.VarChar(500)
+  og_image_url String? @db.VarChar(500)
+  schema_json Json?
+  robots_index Boolean @default(true)
+  robots_follow Boolean @default(true)
+  created_at DateTime @db.Timestamp(0) @default(now())
+  updated_at DateTime? @db.Timestamp(0) @updatedAt
+  @@index([entity_type, entity_id])
+  @@map("seo_meta")
+}
+
+model NotificationTemplates {
+  id BigInt @id @default(autoincrement())
+  template_key String @db.VarChar(100) @unique
+  channel NotificationChannel
+  recipient_type NotificationRecipientType @default(customer)
+  subject String? @db.VarChar(180)
+  title String? @db.VarChar(180)
+  body String @db.Text
+  deep_link String? @db.VarChar(500)
+  variables Json?
+  is_active Boolean @default(true)
+  created_at DateTime @db.Timestamp(0) @default(now())
+  updated_at DateTime? @db.Timestamp(0) @updatedAt
+  @@map("notification_templates")
+}
+
+model NotificationLogs {
+  id BigInt @id @default(autoincrement())
+  template_id BigInt?
+  booking_id BigInt?
+  sender_type NotificationSenderType @default(system)
+  sender_admin_id BigInt?
+  recipient_type NotificationLogRecipientType
+  customer_id BigInt?
+  driver_id BigInt?
+  admin_user_id BigInt?
+  device_id BigInt?
+  channel NotificationChannel
+  title String? @db.VarChar(180)
+  body String @db.Text
+  data_payload Json?
+  delivery_status String?
+  provider_message_id String? @db.VarChar(180)
+  error_message String? @db.Text
+  scheduled_at DateTime? @db.DateTime(0)
+  sent_at DateTime? @db.DateTime(0)
+  delivered_at DateTime? @db.DateTime(0)
+  read_at DateTime? @db.DateTime(0)
+  created_at DateTime @db.Timestamp(0) @default(now())
+  @@index([recipient_type, customer_id, driver_id, admin_user_id, delivery_status])
+  @@index([booking_id])
+  @@index([delivery_status, scheduled_at])
+  @@map("notification_logs")
+}
+
+model AppSettings {
+  id BigInt @id @default(autoincrement())
+  setting_key String @db.VarChar(120) @unique
+  setting_value String? @db.Text
+  value_type ConfigValueType @default(string)
+  group_name String @db.VarChar(80) @default("general")
+  is_public Boolean @default(false)
+  created_at DateTime @db.Timestamp(0) @default(now())
+  updated_at DateTime? @db.Timestamp(0) @updatedAt
+  @@map("app_settings")
+}
+
+model AppVersions {
+  id BigInt @id @default(autoincrement())
+  app_type AppType
+  platform DevicePlatform
+  latest_version String @db.VarChar(40)
+  minimum_supported_version String? @db.VarChar(40)
+  force_update Boolean @default(false)
+  update_title String? @db.VarChar(180)
+  update_message String? @db.Text
+  store_url String? @db.VarChar(500)
+  is_active Boolean @default(true)
+  created_at DateTime @db.Timestamp(0) @default(now())
+  updated_at DateTime? @db.Timestamp(0) @updatedAt
+  @@unique([app_type, platform])
+  @@map("app_versions")
+}
+
+model RemoteConfigValues {
+  id BigInt @id @default(autoincrement())
+  config_key String @db.VarChar(120)
+  app_type RemoteConfigAppType @default(all)
+  platform RemoteConfigPlatform @default(all)
+  value_type ConfigValueType @default(string)
+  config_value String? @db.Text
+  description String? @db.VarChar(255)
+  is_active Boolean @default(true)
+  created_at DateTime @db.Timestamp(0) @default(now())
+  updated_at DateTime? @db.Timestamp(0) @updatedAt
+  @@unique([config_key, app_type, platform])
+  @@map("remote_config_values")
+}
+
+model SupportTickets {
+  id BigInt @id @default(autoincrement())
+  ticket_reference String @db.VarChar(40) @unique
+  booking_id BigInt?
+  customer_id BigInt?
+  driver_id BigInt?
+  raised_by_type SupportRaisedBy
+  subject String @db.VarChar(180)
+  priority TicketPriority @default(medium)
+  status TicketStatus @default(open)
+  assigned_admin_id BigInt?
+  created_at DateTime @db.Timestamp(0) @default(now())
+  updated_at DateTime? @db.Timestamp(0) @updatedAt
+  closed_at DateTime? @db.DateTime(0)
+  @@index([status, priority, created_at])
+  @@index([customer_id, created_at])
+  @@index([driver_id, created_at])
+  @@map("support_tickets")
+}
+
+model SupportTicketMessages {
+  id BigInt @id @default(autoincrement())
+  ticket_id BigInt
+  sender_type TicketSenderType
+  customer_id BigInt?
+  driver_id BigInt?
+  admin_user_id BigInt?
+  message String @db.Text
+  attachment_url String? @db.VarChar(500)
+  is_internal_note Boolean @default(false)
+  created_at DateTime @db.Timestamp(0) @default(now())
+  @@index([ticket_id, created_at])
+  @@map("support_ticket_messages")
+}
+
+model AuditLogs {
+  id BigInt @id @default(autoincrement())
+  admin_user_id BigInt?
+  action String @db.VarChar(120)
+  entity_type String? @db.VarChar(80)
+  entity_id BigInt?
+  old_values Json?
+  new_values Json?
+  ip_address String? @db.VarChar(45)
+  user_agent String? @db.VarChar(500)
+  created_at DateTime @db.Timestamp(0) @default(now())
+  @@index([entity_type, entity_id])
+  @@index([admin_user_id, created_at])
+  @@index([created_at])
+  @@map("audit_logs")
+}
+
+model AuthSessions {
+  id BigInt @id @default(autoincrement())
+  user_type AuthUserType
+  customer_id BigInt?
+  driver_id BigInt?
+  admin_user_id BigInt?
+  refresh_token_hash String @db.VarChar(255)
+  device_name String? @db.VarChar(120)
+  ip_address String? @db.VarChar(45)
+  user_agent String? @db.VarChar(500)
+  expires_at DateTime @db.DateTime(0)
+  revoked_at DateTime? @db.DateTime(0)
+  last_used_at DateTime? @db.DateTime(0)
+  created_at DateTime @db.Timestamp(0) @default(now())
+  @@index([refresh_token_hash])
+  @@index([user_type, customer_id, driver_id, admin_user_id])
+  @@index([expires_at])
+  @@map("auth_sessions")
+}
+
+model IdempotencyKeys {
+  id BigInt @id @default(autoincrement())
+  idempotency_key String @db.VarChar(120)
+  user_type IdempotencyUserType @default(public)
+  user_id BigInt?
+  route String @db.VarChar(200)
+  request_hash String @db.VarChar(64)
+  response_code Int
+  response_body Json
+  created_at DateTime @db.Timestamp(0) @default(now())
+  expires_at DateTime @db.DateTime(0)
+  @@unique([idempotency_key])
+  @@index([expires_at])
+  @@map("idempotency_keys")
+}
+
+model JobQueue {
+  id BigInt @id @default(autoincrement())
+  job_type String @db.VarChar(80)
+  payload Json
+  status JobStatus @default(pending)
+  attempts Int @db.UnsignedTinyInt @default(0)
+  max_attempts Int @db.UnsignedTinyInt @default(5)
+  available_at DateTime @default(now()) @db.DateTime(0)
+  locked_at DateTime? @db.DateTime(0)
+  locked_by String? @db.VarChar(120)
+  last_error String? @db.Text
+  idempotency_key String? @db.VarChar(120)
+  created_at DateTime @db.Timestamp(0) @default(now())
+  updated_at DateTime? @db.Timestamp(0) @updatedAt
+  @@unique([idempotency_key])
+  @@index([status, available_at, id])
+  @@map("job_queue")
+}
+
+model RouteEstimateCache {
+  id BigInt @id @default(autoincrement())
+  cache_key String @db.VarChar(64) @unique
+  pickup_latitude Decimal @db.Decimal(10, 7)
+  pickup_longitude Decimal @db.Decimal(10, 7)
+  drop_latitude Decimal @db.Decimal(10, 7)
+  drop_longitude Decimal @db.Decimal(10, 7)
+  distance_km Decimal @db.Decimal(10, 2)
+  duration_minutes Int
+  provider String @db.VarChar(40)
+  created_at DateTime @db.Timestamp(0) @default(now())
+  expires_at DateTime @db.DateTime(0)
+  @@index([expires_at])
+  @@map("route_estimate_cache")
+}

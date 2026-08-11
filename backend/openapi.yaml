@@ -1,0 +1,86 @@
+openapi: 3.0.3
+info:
+  title: Yaazh Cab Booking API
+  version: 1.0.0
+  description: Production REST API v1 for customer website, admin panel, and future Flutter apps. Designed for cPanel shared hosting (MySQL only, no Redis/Docker required).
+servers:
+  - url: http://localhost:3000
+paths:
+  /health:
+    get:
+      summary: Liveness
+      responses:
+        "200":
+          description: OK
+  /ready:
+    get:
+      summary: Readiness (MySQL)
+      responses:
+        "200":
+          description: Ready
+  /api/v1/public/cities:
+    get:
+      summary: List cities
+      responses:
+        "200":
+          description: Cities
+  /api/v1/public/bookings:
+    post:
+      summary: Create public booking
+      responses:
+        "201":
+          description: Created
+  /api/v1/auth/customer/login:
+    post:
+      summary: Customer login
+      responses:
+        "200":
+          description: Tokens
+  /api/v1/auth/driver/login:
+    post:
+      summary: Driver login
+      responses:
+        "200":
+          description: Tokens
+  /api/v1/auth/admin/login:
+    post:
+      summary: Admin login
+      responses:
+        "200":
+          description: Tokens
+  /api/v1/customer/bookings:
+    get:
+      summary: Customer bookings
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: List
+  /api/v1/driver/offers/{id}/accept:
+    post:
+      summary: Accept driver offer (row-locked)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Assigned
+  /api/v1/admin/dashboard:
+    get:
+      summary: Admin dashboard
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Stats
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
