@@ -98,6 +98,15 @@ export class AdminApiService {
     return this.api.postFormData<{ url: string; path: string }>(`${ADMIN}${path}`, form);
   }
 
+  uploadDriverPhoto(id: string, form: FormData) {
+    return this.api
+      .postFormData<{ photo_url?: string | null; profile_image_url?: string | null }>(
+        `${ADMIN}/drivers/${id}/photo`,
+        form,
+      )
+      .pipe(map((r) => r.data));
+  }
+
   update(path: string, body: unknown) {
     return this.api.put<unknown>(`${ADMIN}${path}`, body);
   }

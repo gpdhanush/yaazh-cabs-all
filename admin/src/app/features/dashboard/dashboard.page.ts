@@ -16,6 +16,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { forkJoin } from 'rxjs';
 import { AdminApiService } from '../../core/api/admin-api.service';
 import { Booking, DashboardStats, LiveTrackingTrip } from '../../core/api/api.types';
+import { driverPhotoUrl } from '../../core/api/media-url';
 import { statusLabel, statusTone } from '../../shared/status-chip';
 
 type LeafletMap = {
@@ -157,7 +158,14 @@ type DashCard = {
                 </div>
                 <div class="live-trip__meta">
                   <span><mat-icon>person</mat-icon>{{ trip.customer_name }}</span>
-                  <span><mat-icon>badge</mat-icon>{{ trip.driver?.name || 'Unassigned' }}</span>
+                  <span>
+                    @if (trip.driver && driverPhoto(trip.driver); as src) {
+                      <img class="live-trip__face" [src]="src" [alt]="trip.driver.name" />
+                    } @else {
+                      <mat-icon>badge</mat-icon>
+                    }
+                    {{ trip.driver?.name || 'Unassigned' }}
+                  </span>
                   <span>
                     <mat-icon>directions_car</mat-icon>
                     {{ trip.vehicle?.registration || trip.vehicle?.name || 'Cab' }}
@@ -359,6 +367,10 @@ export class DashboardPage implements OnInit, AfterViewInit, OnDestroy {
 
   statusClass = statusTone;
   label = statusLabel;
+
+  driverPhoto(d: { id: string; photo_url?: string | null }): string | null {
+    return driverPhotoUrl(d);
+  }
 
   ngOnInit(): void {
     this.reload();

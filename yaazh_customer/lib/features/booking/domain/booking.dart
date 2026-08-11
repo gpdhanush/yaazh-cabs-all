@@ -1,9 +1,15 @@
 class BookingParty {
+  final String? id;
   final String name;
   final String phone;
   final String? photoUrl;
 
-  const BookingParty({required this.name, required this.phone, this.photoUrl});
+  const BookingParty({
+    this.id,
+    required this.name,
+    required this.phone,
+    this.photoUrl,
+  });
 }
 
 class BookingVehicle {
@@ -125,17 +131,7 @@ class Booking {
       assignedDriverId: json['assigned_driver_id']?.toString(),
       customerRating: int.tryParse(json['customer_rating']?.toString() ?? ''),
       customerReview: json['customer_review']?.toString(),
-      driver: driverJson is Map
-          ? BookingParty(
-              name: driverJson['name']?.toString() ?? 'Driver',
-              phone: driverJson['phone']?.toString() ?? '',
-              photoUrl: _photo(
-                driverJson['photo_url'] ??
-                    driverJson['profile_image_url'] ??
-                    driverJson['avatar_url'],
-              ),
-            )
-          : null,
+      driver: _driver(driverJson, json['assigned_driver_id']),
       vehicle: vehicleJson is Map
           ? BookingVehicle(
               name: vehicleJson['name']?.toString() ?? 'Cab',
@@ -155,6 +151,33 @@ class Booking {
             }).toList()
           : const [],
     );
+  }
+
+  static BookingParty? _driver(dynamic driverJson, dynamic assignedId) {
+    final fallbackId = assignedId?.toString();
+    if (driverJson is Map) {
+      final id = driverJson['id']?.toString() ?? fallbackId;
+      return BookingParty(
+        id: id,
+        name: driverJson['name']?.toString() ?? 'Driver',
+        phone: driverJson['phone']?.toString() ?? '',
+        photoUrl: _photo(
+              driverJson['photo_url'] ??
+                  driverJson['profile_image_url'] ??
+                  driverJson['avatar_url'],
+            ) ??
+            (id != null && id.isNotEmpty ? '/api/v1/public/drivers/$id/photo' : null),
+      );
+    }
+    if (fallbackId != null && fallbackId.isNotEmpty) {
+      return BookingParty(
+        id: fallbackId,
+        name: 'Driver',
+        phone: '',
+        photoUrl: '/api/v1/public/drivers/$fallbackId/photo',
+      );
+    }
+    return null;
   }
 
   static double? _d(dynamic value) {

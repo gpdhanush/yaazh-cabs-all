@@ -45,6 +45,8 @@ export type BookingDriver = {
   id: string;
   name: string;
   phone: string;
+  photo_url?: string | null;
+  profile_image_url?: string | null;
 };
 
 export type BookingVehicle = {
@@ -146,7 +148,7 @@ export type LiveTrackingTrip = {
   drop_longitude: number | null;
   progress: number;
   eta_min: number | null;
-  driver: { id: string; name: string; phone: string } | null;
+  driver: { id: string; name: string; phone: string; photo_url?: string | null } | null;
   vehicle: { name: string; registration: string | null } | null;
   location: {
     latitude: number;

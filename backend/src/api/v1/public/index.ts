@@ -4,6 +4,7 @@ import { prisma } from "../../../config/database.js";
 import { ok } from "../../../utils/api-response.js";
 import { ValidationError, NotFoundError } from "../../../errors/app-error.js";
 import { bookingService } from "../../../services/booking.service.js";
+import { loadDriverPhotoBytes } from "../../../services/driver-photo.service.js";
 import { mapService } from "../../../services/map.service.js";
 import type { TripType } from "@prisma/client";
 
@@ -14,6 +15,16 @@ function paginate(query: Record<string, unknown>) {
 }
 
 export const publicRoutes: FastifyPluginAsync = async (app) => {
+  app.get("/drivers/:id/photo", async (req, reply) => {
+    const id = BigInt((req.params as { id: string }).id);
+    const photo = await loadDriverPhotoBytes(id);
+    if (!photo) throw new NotFoundError("Driver photo not found.");
+    return reply
+      .header("Cache-Control", "public, max-age=300")
+      .type(photo.mimeType)
+      .send(photo.bytes);
+  });
+
   app.get("/cities", async (req, reply) => {
     const { page, perPage, skip } = paginate(req.query as Record<string, unknown>);
     const where = { is_active: true };

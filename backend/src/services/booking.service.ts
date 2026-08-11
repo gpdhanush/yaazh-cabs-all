@@ -6,6 +6,7 @@ import { assertTransition, canCancel } from "../domain/booking-state-machine.js"
 import { bookingReference } from "../utils/crypto.js";
 import { AppError, ConflictError, NotFoundError, ValidationError } from "../errors/app-error.js";
 import { deliverBookingNotification } from "./fcm.service.js";
+import { driverPhotoPublicPath, publicMediaPath } from "./driver-photo.service.js";
 import { mapService } from "./map.service.js";
 
 function dec(n: number) {
@@ -1124,20 +1125,6 @@ export function serializeBooking(b: {
   };
 }
 
-/** Prefer a /storage path so mobile apps can prefix their configured API host. */
-function publicMediaPath(raw: string | null | undefined): string | null {
-  if (!raw) return null;
-  const value = raw.trim();
-  if (!value || value === "null") return null;
-  try {
-    const u = new URL(value);
-    if (u.pathname.startsWith("/storage/")) return `${u.pathname}${u.search}`;
-  } catch {
-    /* relative or malformed */
-  }
-  return value;
-}
-
 export async function loadDriverPhotoUrls(driverIds: bigint[]): Promise<Map<string, string>> {
   const map = new Map<string, string>();
   if (driverIds.length === 0) return map;
@@ -1159,13 +1146,15 @@ export function serializeDriverParty(
   photoOverride?: string | null,
 ) {
   if (!d) return null;
-  const photo = publicMediaPath(d.profile_image_url) ?? publicMediaPath(photoOverride);
+  const stored = publicMediaPath(d.profile_image_url) ?? publicMediaPath(photoOverride);
+  const id = d.id != null ? String(d.id) : undefined;
+  const photo = id ? driverPhotoPublicPath(id) : stored;
   return {
-    id: d.id != null ? String(d.id) : undefined,
+    id,
     name: d.name,
     phone: d.phone,
-    photo_url: photo,
-    profile_image_url: photo,
+    photo_url: photo ?? null,
+    profile_image_url: stored,
   };
 }
 

@@ -6,7 +6,8 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { AdminApiService } from '../../core/api/admin-api.service';
-import { Booking, BookingPayment } from '../../core/api/api.types';
+import { Booking, BookingDriver, BookingPayment } from '../../core/api/api.types';
+import { driverPhotoUrl } from '../../core/api/media-url';
 import { canAssignDriver, statusLabel, statusTone } from '../../shared/status-chip';
 import { YaModalPortalDirective } from '../../shared/ya-modal-portal.directive';
 
@@ -123,7 +124,13 @@ import { YaModalPortalDirective } from '../../shared/ya-modal-portal.directive';
             <h3 class="bk-panel__title mt-6">Assigned driver</h3>
             @if (b.driver; as d) {
               <div class="bk-driver-card">
-                <div class="bk-driver-card__avatar">{{ initials(d.name) }}</div>
+                <div class="bk-driver-card__avatar">
+                  @if (driverPhoto(d); as src) {
+                    <img [src]="src" [alt]="d.name" (error)="markPhotoFailed(d.id)" />
+                  } @else {
+                    {{ initials(d.name) }}
+                  }
+                </div>
                 <div>
                   <p class="bk-panel__value">{{ d.name }}</p>
                   <p class="bk-panel__label">{{ d.phone }}</p>
@@ -409,6 +416,7 @@ export class BookingDetailPage implements OnInit {
   readonly error = signal<string | null>(null);
   readonly busy = signal(false);
   readonly sendOpen = signal(false);
+  private readonly photoFailed = signal<Record<string, boolean>>({});
   sendEmail = '';
   driverId = '';
   payAmount = '';
@@ -463,6 +471,15 @@ export class BookingDetailPage implements OnInit {
       .slice(0, 2)
       .map((p) => p[0]!.toUpperCase())
       .join('');
+  }
+
+  driverPhoto(d: BookingDriver): string | null {
+    if (!d.id || this.photoFailed()[d.id]) return null;
+    return driverPhotoUrl(d);
+  }
+
+  markPhotoFailed(id: string): void {
+    this.photoFailed.update((m) => ({ ...m, [id]: true }));
   }
 
   tripKm(b: Booking): number | null {

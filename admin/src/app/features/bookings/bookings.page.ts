@@ -8,7 +8,8 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { AdminApiService } from '../../core/api/admin-api.service';
-import { Booking } from '../../core/api/api.types';
+import { Booking, BookingDriver } from '../../core/api/api.types';
+import { driverPhotoUrl } from '../../core/api/media-url';
 import { canAssignDriver, statusLabel, statusTone } from '../../shared/status-chip';
 
 @Component({
@@ -103,8 +104,19 @@ import { canAssignDriver, statusLabel, statusTone } from '../../shared/status-ch
               <th mat-header-cell *matHeaderCellDef mat-sort-header>Driver</th>
               <td mat-cell *matCellDef="let b">
                 @if (b.driver; as d) {
-                  <p class="bk-table__strong">{{ d.name }}</p>
-                  <p class="bk-table__sub">{{ d.phone }}</p>
+                  <div class="bk-driver-cell">
+                    <div class="bk-driver-cell__avatar">
+                      @if (driverPhoto(d); as src) {
+                        <img [src]="src" [alt]="d.name" (error)="markPhotoFailed(d.id)" />
+                      } @else {
+                        {{ initials(d.name) }}
+                      }
+                    </div>
+                    <div>
+                      <p class="bk-table__strong">{{ d.name }}</p>
+                      <p class="bk-table__sub">{{ d.phone }}</p>
+                    </div>
+                  </div>
                 } @else {
                   <span class="bk-table__muted">Unassigned</span>
                 }
@@ -230,6 +242,25 @@ export class BookingsPage implements OnInit, AfterViewInit {
   tone = statusTone;
   label = statusLabel;
   canAssign = canAssignDriver;
+  private readonly photoFailed = signal<Record<string, boolean>>({});
+
+  driverPhoto(d: BookingDriver): string | null {
+    if (!d.id || this.photoFailed()[d.id]) return null;
+    return driverPhotoUrl(d);
+  }
+
+  markPhotoFailed(id: string): void {
+    this.photoFailed.update((m) => ({ ...m, [id]: true }));
+  }
+
+  initials(name: string): string {
+    return name
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((p) => p[0]!.toUpperCase())
+      .join('');
+  }
 
   ngOnInit(): void {
     this.status = this.route.snapshot.queryParamMap.get('status') || '';

@@ -12,6 +12,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { AdminApiService } from '../../core/api/admin-api.service';
+import { driverPhotoUrl, mediaUrl } from '../../core/api/media-url';
 import { YaDatepickerComponent } from '../../shared/ya-datepicker.component';
 
 type FieldOpt = { label: string; value: string | boolean };
@@ -55,6 +56,33 @@ function phoneValidator(control: AbstractControl): ValidationErrors | null {
         </div>
 
         <form class="ya-page-card__body" [formGroup]="form" (ngSubmit)="submit()">
+          @if (isEdit()) {
+            <div class="ya-upload" [class.ya-upload--filled]="!!photoPreview()">
+              <div class="ya-upload__preview">
+                @if (photoPreview()) {
+                  <img [src]="photoPreview()!" alt="Driver photo" />
+                } @else {
+                  <div class="ya-upload__placeholder">
+                    <mat-icon>person</mat-icon>
+                  </div>
+                }
+              </div>
+              <div class="ya-upload__body">
+                <p class="ya-upload__title">Profile photo</p>
+                <p class="ya-upload__hint">Shown next to the driver name in admin and the customer app.</p>
+                <div class="ya-upload__actions">
+                  <label class="ya-upload__btn">
+                    <mat-icon>photo_camera</mat-icon>
+                    {{ photoPreview() ? 'Change photo' : 'Upload photo' }}
+                    <input type="file" accept="image/*" hidden (change)="onPhotoPicked($event)" />
+                  </label>
+                </div>
+                @if (uploading()) {
+                  <p class="ya-upload__status">Uploading photo…</p>
+                }
+              </div>
+            </div>
+          }
           <div class="ya-field-grid cols-2">
             <div class="ya-field ya-field--stacked">
               <label class="ya-label" for="name">Full name <span class="ya-req">*</span></label>
@@ -219,7 +247,7 @@ function phoneValidator(control: AbstractControl): ValidationErrors | null {
 
           <div class="mt-6 flex flex-wrap justify-end gap-3 border-t border-slate-100 pt-4">
             <a mat-stroked-button class="ya-btn-ghost" routerLink="/drivers">Cancel</a>
-            <button mat-flat-button class="ya-btn-primary" type="submit" [disabled]="saving()">
+            <button mat-flat-button class="ya-btn-primary" type="submit" [disabled]="saving() || uploading()">
               {{ saving() ? 'Saving…' : isEdit() ? 'Save changes' : 'Create driver' }}
             </button>
           </div>
@@ -237,8 +265,10 @@ export class DriverFormPage implements OnInit {
 
   readonly isEdit = signal(false);
   readonly saving = signal(false);
+  readonly uploading = signal(false);
   readonly submitted = signal(false);
   readonly error = signal<string | null>(null);
+  readonly photoPreview = signal<string | null>(null);
   private driverId: string | null = null;
 
   readonly verificationOpts: FieldOpt[] = [
@@ -345,9 +375,40 @@ export class DriverFormPage implements OnInit {
           online_status: String(d['online_status'] ?? 'offline'),
           is_active: isActive,
         });
+        this.photoPreview.set(
+          driverPhotoUrl({
+            id: String(d['id'] ?? id),
+            photo_url: d['photo_url'] != null ? String(d['photo_url']) : null,
+          }) ?? mediaUrl(d['profile_image_url'] != null ? String(d['profile_image_url']) : null),
+        );
       },
       error: (err: unknown) => {
         this.error.set(err instanceof Error ? err.message : 'Failed to load driver');
+      },
+    });
+  }
+
+  onPhotoPicked(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file || !this.driverId) return;
+    const body = new FormData();
+    body.append('file', file);
+    this.uploading.set(true);
+    this.api.uploadDriverPhoto(this.driverId, body).subscribe({
+      next: (d) => {
+        this.uploading.set(false);
+        const url =
+          driverPhotoUrl({ id: this.driverId, photo_url: d.photo_url }) ??
+          mediaUrl(d.profile_image_url) ??
+          this.photoPreview();
+        this.photoPreview.set(url ? `${url}${url.includes('?') ? '&' : '?'}t=${Date.now()}` : url);
+        this.snack.open('Driver photo updated', 'OK', { duration: 2200 });
+      },
+      error: (err: unknown) => {
+        this.uploading.set(false);
+        this.error.set(err instanceof Error ? err.message : 'Photo upload failed');
       },
     });
   }

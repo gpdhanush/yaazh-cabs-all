@@ -12,7 +12,12 @@ class DriverAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final url = resolveMediaUrl(driver.photoUrl);
+    final id = driver.id;
+    final url = resolveMediaUrl(
+      (id != null && id.isNotEmpty)
+          ? '/api/v1/public/drivers/$id/photo'
+          : driver.photoUrl,
+    );
     final size = radius * 2;
     return ClipOval(
       child: SizedBox(

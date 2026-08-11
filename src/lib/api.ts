@@ -1,5 +1,25 @@
 const API_BASE = (import.meta.env["VITE_API_URL"] as string | undefined)?.replace(/\/$/, "") || "";
 
+export function mediaUrl(raw?: string | null): string | null {
+  if (!raw) return null;
+  const value = raw.trim();
+  if (!value || value === "null") return null;
+  if (/^https?:\/\//i.test(value)) {
+    try {
+      const u = new URL(value);
+      if (["localhost", "127.0.0.1", "10.0.2.2"].includes(u.hostname)) {
+        return API_BASE ? `${API_BASE}${u.pathname}${u.search}` : value;
+      }
+    } catch {
+      /* keep */
+    }
+    return value;
+  }
+  if (!API_BASE) return value;
+  if (value.startsWith("/")) return `${API_BASE}${value}`;
+  return `${API_BASE}/${value}`;
+}
+
 export class ApiError extends Error {
   status: number;
   errors?: unknown;
@@ -153,7 +173,7 @@ export type TrackedBooking = {
   estimated_total: string;
   final_total: string | null;
   estimated_distance_km: number | null;
-  driver: { name: string; phone: string } | null;
+  driver: { id?: string; name: string; phone: string; photo_url?: string | null } | null;
   vehicle: { name: string; registration: string | null } | null;
   status_history: Array<{
     old_status: string | null;

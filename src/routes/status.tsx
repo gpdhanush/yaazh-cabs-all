@@ -12,7 +12,7 @@ import {
   type LocalBookingCache,
 } from "@/lib/bookings";
 import { ADMIN_WHATSAPP, PHONE_PRIMARY, BOOKING_FARE_NOTE } from "@/lib/site-data";
-import { ApiError, formatTripType, isApiConfigured, trackBooking, type TrackedBooking } from "@/lib/api";
+import { ApiError, formatTripType, isApiConfigured, mediaUrl, trackBooking, type TrackedBooking } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 const title = "Track Your Booking | Yaazh Cabs Udumalpet";
@@ -306,12 +306,28 @@ function StatusCard({
       {assigned && booking.driver ? (
         <div className="rounded-2xl border border-success/30 bg-success/5 p-5 sm:p-6">
           <h2 className="font-display text-lg font-bold">Your driver</h2>
-          <p className="mt-2 text-sm text-muted-foreground">
-            {booking.driver.name}
-            {booking.vehicle
-              ? ` · ${booking.vehicle.name}${booking.vehicle.registration ? ` · ${booking.vehicle.registration}` : ""}`
-              : ""}
-          </p>
+          <div className="mt-3 flex items-center gap-3">
+            {mediaUrl(booking.driver.photo_url) || booking.driver.id ? (
+              <img
+                src={
+                  mediaUrl(booking.driver.photo_url) ??
+                  mediaUrl(`/api/v1/public/drivers/${booking.driver.id}/photo`) ??
+                  ""
+                }
+                alt={booking.driver.name}
+                className="size-12 shrink-0 rounded-[5px] object-cover bg-primary/15"
+                onError={(e) => {
+                  e.currentTarget.style.display = "none";
+                }}
+              />
+            ) : null}
+            <p className="text-sm text-muted-foreground">
+              {booking.driver.name}
+              {booking.vehicle
+                ? ` · ${booking.vehicle.name}${booking.vehicle.registration ? ` · ${booking.vehicle.registration}` : ""}`
+                : ""}
+            </p>
+          </div>
           <div className="mt-4 flex flex-col gap-2 sm:flex-row">
             <a
               href={`tel:+91${booking.driver.phone.replace(/\D/g, "").slice(-10)}`}

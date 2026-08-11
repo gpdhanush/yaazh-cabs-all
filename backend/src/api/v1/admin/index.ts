@@ -7,7 +7,8 @@ import { prisma } from "../../../config/database.js";
 import { loadEnv } from "../../../config/env.js";
 import { ok } from "../../../utils/api-response.js";
 import { requireAuth, requirePermission, requireUser } from "../../../middleware/auth.js";
-import { bookingService, serializeBooking, getBookingPaymentSummary, recordBookingPayment, setBookingPaymentStatus } from "../../../services/booking.service.js";
+import { bookingService, serializeBooking, serializeDriverParty, getBookingPaymentSummary, recordBookingPayment, setBookingPaymentStatus } from "../../../services/booking.service.js";
+import { saveDriverPhotoBytes } from "../../../services/driver-photo.service.js";
 import {
   resolveCustomerEmail,
   sendBookingInvoiceEmail,
@@ -105,6 +106,7 @@ function serializeDriver(d: {
   license_no: string | null;
   license_expiry_date: Date | null;
   address: string | null;
+  profile_image_url?: string | null;
   verification_status: string;
   online_status: string;
   availability_status: string;
@@ -113,6 +115,7 @@ function serializeDriver(d: {
   total_completed_trips: number;
   created_at: Date;
 }) {
+  const party = serializeDriverParty(d);
   return {
     id: String(d.id),
     name: d.name,
@@ -123,6 +126,8 @@ function serializeDriver(d: {
       ? d.license_expiry_date.toISOString().slice(0, 10)
       : null,
     address: d.address,
+    profile_image_url: party?.profile_image_url ?? null,
+    photo_url: party?.photo_url ?? null,
     verification_status: d.verification_status,
     online_status: d.online_status,
     availability_status: d.availability_status,
@@ -678,9 +683,7 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
             drop_longitude: dropLng,
             progress,
             eta_min: etaMin,
-            driver: driver
-              ? { id: String(driver.id), name: driver.name, phone: driver.phone }
-              : null,
+            driver: serializeDriverParty(driver),
             vehicle: vehicle
               ? {
                   name: vehicle.vehicle_name,
@@ -735,7 +738,7 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
           return {
             ...serializeBooking(b),
             created_at: b.created_at.toISOString(),
-            driver: d ? { id: String(d.id), name: d.name, phone: d.phone } : null,
+            driver: serializeDriverParty(d),
           };
         }),
         "Bookings fetched.",
@@ -778,7 +781,7 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
         created_at: booking.created_at.toISOString(),
         confirmed_at: booking.confirmed_at?.toISOString() ?? null,
         completed_at: booking.completed_at?.toISOString() ?? null,
-        driver: driver ? { id: String(driver.id), name: driver.name, phone: driver.phone } : null,
+        driver: serializeDriverParty(driver),
         vehicle: vehicle
           ? {
               id: String(vehicle.id),
@@ -1287,6 +1290,44 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
     const d = await prisma.drivers.update({ where: { id }, data });
     await audit(user.id, "driver.update", "drivers", String(id), serializeDriver(existing), serializeDriver(d), req);
     return ok(reply, serializeDriver(d), "Driver updated.");
+  });
+
+  app.post("/drivers/:id/photo", { preHandler: [requirePermission("drivers.manage")] }, async (req, reply) => {
+    const id = BigInt((req.params as { id: string }).id);
+    const existing = await prisma.drivers.findUnique({ where: { id } });
+    if (!existing) throw new NotFoundError();
+
+    const env = loadEnv();
+    const file = await req.file();
+    if (!file) throw new ValidationError("Image file is required.");
+    const mime = file.mimetype || "";
+    if (!mime.startsWith("image/")) throw new ValidationError("Only image uploads are allowed.");
+
+    const extFromName = path.extname(file.filename || "").toLowerCase();
+    const ext =
+      extFromName && [".jpg", ".jpeg", ".png", ".webp", ".gif"].includes(extFromName)
+        ? extFromName
+        : mime === "image/png"
+          ? ".png"
+          : mime === "image/webp"
+            ? ".webp"
+            : mime === "image/gif"
+              ? ".gif"
+              : ".jpg";
+
+    const filename = `${id}-${Date.now()}-${randomUUID().slice(0, 8)}${ext}`;
+    const dir = path.resolve(env.STORAGE_PATH, "public", "documents");
+    fs.mkdirSync(dir, { recursive: true });
+    const bytes = await file.toBuffer();
+    await fs.promises.writeFile(path.join(dir, filename), bytes);
+
+    const relativeUrl = `/storage/public/documents/${filename}`;
+    await saveDriverPhotoBytes(id, bytes, mime);
+    const d = await prisma.drivers.update({
+      where: { id },
+      data: { profile_image_url: relativeUrl },
+    });
+    return ok(reply, serializeDriver(d), "Driver photo updated.");
   });
 
   app.delete("/drivers/:id", { preHandler: [requirePermission("drivers.manage")] }, async (req, reply) => {

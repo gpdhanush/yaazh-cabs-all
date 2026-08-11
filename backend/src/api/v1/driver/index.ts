@@ -7,7 +7,8 @@ import { prisma } from "../../../config/database.js";
 import { loadEnv } from "../../../config/env.js";
 import { ok } from "../../../utils/api-response.js";
 import { requireAuth, requireUser } from "../../../middleware/auth.js";
-import { bookingService, serializeBooking, getBookingPaymentSummary, collectBookingPayment } from "../../../services/booking.service.js";
+import { bookingService, serializeBooking, serializeDriverParty, getBookingPaymentSummary, collectBookingPayment } from "../../../services/booking.service.js";
+import { saveDriverPhotoFromStoredUrl } from "../../../services/driver-photo.service.js";
 import { NotFoundError, ValidationError, ConflictError } from "../../../errors/app-error.js";
 import { Prisma } from "@prisma/client";
 
@@ -35,7 +36,7 @@ export const driverRoutes: FastifyPluginAsync = async (app) => {
       phone: d.phone,
       email: d.email,
       address: d.address,
-      profile_image_url: d.profile_image_url,
+      profile_image_url: serializeDriverParty(d)?.photo_url ?? d.profile_image_url,
       license_no: d.license_no,
       license_expiry_date: d.license_expiry_date
         ? d.license_expiry_date.toISOString().slice(0, 10)
@@ -66,6 +67,9 @@ export const driverRoutes: FastifyPluginAsync = async (app) => {
     const parsed = schema.safeParse(req.body);
     if (!parsed.success) throw new ValidationError("Validation failed.", parsed.error.flatten());
     const d = await prisma.drivers.update({ where: { id: user.id }, data: parsed.data });
+    if (parsed.data.profile_image_url) {
+      await saveDriverPhotoFromStoredUrl(user.id, parsed.data.profile_image_url);
+    }
     return ok(reply, serializeDriverProfile(d), "Profile updated.");
   });
 
@@ -437,8 +441,7 @@ export const driverRoutes: FastifyPluginAsync = async (app) => {
     await fs.promises.writeFile(fullPath, await file.toBuffer());
 
     const relativeUrl = `/storage/public/documents/${filename}`;
-    const absoluteUrl = `${env.APP_URL.replace(/\/$/, "")}${relativeUrl}`;
-    return ok(reply, { url: absoluteUrl, path: relativeUrl }, "File uploaded.", 201);
+    return ok(reply, { url: relativeUrl, path: relativeUrl }, "File uploaded.", 201);
   });
 
   app.post("/documents", async (req, reply) => {
@@ -478,6 +481,7 @@ export const driverRoutes: FastifyPluginAsync = async (app) => {
         where: { id: user.id },
         data: { profile_image_url: parsed.data.file_url },
       });
+      await saveDriverPhotoFromStoredUrl(user.id, parsed.data.file_url);
     }
     return ok(reply, { id: String(row.id) }, "Document uploaded.", 201);
   });
