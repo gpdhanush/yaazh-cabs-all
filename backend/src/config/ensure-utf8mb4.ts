@@ -40,8 +40,9 @@ export async function ensureUtf8mb4(): Promise<void> {
           AND TABLE_NAME = ${table}
         LIMIT 1
       `;
-      if (rows.length === 0) continue;
-      if (rows[0].cs?.toLowerCase() === "utf8mb4") continue;
+      const charset = rows[0]?.cs;
+      if (!charset) continue;
+      if (charset.toLowerCase() === "utf8mb4") continue;
       await prisma.$executeRawUnsafe(
         `ALTER TABLE \`${table}\` CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`,
       );

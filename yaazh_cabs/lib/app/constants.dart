@@ -5,7 +5,7 @@ class AppConstants {
   
   // API Config
   // Default to localhost for Android emulator / desktop
-  static const String defaultBaseUrl = 'http://10.0.2.2:3000/api/v1';
+  static const String defaultBaseUrl = 'https://luxe-motion-ride-1.onrender.com/api/v1';
   
   // Storage keys
   static const String tokenKey = 'driver_access_token';
