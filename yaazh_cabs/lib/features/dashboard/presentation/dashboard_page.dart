@@ -5,11 +5,13 @@ import 'package:yaazh_cabs/app/constants.dart';
 import 'package:yaazh_cabs/app/theme.dart';
 import 'package:yaazh_cabs/core/firebase/analytics_service.dart';
 import 'package:yaazh_cabs/core/network/connectivity_provider.dart';
+import 'package:yaazh_cabs/core/widgets/app_logo.dart';
 import 'package:yaazh_cabs/core/widgets/app_state_pages.dart';
 import 'package:yaazh_cabs/core/widgets/app_surface.dart';
 import 'package:yaazh_cabs/core/widgets/metric_tile.dart';
 import 'package:yaazh_cabs/core/widgets/status_chip.dart';
 import 'package:yaazh_cabs/core/widgets/trip_timeline.dart';
+import 'package:yaazh_cabs/core/config/remote_config.dart';
 import 'package:yaazh_cabs/features/auth/presentation/auth_viewmodel.dart';
 import 'package:yaazh_cabs/features/offers/presentation/offer_list_viewmodel.dart';
 import 'package:yaazh_cabs/features/trips/data/trip_repository.dart';
@@ -38,6 +40,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
     ref.read(tripListNotifierProvider.notifier).refresh();
     ref.read(offerListNotifierProvider.notifier).refresh();
     ref.read(authNotifierProvider.notifier).refreshProfile();
+    ref.invalidate(remoteConfigProvider);
     try {
       final balanceData =
           await ref.read(walletRepositoryProvider).getWalletBalance();
@@ -76,6 +79,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
     final tripsState = ref.watch(tripListNotifierProvider);
     final offersState = ref.watch(offerListNotifierProvider);
     final hasNetwork = ref.watch(isOnlineProvider);
+    final remote = ref.watch(remoteConfigProvider).valueOrNull;
     final isOnline = user?.onlineStatus == 'online';
     final offerCount = offersState.maybeWhen(
       data: (o) => o.where((e) => e.isActionable).length,
@@ -106,6 +110,11 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
               backgroundColor: AppConstants.navy,
               foregroundColor: AppConstants.white,
               systemOverlayStyle: AppTheme.statusOverlay,
+              leadingWidth: 56,
+              leading: const Padding(
+                padding: EdgeInsets.only(left: 12),
+                child: Center(child: AppLogo(size: 36)),
+              ),
               title: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -155,6 +164,28 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
               sliver: SliverList(
                 delegate: SliverChildListDelegate([
+                  if (remote?.maintenanceMode == true) ...[
+                    AppSurfaceCard(
+                      color: const Color(0xFFFEF3C7),
+                      border: Border.all(color: AppConstants.gold),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.engineering_rounded, color: AppConstants.navy),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              'Fleet is in maintenance. New trip offers may be paused.',
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                color: AppConstants.navy,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
                   _DutyStatusPanel(
                     isOnline: isOnline,
                     busy: _isTogglingStatus,

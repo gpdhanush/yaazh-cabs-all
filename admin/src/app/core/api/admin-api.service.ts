@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
 import { ApiService, ApiResult } from './api.service';
-import { Booking, BookingPayment, DashboardStats } from './api.types';
+import { Booking, BookingPayment, DashboardStats, LiveTrackingTrip } from './api.types';
 
 const ADMIN = '/api/v1/admin';
 
@@ -11,6 +11,10 @@ export class AdminApiService {
 
   dashboard(): Observable<DashboardStats> {
     return this.api.get<DashboardStats>(`${ADMIN}/dashboard`).pipe(map((r) => r.data));
+  }
+
+  liveTracking(): Observable<LiveTrackingTrip[]> {
+    return this.api.get<LiveTrackingTrip[]>(`${ADMIN}/live-tracking`).pipe(map((r) => r.data));
   }
 
   listBookings(query?: { page?: number; per_page?: number; status?: string }): Observable<ApiResult<Booking[]>> {

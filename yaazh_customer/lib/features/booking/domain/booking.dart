@@ -47,6 +47,8 @@ class Booking {
   final String? assignedDriverId;
   final BookingParty? driver;
   final BookingVehicle? vehicle;
+  final int? customerRating;
+  final String? customerReview;
   final List<StatusHistoryItem> statusHistory;
 
   const Booking({
@@ -70,6 +72,8 @@ class Booking {
     this.assignedDriverId,
     this.driver,
     this.vehicle,
+    this.customerRating,
+    this.customerReview,
     this.statusHistory = const [],
   });
 
@@ -86,6 +90,7 @@ class Booking {
 
   bool get canCancel => isActive;
   bool get isCompleted => status == 'completed';
+  bool get hasRated => customerRating != null;
   bool get isCancelled =>
       status == 'cancelled' || status == 'rejected' || status == 'no_show';
 
@@ -115,6 +120,8 @@ class Booking {
       finalTotal: _d(json['final_total']),
       estimatedDistanceKm: _d(json['estimated_distance_km']),
       assignedDriverId: json['assigned_driver_id']?.toString(),
+      customerRating: int.tryParse(json['customer_rating']?.toString() ?? ''),
+      customerReview: json['customer_review']?.toString(),
       driver: driverJson is Map
           ? BookingParty(
               name: driverJson['name']?.toString() ?? 'Driver',

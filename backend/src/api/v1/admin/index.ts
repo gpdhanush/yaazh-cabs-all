@@ -13,6 +13,55 @@ import { deliverBookingNotification } from "../../../services/fcm.service.js";
 import type { TripType } from "@prisma/client";
 import { hashPassword } from "../../../utils/crypto.js";
 
+function haversineKm(
+  a: { lat: number; lng: number },
+  b: { lat: number; lng: number },
+): number {
+  const earth = 6371;
+  const dLat = ((b.lat - a.lat) * Math.PI) / 180;
+  const dLng = ((b.lng - a.lng) * Math.PI) / 180;
+  const h =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((a.lat * Math.PI) / 180) * Math.cos((b.lat * Math.PI) / 180) * Math.sin(dLng / 2) ** 2;
+  return 2 * earth * Math.asin(Math.min(1, Math.sqrt(h)));
+}
+
+function liveProgress(input: {
+  status: string;
+  here: { lat: number; lng: number } | null;
+  pickup: { lat: number; lng: number } | null;
+  drop: { lat: number; lng: number } | null;
+  speedKmh: number | null;
+  estimatedKm: number | null;
+}): { progress: number; etaMin: number | null } {
+  const speed = input.speedKmh && input.speedKmh > 3 ? input.speedKmh : 32;
+  const status = input.status;
+  if (status === "trip_started") {
+    const total =
+      input.pickup && input.drop
+        ? Math.max(haversineKm(input.pickup, input.drop), 0.4)
+        : Math.max(input.estimatedKm ?? 8, 0.4);
+    const done =
+      input.here && input.pickup ? haversineKm(input.pickup, input.here) : total * 0.45;
+    const remaining = input.here && input.drop ? haversineKm(input.here, input.drop) : Math.max(total - done, 0.3);
+    return {
+      progress: Math.round(Math.min(97, Math.max(38, (done / total) * 100))),
+      etaMin: Math.max(1, Math.round((remaining / speed) * 60)),
+    };
+  }
+  if (status === "arrived") {
+    return { progress: 34, etaMin: 2 };
+  }
+  if (status === "on_the_way") {
+    const remaining = input.here && input.pickup ? haversineKm(input.here, input.pickup) : 4;
+    return {
+      progress: Math.round(Math.min(28, Math.max(8, 28 - remaining * 2))),
+      etaMin: Math.max(1, Math.round((remaining / speed) * 60)),
+    };
+  }
+  return { progress: 6, etaMin: null };
+}
+
 async function audit(
   adminId: bigint,
   action: string,
@@ -496,6 +545,151 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
         bookings_today: today,
         enquiries,
       });
+    },
+  );
+
+  app.get(
+    "/live-tracking",
+    { preHandler: [requirePermission("dashboard.view")] },
+    async (_req, reply) => {
+      const liveStatuses = [
+        "driver_accepted",
+        "driver_assigned",
+        "on_the_way",
+        "arrived",
+        "trip_started",
+      ] as const;
+
+      const bookings = await prisma.bookings.findMany({
+        where: { status: { in: [...liveStatuses] } },
+        orderBy: { pickup_at: "asc" },
+        take: 50,
+      });
+
+      const driverIds = [
+        ...new Set(bookings.map((b) => b.assigned_driver_id).filter((id): id is bigint => id != null)),
+      ];
+      const vehicleIds = [
+        ...new Set(bookings.map((b) => b.assigned_vehicle_id).filter((id): id is bigint => id != null)),
+      ];
+      const bookingIds = bookings.map((b) => b.id);
+
+      const [drivers, vehicles, locationRows] = await Promise.all([
+        driverIds.length
+          ? prisma.drivers.findMany({ where: { id: { in: driverIds } } })
+          : Promise.resolve([]),
+        vehicleIds.length
+          ? prisma.vehicles.findMany({ where: { id: { in: vehicleIds } } })
+          : Promise.resolve([]),
+        bookingIds.length || driverIds.length
+          ? prisma.driverLocations.findMany({
+              where: {
+                OR: [
+                  ...(bookingIds.length ? [{ booking_id: { in: bookingIds } }] : []),
+                  ...(driverIds.length ? [{ driver_id: { in: driverIds } }] : []),
+                ],
+              },
+              orderBy: { recorded_at: "desc" },
+              take: 400,
+            })
+          : Promise.resolve([]),
+      ]);
+
+      const driverMap = new Map(drivers.map((d) => [String(d.id), d]));
+      const vehicleMap = new Map(vehicles.map((v) => [String(v.id), v]));
+      const locByBooking = new Map<string, (typeof locationRows)[number]>();
+      const locByDriver = new Map<string, (typeof locationRows)[number]>();
+      for (const loc of locationRows) {
+        if (loc.booking_id) {
+          const key = String(loc.booking_id);
+          if (!locByBooking.has(key)) locByBooking.set(key, loc);
+        }
+        const driverKey = String(loc.driver_id);
+        if (!locByDriver.has(driverKey)) locByDriver.set(driverKey, loc);
+      }
+
+      const now = Date.now();
+      return ok(
+        reply,
+        bookings.map((booking) => {
+          const driver = booking.assigned_driver_id
+            ? driverMap.get(String(booking.assigned_driver_id))
+            : null;
+          const vehicle = booking.assigned_vehicle_id
+            ? vehicleMap.get(String(booking.assigned_vehicle_id))
+            : null;
+          const sample =
+            locByBooking.get(String(booking.id)) ??
+            (booking.assigned_driver_id ? locByDriver.get(String(booking.assigned_driver_id)) : null);
+
+          let latitude =
+            sample != null
+              ? Number(sample.latitude)
+              : driver?.current_latitude != null
+                ? Number(driver.current_latitude)
+                : null;
+          let longitude =
+            sample != null
+              ? Number(sample.longitude)
+              : driver?.current_longitude != null
+                ? Number(driver.current_longitude)
+                : null;
+          const recordedAt = sample?.recorded_at ?? driver?.last_location_at ?? null;
+          const speed = sample?.speed_kmph != null ? Number(sample.speed_kmph) : null;
+          const heading = sample?.heading != null ? Number(sample.heading) : null;
+          const pickupLat = booking.pickup_latitude != null ? Number(booking.pickup_latitude) : null;
+          const pickupLng = booking.pickup_longitude != null ? Number(booking.pickup_longitude) : null;
+          const dropLat = booking.drop_latitude != null ? Number(booking.drop_latitude) : null;
+          const dropLng = booking.drop_longitude != null ? Number(booking.drop_longitude) : null;
+
+          const here = latitude != null && longitude != null ? { lat: latitude, lng: longitude } : null;
+          const pickup = pickupLat != null && pickupLng != null ? { lat: pickupLat, lng: pickupLng } : null;
+          const drop = dropLat != null && dropLng != null ? { lat: dropLat, lng: dropLng } : null;
+
+          const { progress, etaMin } = liveProgress({
+            status: booking.status ?? "pending",
+            here,
+            pickup,
+            drop,
+            speedKmh: speed,
+            estimatedKm: booking.estimated_distance_km != null ? Number(booking.estimated_distance_km) : null,
+          });
+
+          return {
+            id: String(booking.id),
+            booking_reference: booking.booking_reference,
+            status: booking.status ?? "pending",
+            customer_name: booking.customer_name,
+            pickup_location: booking.pickup_location,
+            drop_location: booking.drop_location,
+            pickup_latitude: pickupLat,
+            pickup_longitude: pickupLng,
+            drop_latitude: dropLat,
+            drop_longitude: dropLng,
+            progress,
+            eta_min: etaMin,
+            driver: driver
+              ? { id: String(driver.id), name: driver.name, phone: driver.phone }
+              : null,
+            vehicle: vehicle
+              ? {
+                  name: vehicle.vehicle_name,
+                  registration: vehicle.registration_no,
+                }
+              : null,
+            location: here
+              ? {
+                  latitude: here.lat,
+                  longitude: here.lng,
+                  heading,
+                  speed_kmph: speed,
+                  recorded_at: recordedAt?.toISOString() ?? null,
+                  stale: recordedAt ? now - recordedAt.getTime() > 90_000 : true,
+                }
+              : null,
+          };
+        }),
+      );
     },
   );
 
@@ -2543,27 +2737,66 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
   });
 
   app.get("/remote-config", { preHandler: [requirePermission("remote_config.manage")] }, async (_req, reply) => {
-    const rows = await prisma.remoteConfigValues.findMany();
+    const rows = await prisma.remoteConfigValues.findMany({
+      orderBy: [{ app_type: "asc" }, { config_key: "asc" }],
+    });
     return ok(
       reply,
       rows.map((r) => ({
         id: String(r.id),
         config_key: r.config_key,
+        app_type: r.app_type,
+        platform: r.platform,
+        value_type: r.value_type,
         config_value: r.config_value,
+        description: r.description,
         is_active: r.is_active,
+        updated_at: r.updated_at,
       })),
     );
   });
 
-  app.put("/remote-config/:id", { preHandler: [requirePermission("remote_config.manage")] }, async (req, reply) => {
-    const id = BigInt((req.params as { id: string }).id);
+  app.post("/remote-config", { preHandler: [requirePermission("remote_config.manage")] }, async (req, reply) => {
+    const user = requireUser(req);
     const schema = z.object({
-      config_value: z.string().optional(),
+      config_key: z.string().min(2).max(120),
+      app_type: z.enum(["customer_app", "driver_app", "admin_web", "user_website", "all"]).optional(),
+      platform: z.enum(["android", "ios", "web", "all"]).optional(),
+      value_type: z.enum(["string", "number", "boolean", "json"]).optional(),
+      config_value: z.string().optional().nullable(),
+      description: z.string().max(255).optional().nullable(),
       is_active: z.boolean().optional(),
     });
     const parsed = schema.safeParse(req.body);
     if (!parsed.success) throw new ValidationError("Validation failed.", parsed.error.flatten());
+    const row = await prisma.remoteConfigValues.create({
+      data: {
+        config_key: parsed.data.config_key.trim(),
+        app_type: parsed.data.app_type ?? "all",
+        platform: parsed.data.platform ?? "all",
+        value_type: parsed.data.value_type ?? "string",
+        config_value: parsed.data.config_value ?? null,
+        description: parsed.data.description ?? null,
+        is_active: parsed.data.is_active ?? true,
+      },
+    });
+    await audit(user.id, "remote_config.create", "remote_config_values", String(row.id), null, parsed.data, req);
+    return ok(reply, { id: String(row.id) }, "Remote config created.", 201);
+  });
+
+  app.put("/remote-config/:id", { preHandler: [requirePermission("remote_config.manage")] }, async (req, reply) => {
+    const user = requireUser(req);
+    const id = BigInt((req.params as { id: string }).id);
+    const schema = z.object({
+      config_value: z.string().optional().nullable(),
+      description: z.string().max(255).optional().nullable(),
+      is_active: z.boolean().optional(),
+      value_type: z.enum(["string", "number", "boolean", "json"]).optional(),
+    });
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) throw new ValidationError("Validation failed.", parsed.error.flatten());
     await prisma.remoteConfigValues.update({ where: { id }, data: parsed.data });
+    await audit(user.id, "remote_config.update", "remote_config_values", String(id), null, parsed.data, req);
     return ok(reply, { id: String(id) }, "Remote config updated.");
   });
 

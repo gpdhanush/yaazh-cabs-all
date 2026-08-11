@@ -100,8 +100,9 @@ class City {
 
 class AppConfig {
   final Map<String, String?> settings;
+  final Map<String, String?> remoteConfig;
 
-  const AppConfig(this.settings);
+  const AppConfig(this.settings, [this.remoteConfig = const {}]);
 
   String? get supportPhone =>
       settings['support_phone'] ?? settings['contact_phone'];
@@ -110,14 +111,54 @@ class AppConfig {
 
   String? get businessHours => settings['business_hours'];
 
+  String? get supportWhatsapp =>
+      settings['support_whatsapp'] ?? supportPhone;
+
+  bool flag(String key, {bool defaultValue = false}) {
+    final raw = remoteConfig[key]?.trim().toLowerCase();
+    if (raw == null || raw.isEmpty) return defaultValue;
+    return raw == 'true' || raw == '1' || raw == 'yes' || raw == 'on';
+  }
+
+  String text(String key, {String defaultValue = ''}) {
+    final raw = remoteConfig[key]?.trim();
+    if (raw == null || raw.isEmpty) return defaultValue;
+    return raw;
+  }
+
+  bool get maintenanceMode => flag('maintenance_mode');
+
+  bool get offerBannerEnabled =>
+      flag('home_offer_banner_enabled', defaultValue: true);
+
+  String get offerBannerText => text(
+        'home_offer_banner_text',
+        defaultValue: 'Get special offers on cab bookings.',
+      );
+
+  bool get cancellationEnabled =>
+      flag('booking_cancellation_enabled', defaultValue: true);
+
+  bool get liveTrackingEnabled =>
+      flag('live_tracking_enabled', defaultValue: true);
+
+  bool get whatsappEnabled =>
+      flag('support_whatsapp_enabled', defaultValue: true);
+
   factory AppConfig.fromJson(Map<String, dynamic> json) {
-    final raw = json['settings'];
-    final map = <String, String?>{};
-    if (raw is Map) {
-      raw.forEach((key, value) {
-        map[key.toString()] = value?.toString();
-      });
+    Map<String, String?> parseMap(dynamic raw) {
+      final map = <String, String?>{};
+      if (raw is Map) {
+        raw.forEach((key, value) {
+          map[key.toString()] = value?.toString();
+        });
+      }
+      return map;
     }
-    return AppConfig(map);
+
+    return AppConfig(
+      parseMap(json['settings']),
+      parseMap(json['remote_config']),
+    );
   }
 }

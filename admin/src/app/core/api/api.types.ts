@@ -107,6 +107,31 @@ export type Booking = {
   }>;
 };
 
+export type LiveTrackingTrip = {
+  id: string;
+  booking_reference: string;
+  status: string;
+  customer_name: string;
+  pickup_location: string;
+  drop_location: string;
+  pickup_latitude: number | null;
+  pickup_longitude: number | null;
+  drop_latitude: number | null;
+  drop_longitude: number | null;
+  progress: number;
+  eta_min: number | null;
+  driver: { id: string; name: string; phone: string } | null;
+  vehicle: { name: string; registration: string | null } | null;
+  location: {
+    latitude: number;
+    longitude: number;
+    heading: number | null;
+    speed_kmph: number | null;
+    recorded_at: string | null;
+    stale: boolean;
+  } | null;
+};
+
 export type DashboardStats = {
   total_bookings: number;
   pending_bookings: number;

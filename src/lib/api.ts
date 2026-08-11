@@ -230,7 +230,7 @@ export function getCities(opts?: { page?: number; perPage?: number }) {
 }
 
 export function getAppConfig() {
-  return request<AppConfig>("/app-config");
+  return request<AppConfig>("/app-config?app=user_website&platform=web");
 }
 
 export function submitContact(payload: {

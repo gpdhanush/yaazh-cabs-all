@@ -14,9 +14,7 @@ import {
 } from './features/resource/resource.configs';
 
 /**
- * Admin routes kept to Yaazh’s live ops + website surface.
- * Extra API modules (wallet, blog, remote-config, …) stay on the backend
- * but are intentionally omitted from the admin UI for now.
+ * Admin routes kept to Yaazh’s live ops + website + app surface.
  */
 export const routes: Routes = [
   {
@@ -175,6 +173,11 @@ export const routes: Routes = [
         path: 'enquiries/:id',
         loadComponent: () =>
           import('./features/enquiries/enquiry-detail.page').then((m) => m.EnquiryDetailPage),
+      },
+      {
+        path: 'remote-config',
+        loadComponent: () =>
+          import('./features/remote-config/remote-config.page').then((m) => m.RemoteConfigPage),
       },
       {
         path: 'settings',

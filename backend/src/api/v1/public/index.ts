@@ -285,14 +285,34 @@ export const publicRoutes: FastifyPluginAsync = async (app) => {
     );
   });
 
-  app.get("/app-config", async (_req, reply) => {
+  app.get("/app-config", async (req, reply) => {
+    const q = req.query as { app?: string; platform?: string };
+    const appType = q.app?.trim() || "all";
+    const platform = q.platform?.trim() || "all";
+
     const [settings, remote] = await Promise.all([
       prisma.appSettings.findMany({ where: { is_public: true } }),
       prisma.remoteConfigValues.findMany({ where: { is_active: true } }),
     ]);
+
+    const scored = new Map<string, { value: string | null; score: number }>();
+    for (const row of remote) {
+      let score = 0;
+      if (row.app_type === appType) score += 2;
+      else if (row.app_type === "all") score += 1;
+      else continue;
+      if (row.platform === platform) score += 2;
+      else if (row.platform === "all") score += 1;
+      else continue;
+      const prev = scored.get(row.config_key);
+      if (!prev || score >= prev.score) {
+        scored.set(row.config_key, { value: row.config_value, score });
+      }
+    }
+
     return ok(reply, {
       settings: Object.fromEntries(settings.map((s) => [s.setting_key, s.setting_value])),
-      remote_config: Object.fromEntries(remote.map((r) => [r.config_key, r.config_value])),
+      remote_config: Object.fromEntries([...scored.entries()].map(([k, v]) => [k, v.value])),
     });
   });
 

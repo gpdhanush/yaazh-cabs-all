@@ -7,6 +7,7 @@ import 'package:yaazh_cabs/app/constants.dart';
 import 'package:yaazh_cabs/app/theme.dart';
 import 'package:yaazh_cabs/core/firebase/analytics_service.dart';
 import 'package:yaazh_cabs/core/network/connectivity_provider.dart';
+import 'package:yaazh_cabs/core/notifications/push_notification_service.dart';
 import 'package:yaazh_cabs/core/widgets/app_bottom_nav.dart';
 import 'package:yaazh_cabs/core/widgets/app_state_pages.dart';
 import 'package:yaazh_cabs/core/widgets/offline_banner.dart';
@@ -46,6 +47,14 @@ final routerProvider = Provider<GoRouter>((ref) {
   ref.listen<AuthState>(authNotifierProvider, (previous, next) {
     if (previous?.status != next.status) {
       refresh.ping();
+    }
+    if (next.status == AuthStatus.authenticated &&
+        previous?.status != AuthStatus.authenticated) {
+      final user = next.user;
+      if (user != null) {
+        ref.read(analyticsServiceProvider).setDriver(user.id);
+      }
+      ref.read(pushNotificationServiceProvider).start();
     }
   });
   ref.listen<String?>(pendingNotificationLocationProvider, (previous, next) {

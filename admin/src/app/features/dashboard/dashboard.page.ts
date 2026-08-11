@@ -1,31 +1,51 @@
 import { DatePipe, DecimalPipe } from '@angular/common';
-import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
+import {
+  AfterViewInit,
+  Component,
+  ElementRef,
+  NgZone,
+  OnDestroy,
+  OnInit,
+  ViewChild,
+  inject,
+  signal,
+} from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { forkJoin } from 'rxjs';
 import { AdminApiService } from '../../core/api/admin-api.service';
-import { Booking, DashboardStats } from '../../core/api/api.types';
+import { Booking, DashboardStats, LiveTrackingTrip } from '../../core/api/api.types';
 import { statusLabel, statusTone } from '../../shared/status-chip';
 
-type LiveTrip = {
-  id: string;
-  ref: string;
-  customer: string;
-  driver: string;
-  vehicle: string;
-  pickup: string;
-  drop: string;
-  status: 'on_the_way' | 'arrived' | 'trip_started';
-  progress: number;
-  etaMin: number;
-  speedKmh: number;
-  lat: number;
-  lng: number;
-  /** Map pin position as % of the sample map canvas */
-  x: number;
-  y: number;
+type LeafletMap = {
+  setView: (latlng: [number, number], zoom?: number) => LeafletMap;
+  fitBounds: (bounds: Array<[number, number]>, opts?: object) => void;
+  remove: () => void;
+  invalidateSize: () => void;
 };
+type LeafletMarker = {
+  setLatLng: (latlng: [number, number]) => LeafletMarker;
+  setIcon: (icon: unknown) => LeafletMarker;
+  bindPopup: (html: string) => LeafletMarker;
+  on: (event: string, fn: () => void) => LeafletMarker;
+  addTo: (map: LeafletMap) => LeafletMarker;
+  remove: () => void;
+};
+type LeafletLayer = { addTo: (map: LeafletMap) => LeafletLayer; remove: () => void };
+type LeafletNS = {
+  map: (el: HTMLElement, opts?: object) => LeafletMap;
+  tileLayer: (url: string, opts?: object) => LeafletLayer;
+  marker: (latlng: [number, number], opts?: object) => LeafletMarker;
+  polyline: (latlngs: Array<[number, number]>, opts?: object) => LeafletLayer;
+  divIcon: (opts: object) => unknown;
+  circleMarker: (latlng: [number, number], opts?: object) => LeafletMarker;
+};
+
+function leaflet(): LeafletNS | null {
+  const L = (window as unknown as { L?: LeafletNS }).L;
+  return L ?? null;
+}
 
 type DashCard = {
   label: string;
@@ -90,53 +110,38 @@ type DashCard = {
             <div class="live-track__title-row">
               <span class="live-track__pulse" aria-hidden="true"></span>
               <h3 class="dash-chart__title">Live on-ride tracking</h3>
-              <span class="live-track__badge">Sample data</span>
+              <span class="live-track__badge is-live">Live</span>
             </div>
             <p class="dash-chart__sub">
-              {{ liveTrips().length }} active trips · updates every {{ tickSec }}s · Udumalpet corridor demo
+              {{ liveTrips().length }} active trip{{ liveTrips().length === 1 ? '' : 's' }}
+              · driver GPS every {{ tickSec }}s
             </p>
           </div>
           <div class="live-track__meta">
-            <span class="live-track__clock">Tick {{ liveTick() | date: 'HH:mm:ss' }}</span>
-            <button mat-stroked-button class="ya-btn-ghost" type="button" (click)="resetLiveSample()">
-              <mat-icon>restart_alt</mat-icon>
-              Reset sample
+            <span class="live-track__clock">Updated {{ liveTick() | date: 'HH:mm:ss' }}</span>
+            <button mat-stroked-button class="ya-btn-ghost" type="button" (click)="refreshLive()">
+              <mat-icon>refresh</mat-icon>
+              Refresh
             </button>
           </div>
         </div>
 
         <div class="live-track__grid">
-          <div class="live-map" aria-label="Sample live map of on-ride trips">
-            <div class="live-map__gridlines" aria-hidden="true"></div>
-            <div class="live-map__label live-map__label--nw">Coimbatore</div>
-            <div class="live-map__label live-map__label--sw">Pollachi</div>
-            <div class="live-map__label live-map__label--se">Udumalpet</div>
-            <div class="live-map__road live-map__road--a" aria-hidden="true"></div>
-            <div class="live-map__road live-map__road--b" aria-hidden="true"></div>
-
-            @for (trip of liveTrips(); track trip.id) {
-              <button
-                type="button"
-                class="live-pin"
-                [class.is-active]="selectedLiveId() === trip.id"
-                [class.live-pin--on_the_way]="trip.status === 'on_the_way'"
-                [class.live-pin--arrived]="trip.status === 'arrived'"
-                [class.live-pin--trip_started]="trip.status === 'trip_started'"
-                [style.left.%]="trip.x"
-                [style.top.%]="trip.y"
-                [attr.title]="trip.ref + ' · ' + label(trip.status)"
-                (click)="selectLive(trip.id)"
-              >
-                <span class="live-pin__ring"></span>
-                <span class="live-pin__dot">
-                  <mat-icon>local_taxi</mat-icon>
-                </span>
-                <span class="live-pin__tag">{{ trip.ref.slice(-4) }}</span>
-              </button>
+          <div class="live-map" aria-label="Live map of on-ride trips">
+            <div #liveMapEl class="live-map__canvas"></div>
+            @if (!liveTrips().length) {
+              <div class="live-map__empty">
+                <mat-icon>explore_off</mat-icon>
+                <p>No drivers on a live trip right now.</p>
+                <span>Pins appear when a driver is assigned and sharing GPS.</span>
+              </div>
             }
           </div>
 
           <div class="live-trip-list">
+            @if (!liveTrips().length) {
+              <div class="live-trip-empty">Waiting for an on-ride booking…</div>
+            }
             @for (trip of liveTrips(); track trip.id) {
               <article
                 class="live-trip"
@@ -145,15 +150,18 @@ type DashCard = {
               >
                 <div class="live-trip__top">
                   <div class="min-w-0">
-                    <p class="live-trip__ref">{{ trip.ref }}</p>
-                    <p class="live-trip__route">{{ trip.pickup }} → {{ trip.drop }}</p>
+                    <p class="live-trip__ref">{{ trip.booking_reference }}</p>
+                    <p class="live-trip__route">{{ trip.pickup_location }} → {{ trip.drop_location }}</p>
                   </div>
                   <span class="chip" [class]="statusClass(trip.status)">{{ label(trip.status) }}</span>
                 </div>
                 <div class="live-trip__meta">
-                  <span><mat-icon>person</mat-icon>{{ trip.customer }}</span>
-                  <span><mat-icon>badge</mat-icon>{{ trip.driver }}</span>
-                  <span><mat-icon>directions_car</mat-icon>{{ trip.vehicle }}</span>
+                  <span><mat-icon>person</mat-icon>{{ trip.customer_name }}</span>
+                  <span><mat-icon>badge</mat-icon>{{ trip.driver?.name || 'Unassigned' }}</span>
+                  <span>
+                    <mat-icon>directions_car</mat-icon>
+                    {{ trip.vehicle?.registration || trip.vehicle?.name || 'Cab' }}
+                  </span>
                 </div>
                 <div class="live-trip__progress">
                   <div class="live-trip__bar">
@@ -161,13 +169,26 @@ type DashCard = {
                   </div>
                   <div class="live-trip__stats">
                     <span>{{ trip.progress | number: '1.0-0' }}% done</span>
-                    <span>ETA {{ trip.etaMin }} min</span>
-                    <span>{{ trip.speedKmh }} km/h</span>
+                    <span>{{ trip.eta_min ? 'ETA ' + trip.eta_min + ' min' : 'ETA —' }}</span>
+                    <span>
+                      {{ trip.location?.speed_kmph != null ? (trip.location!.speed_kmph | number: '1.0-0') + ' km/h' : '—' }}
+                    </span>
                   </div>
                 </div>
                 <p class="live-trip__coords">
-                  {{ trip.lat | number: '1.4-4' }}, {{ trip.lng | number: '1.4-4' }}
+                  @if (trip.location) {
+                    {{ trip.location.latitude | number: '1.4-4' }},
+                    {{ trip.location.longitude | number: '1.4-4' }}
+                    @if (trip.location.stale) {
+                      <span class="live-stale">GPS stale</span>
+                    }
+                  } @else {
+                    Waiting for driver GPS
+                  }
                 </p>
+                <a class="live-trip__open" [routerLink]="['/bookings', trip.id]" (click)="$event.stopPropagation()">
+                  Open booking
+                </a>
               </article>
             }
           </div>
@@ -235,17 +256,24 @@ type DashCard = {
     </div>
   `,
 })
-export class DashboardPage implements OnInit, OnDestroy {
+export class DashboardPage implements OnInit, AfterViewInit, OnDestroy {
   private readonly api = inject(AdminApiService);
+  private readonly zone = inject(NgZone);
   private liveTimer: ReturnType<typeof setInterval> | null = null;
+  private map: LeafletMap | null = null;
+  private markers = new Map<string, LeafletMarker>();
+  private stopMarkers: LeafletMarker[] = [];
+  private routeLine: LeafletLayer | null = null;
 
-  readonly tickSec = 3;
+  @ViewChild('liveMapEl') liveMapEl?: ElementRef<HTMLElement>;
+
+  readonly tickSec = 8;
   readonly stats = signal<DashboardStats | null>(null);
   readonly recent = signal<Booking[]>([]);
   readonly loading = signal(true);
   readonly error = signal<string | null>(null);
   readonly loadedAt = signal<Date>(new Date());
-  readonly liveTrips = signal<LiveTrip[]>([]);
+  readonly liveTrips = signal<LiveTrackingTrip[]>([]);
   readonly selectedLiveId = signal<string | null>(null);
   readonly liveTick = signal<Date>(new Date());
 
@@ -333,9 +361,14 @@ export class DashboardPage implements OnInit, OnDestroy {
   label = statusLabel;
 
   ngOnInit(): void {
-    this.resetLiveSample();
-    this.startLiveTicker();
     this.reload();
+    this.refreshLive();
+    this.startLiveTicker();
+  }
+
+  ngAfterViewInit(): void {
+    this.ensureMap();
+    queueMicrotask(() => this.syncMap());
   }
 
   ngOnDestroy(): void {
@@ -343,17 +376,30 @@ export class DashboardPage implements OnInit, OnDestroy {
       clearInterval(this.liveTimer);
       this.liveTimer = null;
     }
+    this.map?.remove();
+    this.map = null;
   }
 
   selectLive(id: string): void {
     this.selectedLiveId.set(id);
+    this.syncMap(true);
   }
 
-  resetLiveSample(): void {
-    const sample = this.buildSampleTrips();
-    this.liveTrips.set(sample);
-    this.selectedLiveId.set(sample[0]?.id ?? null);
-    this.liveTick.set(new Date());
+  refreshLive(): void {
+    this.api.liveTracking().subscribe({
+      next: (trips) => {
+        this.liveTrips.set(trips);
+        this.liveTick.set(new Date());
+        const selected = this.selectedLiveId();
+        if (!selected || !trips.some((t) => t.id === selected)) {
+          this.selectedLiveId.set(trips[0]?.id ?? null);
+        }
+        this.syncMap();
+      },
+      error: () => {
+        this.liveTick.set(new Date());
+      },
+    });
   }
 
   reload(): void {
@@ -361,7 +407,7 @@ export class DashboardPage implements OnInit, OnDestroy {
     this.error.set(null);
     forkJoin({
       stats: this.api.dashboard(),
-      bookings: this.api.listBookings({ page: 1, per_page: 8 }),
+      bookings: this.api.listBookings({ page: 1, per_page: 7 }),
     }).subscribe({
       next: ({ stats, bookings }) => {
         this.stats.set(stats);
@@ -378,116 +424,116 @@ export class DashboardPage implements OnInit, OnDestroy {
 
   private startLiveTicker(): void {
     if (this.liveTimer) clearInterval(this.liveTimer);
-    this.liveTimer = setInterval(() => this.tickLiveTrips(), this.tickSec * 1000);
+    this.liveTimer = setInterval(() => this.refreshLive(), this.tickSec * 1000);
   }
 
-  private tickLiveTrips(): void {
-    this.liveTick.set(new Date());
-    this.liveTrips.update((trips) =>
-      trips.map((trip, index) => {
-        const drift = 0.6 + (index % 3) * 0.35;
-        let progress = Math.min(99, trip.progress + drift);
-        let status = trip.status;
-        let etaMin = Math.max(1, trip.etaMin - (index % 2 === 0 ? 1 : 0));
-        let speedKmh = Math.max(18, Math.min(72, trip.speedKmh + (Math.random() * 6 - 3)));
-        let x = Math.min(92, Math.max(8, trip.x + (Math.random() * 1.6 - 0.4)));
-        let y = Math.min(88, Math.max(12, trip.y + (Math.random() * 1.4 - 0.5)));
-        let lat = trip.lat + (Math.random() * 0.004 - 0.0015);
-        let lng = trip.lng + (Math.random() * 0.004 - 0.0015);
-
-        if (progress >= 92 && status === 'on_the_way') status = 'arrived';
-        if (progress >= 96 && status === 'arrived') status = 'trip_started';
-        if (progress >= 99) {
-          // loop sample trip so the panel stays populated
-          const fresh = this.buildSampleTrips()[index % 4];
-          return { ...fresh, id: trip.id };
-        }
-
-        return {
-          ...trip,
-          progress: Math.round(progress * 10) / 10,
-          status,
-          etaMin,
-          speedKmh: Math.round(speedKmh),
-          x: Math.round(x * 10) / 10,
-          y: Math.round(y * 10) / 10,
-          lat: Math.round(lat * 10000) / 10000,
-          lng: Math.round(lng * 10000) / 10000,
-        };
-      }),
-    );
+  private ensureMap(): void {
+    const L = leaflet();
+    const el = this.liveMapEl?.nativeElement;
+    if (!L || !el || this.map) return;
+    this.map = L.map(el, { zoomControl: true, attributionControl: true }).setView([10.5847, 77.2514], 11);
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap',
+      maxZoom: 19,
+    }).addTo(this.map);
+    setTimeout(() => this.map?.invalidateSize(), 80);
   }
 
-  private buildSampleTrips(): LiveTrip[] {
-    return [
-      {
-        id: 'live-1',
-        ref: 'YZ-LIVE-2401',
-        customer: 'Arun Kumar',
-        driver: 'Suresh Babu',
-        vehicle: 'TN 39 AB 2145 · Etios',
-        pickup: 'Udumalpet Bus Stand',
-        drop: 'Coimbatore Airport',
-        status: 'trip_started',
-        progress: 42,
-        etaMin: 38,
-        speedKmh: 54,
-        lat: 10.6821,
-        lng: 77.0914,
-        x: 58,
-        y: 46,
-      },
-      {
-        id: 'live-2',
-        ref: 'YZ-LIVE-2402',
-        customer: 'Priya Devi',
-        driver: 'Karthik Raja',
-        vehicle: 'TN 37 CD 8891 · Innova',
-        pickup: 'Pollachi Market',
-        drop: 'Tiruppur New Bus Stand',
-        status: 'on_the_way',
-        progress: 18,
-        etaMin: 12,
-        speedKmh: 36,
-        lat: 10.6612,
-        lng: 77.0188,
-        x: 28,
-        y: 68,
-      },
-      {
-        id: 'live-3',
-        ref: 'YZ-LIVE-2403',
-        customer: 'Meena Lakshmi',
-        driver: 'Gokul Krishnan',
-        vehicle: 'TN 41 EF 5520 · Dzire',
-        pickup: 'Udumalpet Railway',
-        drop: 'Palani Temple',
-        status: 'arrived',
-        progress: 8,
-        etaMin: 2,
-        speedKmh: 0,
-        lat: 10.5848,
-        lng: 77.2489,
-        x: 78,
-        y: 72,
-      },
-      {
-        id: 'live-4',
-        ref: 'YZ-LIVE-2404',
-        customer: 'Vignesh S',
-        driver: 'Balaji S',
-        vehicle: 'TN 38 GH 1044 · Crysta',
-        pickup: 'Coimbatore Gandhipuram',
-        drop: 'Udumalpet Bypass',
-        status: 'trip_started',
-        progress: 67,
-        etaMin: 24,
-        speedKmh: 61,
-        lat: 10.9012,
-        lng: 77.0421,
-        x: 36,
-        y: 28,
-      },
-    ];
+  private syncMap(focusSelected = false): void {
+    this.ensureMap();
+    const L = leaflet();
+    const map = this.map;
+    if (!L || !map) return;
+
+    const trips = this.liveTrips();
+    const selectedId = this.selectedLiveId();
+    const seen = new Set<string>();
+
+    for (const trip of trips) {
+      const loc = trip.location;
+      if (!loc) continue;
+      seen.add(trip.id);
+      const latlng: [number, number] = [loc.latitude, loc.longitude];
+      const icon = L.divIcon({
+        className: `live-pin live-pin--${trip.status} ${selectedId === trip.id ? 'is-active' : ''}`,
+        html: `<span class="live-pin__ring"></span><span class="live-pin__dot">🚕</span><span class="live-pin__tag">${trip.booking_reference.slice(-4)}</span>`,
+        iconSize: [42, 42],
+        iconAnchor: [21, 21],
+      });
+      const existing = this.markers.get(trip.id);
+      if (existing) {
+        existing.setLatLng(latlng).setIcon(icon);
+      } else {
+        const marker = L.marker(latlng, { icon })
+          .addTo(map)
+          .bindPopup(`${trip.booking_reference}<br>${trip.driver?.name ?? 'Driver'}`)
+          .on('click', () => this.zone.run(() => this.selectLive(trip.id)));
+        this.markers.set(trip.id, marker);
+      }
+    }
+
+    for (const [id, marker] of this.markers) {
+      if (!seen.has(id)) {
+        marker.remove();
+        this.markers.delete(id);
+      }
+    }
+
+    this.routeLine?.remove();
+    this.routeLine = null;
+    for (const stop of this.stopMarkers) stop.remove();
+    this.stopMarkers = [];
+
+    const selected = trips.find((t) => t.id === selectedId);
+    const points: Array<[number, number]> = [];
+    if (selected?.pickup_latitude != null && selected.pickup_longitude != null) {
+      const pickup: [number, number] = [selected.pickup_latitude, selected.pickup_longitude];
+      points.push(pickup);
+      this.stopMarkers.push(
+        L.circleMarker(pickup, {
+          radius: 6,
+          color: '#16a34a',
+          weight: 2,
+          fillColor: '#fff',
+          fillOpacity: 1,
+        }).addTo(map),
+      );
+    }
+    if (selected?.location) {
+      points.push([selected.location.latitude, selected.location.longitude]);
+    }
+    if (selected?.drop_latitude != null && selected.drop_longitude != null) {
+      const drop: [number, number] = [selected.drop_latitude, selected.drop_longitude];
+      points.push(drop);
+      this.stopMarkers.push(
+        L.circleMarker(drop, {
+          radius: 6,
+          color: '#ef4444',
+          weight: 2,
+          fillColor: '#fff',
+          fillOpacity: 1,
+        }).addTo(map),
+      );
+    }
+    if (points.length >= 2) {
+      this.routeLine = L.polyline(points, {
+        color: '#14213d',
+        weight: 3,
+        opacity: 0.7,
+        dashArray: '8 6',
+      }).addTo(map);
+    }
+
+    const fitPoints = trips
+      .map((t) => (t.location ? ([t.location.latitude, t.location.longitude] as [number, number]) : null))
+      .filter((p): p is [number, number] => p != null);
+    if (focusSelected && selected?.location) {
+      map.setView([selected.location.latitude, selected.location.longitude], 14);
+    } else if (fitPoints.length > 1) {
+      map.fitBounds(fitPoints, { padding: [36, 36], maxZoom: 14 });
+    } else if (fitPoints.length === 1) {
+      map.setView(fitPoints[0], 13);
+    }
+    map.invalidateSize();
   }
 }

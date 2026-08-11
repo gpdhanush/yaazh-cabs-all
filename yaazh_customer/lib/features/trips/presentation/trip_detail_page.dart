@@ -14,6 +14,8 @@ import 'package:yaazh_customer/core/widgets/app_loading_view.dart';
 import 'package:yaazh_customer/core/widgets/status_chip.dart';
 import 'package:yaazh_customer/features/booking/data/booking_repository.dart';
 import 'package:yaazh_customer/features/booking/domain/booking.dart';
+import 'package:yaazh_customer/features/home/data/catalog_repository.dart';
+import 'package:yaazh_customer/features/trips/presentation/rate_trip_card.dart';
 import 'package:yaazh_customer/features/trips/presentation/trips_viewmodel.dart';
 
 class TripDetailPage extends ConsumerStatefulWidget {
@@ -32,6 +34,8 @@ class _TripDetailPageState extends ConsumerState<TripDetailPage> {
   Timer? _poll;
   int _rating = 5;
   final _reviewController = TextEditingController();
+  bool _submittingRating = false;
+  bool _ratingSubmitted = false;
 
   @override
   void initState() {
@@ -53,8 +57,14 @@ class _TripDetailPageState extends ConsumerState<TripDetailPage> {
       setState(() {
         _booking = booking;
         _error = null;
+        if (booking.customerRating != null) {
+          _rating = booking.customerRating!;
+          _reviewController.text = booking.customerReview ?? '';
+        }
       });
-      if (booking.isActive) {
+      final liveTracking =
+          ref.read(appConfigProvider).valueOrNull?.liveTrackingEnabled ?? true;
+      if (booking.isActive && liveTracking) {
         _poll?.cancel();
         _poll = Timer.periodic(const Duration(seconds: 8), (_) => _pollLocation());
         await _pollLocation();
@@ -139,6 +149,8 @@ class _TripDetailPageState extends ConsumerState<TripDetailPage> {
   }
 
   Future<void> _rate() async {
+    if (_submittingRating) return;
+    setState(() => _submittingRating = true);
     try {
       await ref.read(bookingRepositoryProvider).rate(
             widget.bookingId,
@@ -146,14 +158,19 @@ class _TripDetailPageState extends ConsumerState<TripDetailPage> {
             review: _reviewController.text.trim(),
           );
       if (!mounted) return;
+      setState(() => _ratingSubmitted = true);
+      await _load();
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Thanks for the rating')),
+        const SnackBar(content: Text('Thanks — your review was submitted')),
       );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(e is ApiException ? e.message : e.toString())),
       );
+    } finally {
+      if (mounted) setState(() => _submittingRating = false);
     }
   }
 
@@ -301,7 +318,8 @@ class _TripDetailPageState extends ConsumerState<TripDetailPage> {
                   _StatusTimeline(items: booking.statusHistory),
                 ],
                 const SizedBox(height: 16),
-                if (booking.canCancel)
+                if (booking.canCancel &&
+                    (ref.watch(appConfigProvider).valueOrNull?.cancellationEnabled ?? true))
                   Row(
                     children: [
                       Expanded(
@@ -334,25 +352,15 @@ class _TripDetailPageState extends ConsumerState<TripDetailPage> {
                   ),
                 if (booking.isCompleted) ...[
                   const SizedBox(height: 20),
-                  const Text('Rate this trip', style: TextStyle(fontWeight: FontWeight.w800)),
-                  Row(
-                    children: [
-                      for (var i = 1; i <= 5; i++)
-                        IconButton(
-                          onPressed: () => setState(() => _rating = i),
-                          icon: Icon(
-                            i <= _rating ? Icons.star_rounded : Icons.star_border_rounded,
-                            color: AppConstants.accentColor,
-                          ),
-                        ),
-                    ],
+                  RateTripCard(
+                    booking: booking,
+                    rating: _rating,
+                    reviewController: _reviewController,
+                    submitting: _submittingRating,
+                    submitted: _ratingSubmitted,
+                    onRatingChanged: (value) => setState(() => _rating = value),
+                    onSubmit: _rate,
                   ),
-                  TextField(
-                    controller: _reviewController,
-                    decoration: const InputDecoration(labelText: 'Review (optional)'),
-                  ),
-                  const SizedBox(height: 12),
-                  ElevatedButton(onPressed: _rate, child: const Text('SUBMIT RATING')),
                 ],
               ],
             ),

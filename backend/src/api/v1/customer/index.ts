@@ -289,7 +289,61 @@ export const customerRoutes: FastifyPluginAsync = async (app) => {
         customer_review: parsed.data.review ?? null,
       },
     });
-    return ok(reply, { id: String(row.id) }, "Rating submitted.", 201);
+
+    const reviewText = (parsed.data.review ?? "").trim() || "Great trip with Yaazh Cabs.";
+    const existingReview = await prisma.testimonials.findFirst({
+      where: { booking_id: id },
+    });
+    if (existingReview) {
+      await prisma.testimonials.update({
+        where: { id: existingReview.id },
+        data: {
+          rating: parsed.data.rating,
+          review: reviewText,
+          customer_name: booking.customer_name,
+          customer_phone: booking.customer_phone,
+          customer_id: user.id,
+          approval_status: "pending",
+          approved_at: null,
+          approved_by_admin_id: null,
+        },
+      });
+    } else {
+      await prisma.testimonials.create({
+        data: {
+          booking_id: id,
+          customer_id: user.id,
+          customer_name: booking.customer_name,
+          customer_phone: booking.customer_phone,
+          rating: parsed.data.rating,
+          review: reviewText,
+          approval_status: "pending",
+          is_featured: false,
+        },
+      });
+    }
+
+    if (booking.assigned_driver_id) {
+      const agg = await prisma.tripRatings.aggregate({
+        where: { driver_id: booking.assigned_driver_id, customer_rating: { not: null } },
+        _avg: { customer_rating: true },
+      });
+      await prisma.drivers.update({
+        where: { id: booking.assigned_driver_id },
+        data: { rating_avg: agg._avg.customer_rating ?? 0 },
+      });
+    }
+
+    return ok(
+      reply,
+      {
+        id: String(row.id),
+        rating: parsed.data.rating,
+        review: parsed.data.review ?? null,
+      },
+      "Rating submitted.",
+      201,
+    );
   });
 
   app.get("/notifications", async (req, reply) => {

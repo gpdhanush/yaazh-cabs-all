@@ -61,7 +61,10 @@ class CatalogRepository {
   }
 
   Future<AppConfig> getAppConfig() async {
-    final data = await _api.get('/public/app-config');
+    final data = await _api.get(
+      '/public/app-config',
+      queryParameters: {'app': 'customer_app', 'platform': 'android'},
+    );
     if (data is! Map) return const AppConfig({});
     return AppConfig.fromJson(Map<String, dynamic>.from(data));
   }

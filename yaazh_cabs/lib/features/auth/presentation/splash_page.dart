@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:yaazh_cabs/app/constants.dart';
-import 'package:yaazh_cabs/core/firebase/analytics_service.dart';
-import 'package:yaazh_cabs/core/notifications/push_notification_service.dart';
+import 'package:yaazh_cabs/core/widgets/app_logo.dart';
 import 'package:yaazh_cabs/features/auth/presentation/auth_viewmodel.dart';
 
 class SplashPage extends ConsumerStatefulWidget {
@@ -21,21 +19,11 @@ class _SplashPageState extends ConsumerState<SplashPage> {
   }
 
   Future<void> _boot() async {
-    await ref.read(authNotifierProvider.notifier).checkAuthSession();
     if (!mounted) return;
-
-    final status = ref.read(authNotifierProvider).status;
-    if (status == AuthStatus.authenticated) {
-      final user = ref.read(authNotifierProvider).user;
-      if (user != null) {
-        await ref.read(analyticsServiceProvider).setDriver(user.id);
-      }
-      await ref.read(pushNotificationServiceProvider).start();
-      if (!mounted) return;
-      context.go('/home');
-    } else {
-      context.go('/login');
-    }
+    await ref.read(authNotifierProvider.notifier).checkAuthSession();
+    // Router redirect leaves /splash as soon as auth status settles.
+    // Do not use ref or context after this await — the widget may already
+    // be disposed, which is what Crashlytics was reporting.
   }
 
   @override
@@ -47,18 +35,7 @@ class _SplashPageState extends ConsumerState<SplashPage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: AppConstants.gold,
-                borderRadius: BorderRadius.circular(22),
-              ),
-              child: const Icon(
-                Icons.local_taxi_rounded,
-                size: 48,
-                color: AppConstants.black,
-              ),
-            ),
+            const AppLogo(size: 112),
             const SizedBox(height: 24),
             Text(
               'Yaazh Cabs',

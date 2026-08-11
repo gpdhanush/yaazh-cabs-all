@@ -8,6 +8,7 @@ import 'package:yaazh_cabs/core/widgets/app_loading_view.dart';
 import 'package:yaazh_cabs/core/widgets/app_state_pages.dart';
 import 'package:yaazh_cabs/core/widgets/app_surface.dart';
 import 'package:yaazh_cabs/core/widgets/status_chip.dart';
+import 'package:yaazh_cabs/core/config/remote_config.dart';
 import 'package:yaazh_cabs/features/offers/presentation/offer_list_viewmodel.dart';
 import 'package:yaazh_cabs/features/trips/presentation/viewmodels/trip_list_viewmodel.dart';
 
@@ -17,6 +18,7 @@ class OffersPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final offersState = ref.watch(offerListNotifierProvider);
+    final remote = ref.watch(remoteConfigProvider).valueOrNull;
     final theme = Theme.of(context);
 
     return Scaffold(
@@ -42,11 +44,12 @@ class OffersPage extends ConsumerWidget {
         ),
         data: (offers) {
           if (offers.isEmpty) {
-            return const AppEmptyView(
+            return AppEmptyView(
               icon: Icons.inbox_outlined,
               title: 'No pending offers',
-              message:
-                  'When fleet admin sends you a trip offer, it will appear here for accept or reject.',
+              message: remote?.driverAutoOfferEnabled == false
+                  ? 'Auto-offers are off. Dispatch will assign trips to you directly.'
+                  : 'When fleet admin sends you a trip offer, it will appear here for accept or reject.',
             );
           }
 

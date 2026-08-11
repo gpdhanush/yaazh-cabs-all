@@ -23,6 +23,13 @@ class HomePage extends ConsumerWidget {
     final config = ref.watch(appConfigProvider);
     final firstName = (user?.name ?? 'there').split(' ').first;
     void openBook() {
+      final cfg = config.valueOrNull;
+      if (cfg?.maintenanceMode == true) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Bookings are paused for maintenance. Please try again shortly.')),
+        );
+        return;
+      }
       if (upcoming != null) {
         context.push('/trips/${upcoming.id}');
       } else {
@@ -44,6 +51,18 @@ class HomePage extends ConsumerWidget {
           slivers: [
             SliverToBoxAdapter(
               child: _HeroHeader(firstName: firstName, onSearch: openBook),
+            ),
+            SliverToBoxAdapter(
+              child: config.maybeWhen(
+                data: (data) => Column(
+                  children: [
+                    if (data.maintenanceMode) const _MaintenanceBanner(),
+                    if (data.offerBannerEnabled && data.offerBannerText.isNotEmpty)
+                      _OfferBanner(text: data.offerBannerText),
+                  ],
+                ),
+                orElse: () => const SizedBox.shrink(),
+              ),
             ),
             SliverToBoxAdapter(
               child: _QuickActions(
@@ -87,6 +106,7 @@ class HomePage extends ConsumerWidget {
                 data: (data) => _SupportCard(
                   phone: data.supportPhone,
                   hours: data.businessHours,
+                  whatsapp: data.whatsappEnabled ? data.supportWhatsapp : null,
                 ),
                 orElse: () => const SizedBox(height: 24),
               ),
@@ -548,59 +568,157 @@ class _FleetStrip extends StatelessWidget {
   }
 }
 
+class _MaintenanceBanner extends StatelessWidget {
+  const _MaintenanceBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFEF3C7),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFF59E0B)),
+        ),
+        child: const Row(
+          children: [
+            Icon(Icons.engineering_rounded, color: Color(0xFF92400E)),
+            SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'We’re doing a short maintenance. New bookings are paused — existing trips continue.',
+                style: TextStyle(
+                  color: Color(0xFF78350F),
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13,
+                  height: 1.35,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _OfferBanner extends StatelessWidget {
+  final String text;
+
+  const _OfferBanner({required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
+          ),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppConstants.accentColor.withValues(alpha: 0.35)),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.local_offer_rounded, color: AppConstants.accentColor),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                text,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13,
+                  height: 1.35,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _SupportCard extends StatelessWidget {
   final String? phone;
   final String? hours;
+  final String? whatsapp;
 
-  const _SupportCard({this.phone, this.hours});
+  const _SupportCard({this.phone, this.hours, this.whatsapp});
 
   @override
   Widget build(BuildContext context) {
     if (phone == null || phone!.isEmpty) return const SizedBox(height: 16);
+    final waDigits = whatsapp?.replaceAll(RegExp(r'\D'), '') ?? '';
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 26, 16, 0),
       child: Material(
         color: const Color(0xFF0F172A),
         borderRadius: BorderRadius.circular(20),
-        child: InkWell(
-          onTap: () => launchUrl(Uri.parse('tel:$phone')),
-          borderRadius: BorderRadius.circular(20),
-          child: Padding(
-            padding: const EdgeInsets.all(18),
-            child: Row(
-              children: [
-                Container(
-                  width: 46,
-                  height: 46,
-                  decoration: BoxDecoration(
-                    color: AppConstants.accentColor.withValues(alpha: 0.16),
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: const Icon(Icons.headset_mic_rounded, color: AppConstants.accentColor),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+        child: Padding(
+          padding: const EdgeInsets.all(18),
+          child: Row(
+            children: [
+              Expanded(
+                child: InkWell(
+                  onTap: () => launchUrl(Uri.parse('tel:$phone')),
+                  child: Row(
                     children: [
-                      const Text(
-                        'Need help booking?',
-                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800),
+                      Container(
+                        width: 46,
+                        height: 46,
+                        decoration: BoxDecoration(
+                          color: AppConstants.accentColor.withValues(alpha: 0.16),
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: const Icon(Icons.headset_mic_rounded, color: AppConstants.accentColor),
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        hours ?? 'Call our Udumalpet desk',
-                        style: TextStyle(color: Colors.white.withValues(alpha: 0.68), fontSize: 12),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Need help booking?',
+                              style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              hours ?? 'Call our Udumalpet desk',
+                              style: TextStyle(color: Colors.white.withValues(alpha: 0.68), fontSize: 12),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              phone!,
+                              style: const TextStyle(color: AppConstants.accentColor, fontWeight: FontWeight.w800),
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                   ),
                 ),
-                Text(
-                  phone!,
-                  style: const TextStyle(color: AppConstants.accentColor, fontWeight: FontWeight.w800),
+              ),
+              if (waDigits.isNotEmpty)
+                IconButton.filled(
+                  style: IconButton.styleFrom(
+                    backgroundColor: const Color(0xFF25D366),
+                    foregroundColor: Colors.white,
+                  ),
+                  onPressed: () => launchUrl(
+                    Uri.parse('https://wa.me/$waDigits'),
+                    mode: LaunchMode.externalApplication,
+                  ),
+                  icon: const Icon(Icons.chat_rounded),
                 ),
-              ],
-            ),
+            ],
           ),
         ),
       ),

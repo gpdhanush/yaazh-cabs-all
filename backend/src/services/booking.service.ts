@@ -832,10 +832,16 @@ export const bookingService = {
       if (v) vehicle = { name: v.vehicle_name, registration: v.registration_no };
     }
 
+    const rating = await prisma.tripRatings.findUnique({
+      where: { booking_id: booking.id },
+    });
+
     return {
       ...serializeBooking(booking),
       driver,
       vehicle,
+      customer_rating: rating?.customer_rating ?? null,
+      customer_review: rating?.customer_review ?? null,
       status_history: history.map((h) => ({
         old_status: h.old_status,
         new_status: h.new_status,

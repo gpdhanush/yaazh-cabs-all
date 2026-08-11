@@ -3,8 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:yaazh_cabs/app/constants.dart';
 import 'package:yaazh_cabs/core/firebase/analytics_service.dart';
+import 'package:yaazh_cabs/core/widgets/app_logo.dart';
 import 'package:yaazh_cabs/core/network/connectivity_provider.dart';
-import 'package:yaazh_cabs/core/notifications/push_notification_service.dart';
 import 'package:yaazh_cabs/core/widgets/app_state_pages.dart';
 import 'package:yaazh_cabs/features/auth/presentation/auth_viewmodel.dart';
 
@@ -34,13 +34,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           _phoneController.text.trim(),
           _passwordController.text,
         );
-    if (success && mounted) {
-      final user = ref.read(authNotifierProvider).user;
-      final analytics = ref.read(analyticsServiceProvider);
-      if (user != null) await analytics.setDriver(user.id);
-      await analytics.logLogin();
-      await ref.read(pushNotificationServiceProvider).start();
-      if (mounted) context.go('/home');
+    if (!mounted) return;
+    if (success) {
+      ref.read(analyticsServiceProvider).logLogin();
     }
   }
 
@@ -76,19 +72,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 child: Column(
                   children: [
                     const SizedBox(height: 12),
-                    Container(
-                      width: 72,
-                      height: 72,
-                      decoration: BoxDecoration(
-                        color: AppConstants.gold,
-                        borderRadius: BorderRadius.circular(22),
-                      ),
-                      child: const Icon(
-                        Icons.local_taxi_rounded,
-                        size: 38,
-                        color: AppConstants.black,
-                      ),
-                    ),
+                    const AppLogo(size: 88),
                     const SizedBox(height: 18),
                     Text(
                       'Yaazh Cabs',

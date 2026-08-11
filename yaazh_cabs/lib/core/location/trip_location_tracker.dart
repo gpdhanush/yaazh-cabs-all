@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:yaazh_cabs/core/config/remote_config.dart';
 import 'package:yaazh_cabs/core/location/location_service.dart';
 import 'package:yaazh_cabs/features/trips/data/trip_repository.dart';
 
@@ -10,6 +11,7 @@ final tripLocationTrackerProvider = Provider<TripLocationTracker>((ref) {
   final tracker = TripLocationTracker(
     ref.watch(locationServiceProvider),
     ref.watch(tripRepositoryProvider),
+    ref.watch(remoteConfigServiceProvider),
   );
   ref.onDispose(tracker.stop);
   return tracker;
@@ -20,19 +22,30 @@ final tripLocationTrackerProvider = Provider<TripLocationTracker>((ref) {
 class TripLocationTracker {
   final LocationService _locationService;
   final TripRepository _tripRepository;
+  final RemoteConfigService _remoteConfig;
 
   StreamSubscription<Position>? _subscription;
   String? _bookingId;
   DateTime? _lastSentAt;
   bool _lastSuccess = false;
 
-  TripLocationTracker(this._locationService, this._tripRepository);
+  TripLocationTracker(
+    this._locationService,
+    this._tripRepository,
+    this._remoteConfig,
+  );
 
   bool get isTracking => _subscription != null;
   bool get lastSuccess => _lastSuccess;
   String? get bookingId => _bookingId;
 
   Future<void> start(String bookingId) async {
+    final config = await _remoteConfig.fetch();
+    if (!config.liveTrackingEnabled) {
+      await stop();
+      debugPrint('Live tracking disabled by remote config');
+      return;
+    }
     if (_bookingId == bookingId && _subscription != null) return;
     await stop();
     _bookingId = bookingId;

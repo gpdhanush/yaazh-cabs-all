@@ -7,6 +7,8 @@ import 'package:yaazh_customer/core/widgets/app_error_view.dart';
 import 'package:yaazh_customer/core/widgets/app_loading_view.dart';
 import 'package:yaazh_customer/core/widgets/app_state_pages.dart';
 import 'package:yaazh_customer/core/widgets/status_chip.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:yaazh_customer/features/home/data/catalog_repository.dart';
 import 'package:yaazh_customer/features/support/data/support_repository.dart';
 
 class SupportPage extends ConsumerWidget {
@@ -15,9 +17,26 @@ class SupportPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final tickets = ref.watch(supportTicketsProvider);
+    final config = ref.watch(appConfigProvider).valueOrNull;
+    final waDigits = (config?.whatsappEnabled == true)
+        ? (config?.supportWhatsapp ?? '').replaceAll(RegExp(r'\D'), '')
+        : '';
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Support')),
+      appBar: AppBar(
+        title: const Text('Support'),
+        actions: [
+          if (waDigits.isNotEmpty)
+            IconButton(
+              tooltip: 'WhatsApp',
+              onPressed: () => launchUrl(
+                Uri.parse('https://wa.me/$waDigits'),
+                mode: LaunchMode.externalApplication,
+              ),
+              icon: const Icon(Icons.chat_rounded),
+            ),
+        ],
+      ),
       floatingActionButton: FloatingActionButton.extended(
         backgroundColor: AppConstants.accentColor,
         foregroundColor: Colors.black,

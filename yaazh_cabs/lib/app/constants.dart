@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 class AppConstants {
   static const String appName = 'Yaazh Cabs Driver';
+  static const String appLogo = 'assets/img/playstore-icon.png';
 
   // API Config
   static const String defaultBaseUrl =

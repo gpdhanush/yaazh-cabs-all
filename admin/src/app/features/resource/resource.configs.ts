@@ -464,15 +464,82 @@ export const settingsResource: ResourceConfig = {
 
 export const remoteConfigResource: ResourceConfig = {
   title: 'Remote config',
+  description: 'Feature flags and copy for customer app, driver app, and website. Apps fetch these from GET /public/app-config.',
   path: '/remote-config',
   columns: [
-    { key: 'id', label: 'ID' },
+    { key: '#', label: '#', type: 'serial' },
     { key: 'config_key', label: 'Key' },
+    { key: 'app_type', label: 'App' },
+    { key: 'platform', label: 'Platform' },
     { key: 'config_value', label: 'Value' },
-    { key: 'is_active', label: 'Active' },
+    { key: 'is_active', label: 'Active', type: 'boolean' },
+  ],
+  createFields: [
+    { key: 'config_key', label: 'Key', required: true },
+    {
+      key: 'app_type',
+      label: 'App',
+      type: 'select',
+      defaultValue: 'all',
+      options: [
+        { label: 'All', value: 'all' },
+        { label: 'Customer app', value: 'customer_app' },
+        { label: 'Driver app', value: 'driver_app' },
+        { label: 'Website', value: 'user_website' },
+        { label: 'Admin', value: 'admin_web' },
+      ],
+    },
+    {
+      key: 'platform',
+      label: 'Platform',
+      type: 'select',
+      defaultValue: 'all',
+      options: [
+        { label: 'All', value: 'all' },
+        { label: 'Android', value: 'android' },
+        { label: 'iOS', value: 'ios' },
+        { label: 'Web', value: 'web' },
+      ],
+    },
+    {
+      key: 'value_type',
+      label: 'Type',
+      type: 'select',
+      defaultValue: 'boolean',
+      options: [
+        { label: 'Boolean', value: 'boolean' },
+        { label: 'String', value: 'string' },
+        { label: 'Number', value: 'number' },
+        { label: 'JSON', value: 'json' },
+      ],
+    },
+    { key: 'config_value', label: 'Value', type: 'textarea' },
+    { key: 'description', label: 'Description', type: 'textarea', nullable: true },
+    {
+      key: 'is_active',
+      label: 'Active',
+      type: 'select',
+      defaultValue: true,
+      options: [
+        { label: 'Yes', value: true },
+        { label: 'No', value: false },
+      ],
+    },
   ],
   editFields: [
     { key: 'config_value', label: 'Value', type: 'textarea' },
+    { key: 'description', label: 'Description', type: 'textarea', nullable: true },
+    {
+      key: 'value_type',
+      label: 'Type',
+      type: 'select',
+      options: [
+        { label: 'Boolean', value: 'boolean' },
+        { label: 'String', value: 'string' },
+        { label: 'Number', value: 'number' },
+        { label: 'JSON', value: 'json' },
+      ],
+    },
     {
       key: 'is_active',
       label: 'Active',
