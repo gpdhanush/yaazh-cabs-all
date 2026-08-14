@@ -755,48 +755,92 @@ class _PaymentPanel extends StatelessWidget {
             ),
           ] else ...[
             const SizedBox(height: 14),
-            YaNumberField(
-              controller: discountController,
-              label: 'Discount amount',
-              hint: '0',
-              decimal: true,
-              maxLength: 8,
-              prefixIcon: const Icon(Icons.currency_rupee_rounded),
-              textInputAction: TextInputAction.next,
-            ),
-            const SizedBox(height: 10),
-            YaNumberField(
-              controller: amountController,
-              label: 'Amount',
-              hint: '0',
-              decimal: true,
-              maxLength: 8,
-              prefixIcon: const Icon(Icons.currency_rupee_rounded),
-              textInputAction: TextInputAction.done,
-            ),
-            const SizedBox(height: 10),
-            YaDropdown<String>(
-              label: 'Method',
-              value: method,
-              items: const [
-                DropdownMenuItem(value: 'cash', child: Text('Cash')),
-                DropdownMenuItem(value: 'upi', child: Text('UPI')),
-                DropdownMenuItem(value: 'card', child: Text('Card')),
-                DropdownMenuItem(value: 'bank_transfer', child: Text('Bank')),
-                DropdownMenuItem(value: 'other', child: Text('Other')),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Expanded(
+                  child: YaNumberField(
+                    controller: discountController,
+                    label: 'Discount amount',
+                    hint: '0',
+                    decimal: true,
+                    maxLength: 8,
+                    prefixIcon: const Icon(Icons.currency_rupee_rounded),
+                    textInputAction: TextInputAction.next,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: onApplyDiscount,
+                    style: ElevatedButton.styleFrom(
+                      minimumSize: const Size(0, 52),
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                    ),
+                    child: const Text('APPLY'),
+                  ),
+                ),
               ],
-              onChanged: (v) {
-                if (v != null) onMethod(v);
-              },
+            ),
+            const SizedBox(height: 10),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: YaNumberField(
+                    controller: amountController,
+                    label: 'Amount',
+                    hint: '0',
+                    decimal: true,
+                    maxLength: 8,
+                    prefixIcon: const Icon(Icons.currency_rupee_rounded),
+                    textInputAction: TextInputAction.done,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: YaDropdown<String>(
+                    label: 'Method',
+                    value: method,
+                    items: const [
+                      DropdownMenuItem(value: 'cash', child: Text('Cash')),
+                      DropdownMenuItem(value: 'upi', child: Text('UPI')),
+                      DropdownMenuItem(value: 'card', child: Text('Card')),
+                      DropdownMenuItem(value: 'bank_transfer', child: Text('Bank')),
+                      DropdownMenuItem(value: 'other', child: Text('Other')),
+                    ],
+                    onChanged: (v) {
+                      if (v != null) onMethod(v);
+                    },
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 12),
-            ElevatedButton(onPressed: onApplyDiscount, child: const Text('APPLY DISCOUNT')),
-            const SizedBox(height: 8),
-            ElevatedButton(onPressed: onRecord, child: const Text('RECORD PAYMENT')),
-            const SizedBox(height: 8),
-            OutlinedButton(
-              onPressed: balance <= 0 ? null : onMarkPaid,
-              child: const Text('MARK FULLY PAID'),
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: onRecord,
+                    style: ElevatedButton.styleFrom(
+                      minimumSize: const Size(0, 52),
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                    ),
+                    child: const Text('RECORD'),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: balance <= 0 ? null : onMarkPaid,
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size(0, 52),
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                    ),
+                    child: const Text('FULLY PAID'),
+                  ),
+                ),
+              ],
             ),
           ],
           if (pay != null && pay.payments.isNotEmpty) ...[

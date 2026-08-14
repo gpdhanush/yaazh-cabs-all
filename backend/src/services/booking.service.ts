@@ -1744,60 +1744,57 @@ export async function applyBookingDiscount(params: {
 
   const paymentStatus = alreadyPaid <= 0 ? "unpaid" : alreadyPaid >= finalTotal - 0.009 ? "paid" : "partial";
   const balanceDue = roundMoney(Math.max(0, finalTotal - alreadyPaid));
+  const note = `Fare reduced by Rs. ${discount}. Final Rs. ${finalTotal}`;
 
-  await prisma.$transaction(async (tx) => {
-    await tx.bookings.update({
-      where: { id: params.bookingId },
-      data: {
-        discount_amount: new Prisma.Decimal(discount),
-        final_total: new Prisma.Decimal(finalTotal),
-        payment_status: paymentStatus,
-      },
-    });
-
-    await tx.bookingStatusHistory.create({
-      data: {
-        booking_id: params.bookingId,
-        old_status: booking.status,
-        new_status: booking.status,
-        note: `Fare reduced by Rs. ${discount}. Final Rs. ${finalTotal}`,
-        changed_by_type: "admin",
-        changed_by_admin_id: params.adminId,
-      },
-    });
-
-    await tx.tripEvents.create({
-      data: {
-        booking_id: params.bookingId,
-        driver_id: booking.assigned_driver_id,
-        event_type: "fare_adjusted",
-        event_note: `Fare reduced by Rs. ${discount}. Final Rs. ${finalTotal}`,
-        event_payload: {
-          quoted,
-          discount_amount: discount,
-          final_total: finalTotal,
-          amount_paid: alreadyPaid,
-          balance_due: balanceDue,
-        },
-        created_by_type: "admin",
-        created_by_admin_id: params.adminId,
-      },
-    });
-
-    const invoice = await tx.bookingInvoices.findUnique({ where: { booking_id: params.bookingId } });
-    if (invoice) {
-      await tx.bookingInvoices.update({
-        where: { id: invoice.id },
+  try {
+    await prisma.$transaction(async (tx) => {
+      await tx.bookings.update({
+        where: { id: params.bookingId },
         data: {
           discount_amount: new Prisma.Decimal(discount),
-          total_amount: new Prisma.Decimal(finalTotal),
-          amount_paid: new Prisma.Decimal(alreadyPaid),
-          balance_amount: new Prisma.Decimal(balanceDue),
-          status: balanceDue <= 0 ? "paid" : alreadyPaid > 0 ? "partially_paid" : invoice.status,
+          final_total: new Prisma.Decimal(finalTotal),
+          payment_status: paymentStatus,
         },
       });
-    }
-  });
+
+      await tx.tripEvents.create({
+        data: {
+          booking_id: params.bookingId,
+          driver_id: booking.assigned_driver_id,
+          event_type: "fare_adjusted",
+          event_note: note,
+          event_payload: {
+            quoted,
+            discount_amount: discount,
+            final_total: finalTotal,
+            amount_paid: alreadyPaid,
+            balance_due: balanceDue,
+          } as Prisma.InputJsonValue,
+          created_by_type: "admin",
+          created_by_admin_id: params.adminId,
+        },
+      });
+
+      const invoice = await tx.bookingInvoices.findUnique({ where: { booking_id: params.bookingId } });
+      if (invoice) {
+        const nextStatus =
+          balanceDue <= 0 ? "paid" : alreadyPaid > 0 ? "partially_paid" : invoice.status;
+        await tx.bookingInvoices.update({
+          where: { id: invoice.id },
+          data: {
+            discount_amount: new Prisma.Decimal(discount),
+            total_amount: new Prisma.Decimal(finalTotal),
+            amount_paid: new Prisma.Decimal(alreadyPaid),
+            balance_amount: new Prisma.Decimal(balanceDue),
+            status: nextStatus,
+          },
+        });
+      }
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Could not apply discount.";
+    throw new ValidationError(message);
+  }
 
   return getBookingPaymentSummary(params.bookingId);
 }

@@ -1282,8 +1282,8 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
       const id = BigInt((req.params as { id: string }).id);
       const schema = z
         .object({
-          discount_amount: z.number().min(0).optional(),
-          final_total: z.number().min(0).optional(),
+          discount_amount: z.coerce.number().min(0).optional(),
+          final_total: z.coerce.number().min(0).optional(),
         })
         .refine((d) => d.discount_amount != null || d.final_total != null, {
           message: "Enter a discount amount or a final fare.",
