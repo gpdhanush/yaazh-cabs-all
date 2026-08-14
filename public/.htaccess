@@ -5,6 +5,9 @@ Options -MultiViews
 DirectoryIndex index.html _shell.html
 RewriteEngine On
 
+# Invoice PDFs live on the API, not this static site
+RewriteRule ^storage/public/invoices/(.+)$ https://luxe-motion-ride-1.onrender.com/api/v1/public/invoices/$1 [L,R=302]
+
 # Force HTTPS (uncomment after AutoSSL is active)
 # RewriteCond %{HTTPS} !=on
 # RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]

@@ -17,10 +17,22 @@ final _loopbackUrl = RegExp(
 );
 
 String rewriteLoopbackUrls(String text) {
-  return text.replaceAllMapped(_loopbackUrl, (match) {
+  final origin = apiOrigin;
+  var next = text.replaceAllMapped(_loopbackUrl, (match) {
     final path = match.group(1) ?? '';
-    return '$apiOrigin$path';
+    return '$origin$path';
   });
+  next = next.replaceAllMapped(
+    RegExp(
+      r'https?://[^/\s]+/(?:storage/public/invoices|api/v1/public/invoices)/([^\s/?#]+)',
+      caseSensitive: false,
+    ),
+    (match) {
+      final file = match.group(1) ?? '';
+      return '$origin/api/v1/public/invoices/$file';
+    },
+  );
+  return next;
 }
 
 String rewriteWhatsAppShareUrl(String url) {
@@ -44,8 +56,13 @@ String? resolveMediaUrl(String? raw) {
 
   final uri = Uri.tryParse(value);
   if (uri != null && uri.hasScheme && (uri.isScheme('http') || uri.isScheme('https'))) {
-    if (_isLoopback(uri.host)) {
-      return '$apiOrigin${uri.path}${uri.hasQuery ? '?${uri.query}' : ''}';
+    if (_isLoopback(uri.host) ||
+        uri.host.endsWith('.vercel.app') ||
+        uri.path.contains('/storage/public/invoices/')) {
+      final path = uri.path.contains('/storage/public/invoices/')
+          ? uri.path.replaceFirst('/storage/public/invoices/', '/api/v1/public/invoices/')
+          : uri.path;
+      return '$apiOrigin$path${uri.hasQuery ? '?${uri.query}' : ''}';
     }
     return value;
   }

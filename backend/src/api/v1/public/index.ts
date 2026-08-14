@@ -8,6 +8,7 @@ import { notifyAdmins } from "../../../services/fcm.service.js";
 import { getPublicFeedback, submitPublicFeedback } from "../../../services/feedback.service.js";
 import { loadDriverPhotoBytes } from "../../../services/driver-photo.service.js";
 import { loadAdminPhotoBytes } from "../../../services/admin-photo.service.js";
+import { loadPublicInvoicePdf } from "../../../services/invoice.service.js";
 import { mapService } from "../../../services/map.service.js";
 import type { TripType } from "@prisma/client";
 
@@ -43,6 +44,17 @@ export const publicRoutes: FastifyPluginAsync = async (app) => {
       .header("Content-Type", photo.mimeType)
       .header("Content-Length", String(photo.bytes.length))
       .send(photo.bytes);
+  });
+
+  app.get("/invoices/*", async (req, reply) => {
+    const invoiceNumber = String((req.params as { "*": string })["*"] ?? "");
+    const { invoice, pdfBuffer } = await loadPublicInvoicePdf(invoiceNumber);
+    return reply
+      .header("Cache-Control", "private, max-age=120")
+      .header("Content-Type", "application/pdf")
+      .header("Content-Disposition", `inline; filename="${invoice.invoice_number}.pdf"`)
+      .header("Content-Length", String(pdfBuffer.length))
+      .send(pdfBuffer);
   });
 
   app.get("/cities", async (req, reply) => {

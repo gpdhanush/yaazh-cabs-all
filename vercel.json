@@ -5,6 +5,10 @@
   "buildCommand": "npm run build:cpanel",
   "outputDirectory": ".output/public",
   "rewrites": [
+    {
+      "source": "/storage/public/invoices/:file",
+      "destination": "https://luxe-motion-ride-1.onrender.com/api/v1/public/invoices/:file"
+    },
     { "source": "/((?!assets/).*)", "destination": "/index.html" }
   ]
 }

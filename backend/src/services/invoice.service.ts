@@ -6,6 +6,7 @@ import { prisma } from "../config/database.js";
 import { loadEnv } from "../config/env.js";
 import { NotFoundError, ValidationError } from "../errors/app-error.js";
 import { sendMail } from "./mail.service.js";
+import { publicInvoiceApiPath } from "../utils/public-url.js";
 
 function roundMoney(n: number): number {
   return Math.round(n * 100) / 100;
@@ -110,7 +111,7 @@ function invoicePdfPath(invoiceNumber: string) {
   fs.mkdirSync(dir, { recursive: true });
   return {
     abs: path.join(dir, `${invoiceNumber}.pdf`),
-    url: `/storage/public/invoices/${invoiceNumber}.pdf`,
+    url: publicInvoiceApiPath(invoiceNumber),
   };
 }
 
@@ -280,6 +281,24 @@ export async function upsertBookingInvoice(bookingId: bigint) {
     : await prisma.bookingInvoices.create({ data: { booking_id: bookingId, ...data } });
 
   return { invoice: serializeInvoice(row), pdfBuffer, pdfPath: file.abs };
+}
+
+export async function loadPublicInvoicePdf(invoiceNumber: string) {
+  const num = decodeURIComponent(invoiceNumber).replace(/\.pdf$/i, "").trim();
+  if (!/^INV-[A-Za-z0-9-]+$/i.test(num)) {
+    throw new ValidationError("Invalid invoice number.");
+  }
+  let row = await prisma.bookingInvoices.findUnique({ where: { invoice_number: num } });
+  if (!row) {
+    const bookingRef = num.replace(/^INV-/i, "");
+    const booking = await prisma.bookings.findFirst({
+      where: { booking_reference: bookingRef },
+      select: { id: true },
+    });
+    if (!booking) throw new NotFoundError("Invoice not found.");
+    return upsertBookingInvoice(booking.id);
+  }
+  return upsertBookingInvoice(row.booking_id);
 }
 
 export async function sendBookingInvoiceEmail(bookingId: bigint, to?: string | null) {

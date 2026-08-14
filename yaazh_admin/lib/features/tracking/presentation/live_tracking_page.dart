@@ -75,20 +75,40 @@ class _LiveTrackingPageState extends ConsumerState<LiveTrackingPage> {
 
   bool _rideStarted(LiveTrip trip) => trip.status == BookingStatus.tripStarted;
 
+  bool _hasDriverGps(LiveTrip trip) {
+    final loc = trip.location;
+    if (loc == null) return false;
+    if (loc.latitude == 0 && loc.longitude == 0) return false;
+    return true;
+  }
+
   List<LatLng> _waypoints(LiveTrip trip) {
-    final points = <LatLng>[];
-    if (trip.location != null) {
-      points.add(LatLng(trip.location!.latitude, trip.location!.longitude));
+    final pickup = trip.pickupLatitude != null && trip.pickupLongitude != null
+        ? LatLng(trip.pickupLatitude!, trip.pickupLongitude!)
+        : null;
+    final drop = trip.dropLatitude != null && trip.dropLongitude != null
+        ? LatLng(trip.dropLatitude!, trip.dropLongitude!)
+        : null;
+
+    if (!_hasDriverGps(trip)) {
+      return [
+        if (pickup != null) pickup,
+        if (drop != null) drop,
+      ];
     }
-    if (!_rideStarted(trip) &&
-        trip.pickupLatitude != null &&
-        trip.pickupLongitude != null) {
-      points.add(LatLng(trip.pickupLatitude!, trip.pickupLongitude!));
+
+    final driver = LatLng(trip.location!.latitude, trip.location!.longitude);
+    if (_rideStarted(trip)) {
+      return [
+        driver,
+        if (drop != null) drop,
+      ];
     }
-    if (trip.dropLatitude != null && trip.dropLongitude != null) {
-      points.add(LatLng(trip.dropLatitude!, trip.dropLongitude!));
-    }
-    return points;
+    return [
+      driver,
+      if (pickup != null) pickup,
+      if (drop != null) drop,
+    ];
   }
 
   Future<void> _refreshRoute(LiveTrip? trip) async {
@@ -199,9 +219,9 @@ class _LiveTrackingPageState extends ConsumerState<LiveTrackingPage> {
                   MarkerLayer(
                     markers: [
                       for (final trip in trips) ...[
-                        if (!_rideStarted(trip) &&
-                            trip.pickupLatitude != null &&
-                            trip.pickupLongitude != null)
+                        if (trip.pickupLatitude != null &&
+                            trip.pickupLongitude != null &&
+                            (!_rideStarted(trip) || !_hasDriverGps(trip)))
                           Marker(
                             point: LatLng(trip.pickupLatitude!, trip.pickupLongitude!),
                             width: 44,
@@ -217,7 +237,7 @@ class _LiveTrackingPageState extends ConsumerState<LiveTrackingPage> {
                             alignment: Alignment.bottomCenter,
                             child: const MapDrop3d(),
                           ),
-                        if (trip.location != null)
+                        if (_hasDriverGps(trip))
                           Marker(
                             point: LatLng(trip.location!.latitude, trip.location!.longitude),
                             width: 56,

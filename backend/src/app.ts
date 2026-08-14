@@ -17,6 +17,7 @@ import { customerRoutes } from "./api/v1/customer/index.js";
 import { driverRoutes } from "./api/v1/driver/index.js";
 import { adminRoutes } from "./api/v1/admin/index.js";
 import { ok } from "./utils/api-response.js";
+import { loadPublicInvoicePdf } from "./services/invoice.service.js";
 
 export async function buildApp() {
   const env = loadEnv();
@@ -55,6 +56,18 @@ export async function buildApp() {
   fs.mkdirSync(path.join(publicDir, "routes"), { recursive: true });
   fs.mkdirSync(path.join(publicDir, "documents"), { recursive: true });
   fs.mkdirSync(path.join(publicDir, "invoices"), { recursive: true });
+
+  app.get("/storage/public/invoices/*", async (req, reply) => {
+    const invoiceNumber = String((req.params as { "*": string })["*"] ?? "");
+    const { invoice, pdfBuffer } = await loadPublicInvoicePdf(invoiceNumber);
+    return reply
+      .header("Cache-Control", "private, max-age=120")
+      .header("Content-Type", "application/pdf")
+      .header("Content-Disposition", `inline; filename="${invoice.invoice_number}.pdf"`)
+      .header("Content-Length", String(pdfBuffer.length))
+      .send(pdfBuffer);
+  });
+
   await app.register(fastifyStatic, {
     root: publicDir,
     prefix: "/storage/public/",

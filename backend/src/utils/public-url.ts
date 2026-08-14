@@ -22,41 +22,71 @@ export function isLoopbackHost(hostOrUrl: string): boolean {
   );
 }
 
-/** Public API origin for shareable links (invoices, uploads). Never prefer loopback when the request came from a real host. */
-export function publicApiOrigin(req?: FastifyRequest): string {
+function isFrontendHost(hostOrUrl: string): boolean {
+  const host = hostnameOf(hostOrUrl);
+  if (!host) return false;
+  if (host.endsWith(".vercel.app")) return true;
   const env = loadEnv();
-  const configured = env.APP_URL.replace(/\/$/, "");
-  if (!isLoopbackHost(configured)) return configured;
+  const web = hostnameOf(env.PUBLIC_WEB_URL);
+  return Boolean(web) && host === web;
+}
 
+function originFromRequest(req?: FastifyRequest): string | null {
+  const env = loadEnv();
   const forwarded = String(req?.headers["x-forwarded-host"] ?? "")
     .split(",")[0]
     ?.trim() ?? "";
   const host = forwarded || (String(req?.headers.host ?? "").split(",")[0]?.trim() ?? "");
-  if (host && !isLoopbackHost(host)) {
-    const proto =
-      String(req?.headers["x-forwarded-proto"] ?? "")
-        .split(",")[0]
-        ?.trim() || (env.NODE_ENV === "production" ? "https" : "http");
-    return `${proto}://${host}`.replace(/\/$/, "");
-  }
+  if (!host || isLoopbackHost(host) || isFrontendHost(host)) return null;
+  const proto =
+    String(req?.headers["x-forwarded-proto"] ?? "")
+      .split(",")[0]
+      ?.trim() || (env.NODE_ENV === "production" ? "https" : "http");
+  return `${proto}://${host}`.replace(/\/$/, "");
+}
 
-  return configured;
+/** Public API origin for shareable links (invoices, uploads). Never use the marketing site. */
+export function publicApiOrigin(req?: FastifyRequest): string {
+  const env = loadEnv();
+  const fromReq = originFromRequest(req);
+  if (fromReq) return fromReq;
+
+  const render = (process.env.RENDER_EXTERNAL_URL ?? "").replace(/\/$/, "");
+  if (render && !isLoopbackHost(render) && !isFrontendHost(render)) return render;
+
+  const configured = env.APP_URL.replace(/\/$/, "");
+  if (!isLoopbackHost(configured) && !isFrontendHost(configured)) return configured;
+
+  return fromReq || render || configured;
+}
+
+export function publicInvoiceApiPath(invoiceNumber: string): string {
+  const num = invoiceNumber.replace(/\.pdf$/i, "").trim();
+  return `/api/v1/public/invoices/${encodeURIComponent(num)}.pdf`;
+}
+
+function rewriteInvoicePath(raw: string): string {
+  const match = raw.match(/\/(?:storage\/public\/invoices|api\/v1\/public\/invoices)\/([^/?#]+)/i);
+  if (!match?.[1]) return raw;
+  return publicInvoiceApiPath(decodeURIComponent(match[1]));
 }
 
 export function absolutePublicUrl(pathOrUrl: string | null | undefined, req?: FastifyRequest): string {
   const origin = publicApiOrigin(req);
-  const raw = (pathOrUrl ?? "").trim();
+  let raw = (pathOrUrl ?? "").trim();
   if (!raw) return origin;
   if (/^https?:\/\//i.test(raw)) {
     try {
       const url = new URL(raw);
-      if (isLoopbackHost(url.hostname)) {
-        return `${origin}${url.pathname}${url.search}`;
+      const path = rewriteInvoicePath(url.pathname);
+      if (isLoopbackHost(url.hostname) || isFrontendHost(url.hostname) || path !== url.pathname) {
+        return `${origin}${path}${url.search}`;
       }
       return raw;
     } catch {
       return raw;
     }
   }
+  raw = rewriteInvoicePath(raw);
   return `${origin}${raw.startsWith("/") ? raw : `/${raw}`}`;
 }
