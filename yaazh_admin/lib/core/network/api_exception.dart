@@ -23,7 +23,11 @@ class ApiException implements Exception {
         final statusCode = error.response?.statusCode;
         final resData = error.response?.data;
         String message = 'An unexpected server error occurred.';
-        if (resData is Map) {
+        if (statusCode == 413) {
+          message = 'That photo is too large. Try a smaller image.';
+        } else if (statusCode == 401 || statusCode == 403) {
+          message = 'Please sign in again to update your photo.';
+        } else if (resData is Map) {
           if (resData['message'] != null) {
             message = resData['message'].toString();
           } else if (resData['error'] != null) {

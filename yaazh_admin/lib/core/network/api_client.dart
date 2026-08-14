@@ -254,16 +254,22 @@ class ApiClient {
     required String filePath,
     String fieldName = 'file',
     String? filename,
+    String? contentType,
     bool silent = false,
   }) async {
     try {
+      final name = filename ?? 'photo.jpg';
+      final mime = (contentType ?? 'image/jpeg').split('/');
       final formData = FormData.fromMap({
         fieldName: await MultipartFile.fromFile(
           filePath,
-          filename: filename ?? 'photo.jpg',
-          contentType: MediaType('image', 'jpeg'),
+          filename: name,
+          contentType: MediaType(mime.first, mime.length > 1 ? mime[1] : 'jpeg'),
         ),
       });
+      if (kDebugMode) {
+        debugPrint('[PROFILE PHOTO] Upload status: posting $name ($contentType)');
+      }
       final response = await _dio.post(
         path,
         data: formData,
@@ -272,10 +278,21 @@ class ApiClient {
           contentType: Headers.multipartFormDataContentType,
         ),
       );
+      if (kDebugMode) {
+        debugPrint('[PROFILE PHOTO] Upload status: ${response.statusCode}');
+        debugPrint('[PROFILE PHOTO] API response: ${_safeBody(response.data)}');
+      }
       return _processResponse(response);
     } on DioException catch (e) {
       throw ApiException.fromDioError(e);
     }
+  }
+
+  String _safeBody(dynamic data) {
+    if (data is Map) {
+      return data.keys.map((k) => k.toString()).join(',');
+    }
+    return data.runtimeType.toString();
   }
 
   dynamic _processResponse(Response response) {

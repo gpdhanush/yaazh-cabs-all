@@ -1,8 +1,10 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:yaazh_admin/app/constants.dart';
 import 'package:yaazh_admin/core/network/api_client.dart';
+import 'package:yaazh_admin/core/network/api_exception.dart';
 import 'package:yaazh_admin/core/notifications/device_service.dart';
 import 'package:yaazh_admin/core/storage/storage_service.dart';
 import 'package:yaazh_admin/features/auth/domain/admin_user.dart';
@@ -61,12 +63,20 @@ class AuthRepository {
     return user;
   }
 
-  Future<AdminUser> uploadPhoto(String filePath) async {
+  Future<AdminUser> uploadPhoto(String filePath, {String? filename, String? contentType}) async {
     final data = await _apiClient.uploadFile(
       '/admin/profile/photo',
       filePath: filePath,
+      filename: filename,
+      contentType: contentType,
     );
-    final user = AdminUser.fromJson(Map<String, dynamic>.from(data as Map));
+    if (data is! Map) {
+      throw ApiException(message: 'Invalid photo upload response.');
+    }
+    final user = AdminUser.fromJson(Map<String, dynamic>.from(data));
+    if (kDebugMode) {
+      debugPrint('[PROFILE PHOTO] Returned photo URL: ${user.avatarUrl}');
+    }
     await _cacheUser(user);
     return user;
   }

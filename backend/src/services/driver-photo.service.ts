@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { prisma } from "../config/database.js";
 import { loadEnv } from "../config/env.js";
+import { prepareStoredImage } from "../utils/jpeg-jfif.js";
 
 export function driverPhotoPublicPath(driverId: bigint | string): string {
   return `/api/v1/public/drivers/${String(driverId)}/photo`;
@@ -90,9 +91,10 @@ export async function saveDriverPhotoBytes(
   if (!sniffed) {
     throw new Error("UNSUPPORTED_IMAGE");
   }
+  const prepared = prepareStoredImage(bytes);
   await ensurePhotoTable();
-  const mime = sniffed.mime || (mimeType && mimeType.startsWith("image/") ? mimeType : "image/jpeg");
-  const b64 = bytes.toString("base64");
+  const mime = sniffImage(prepared)?.mime ?? sniffed.mime;
+  const b64 = prepared.toString("base64");
   await prisma.$executeRaw`
     INSERT INTO driver_profile_photos (driver_id, mime_type, data_base64, updated_at)
     VALUES (${driverId}, ${mime}, ${b64}, NOW())
@@ -134,7 +136,8 @@ export async function loadDriverPhotoBytes(
       const bytes = Buffer.from(row.data_base64, "base64");
       const sniffed = sniffImage(bytes);
       if (sniffed && bytes.length > 0) {
-        return { bytes, mimeType: sniffed.mime };
+        const prepared = prepareStoredImage(bytes);
+        return { bytes: prepared, mimeType: sniffImage(prepared)?.mime ?? sniffed.mime };
       }
     }
   } catch {
@@ -155,7 +158,8 @@ export async function loadDriverPhotoBytes(
       const sniffed = sniffImage(bytes);
       if (sniffed && bytes.length > 0) {
         void saveDriverPhotoBytes(driverId, bytes, sniffed.mime);
-        return { bytes, mimeType: sniffed.mime };
+        const prepared = prepareStoredImage(bytes);
+        return { bytes: prepared, mimeType: sniffImage(prepared)?.mime ?? sniffed.mime };
       }
     }
   }

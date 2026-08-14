@@ -23,14 +23,23 @@ class YaDropdown<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final uniqueItems = <DropdownMenuItem<T>>[];
+    final seen = <T?>{};
+    for (final item in items) {
+      if (seen.contains(item.value)) continue;
+      seen.add(item.value);
+      uniqueItems.add(item);
+    }
+    final selected = seen.contains(value) ? value : null;
+
     return YaField(
       label: label,
       required: required,
       child: DropdownButtonFormField<T>(
-        key: ValueKey('$label-$value'),
-        initialValue: value,
+        key: ValueKey('$label-$selected-${uniqueItems.length}'),
+        initialValue: selected,
         hint: hint == null ? null : Text(hint!),
-        items: items,
+        items: uniqueItems,
         onChanged: onChanged,
         validator: validator,
         isExpanded: true,

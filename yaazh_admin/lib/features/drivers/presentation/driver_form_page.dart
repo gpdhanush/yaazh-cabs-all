@@ -132,17 +132,17 @@ class _DriverFormPageState extends ConsumerState<DriverFormPage> {
     if (!mounted) return;
     final toolbarColor = Theme.of(context).colorScheme.primary;
 
-    final path = await pickAndPrepareImage(
+    final prepared = await pickAndPrepareImage(
       source: source,
       toolbarColor: toolbarColor,
       title: 'Crop driver photo',
     );
-    if (path == null) return;
+    if (prepared == null) return;
 
     try {
       final updated = await ref
           .read(driverRepositoryProvider)
-          .uploadPhoto(widget.driverId!, path);
+          .uploadPhoto(widget.driverId!, prepared.path);
       invalidateDriverCaches(ref, id: widget.driverId);
       setState(() {
         _driver = updated;

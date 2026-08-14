@@ -1,8 +1,11 @@
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:yaazh_admin/core/image_encode.dart';
 import 'package:yaazh_admin/core/network/api_exception.dart';
+import 'package:yaazh_admin/core/network/media_url.dart';
 import 'package:yaazh_admin/core/widgets/admin_avatar.dart';
 import 'package:yaazh_admin/core/widgets/app_toast.dart';
 import 'package:yaazh_admin/core/widgets/keyboard_dismiss.dart';
@@ -111,14 +114,28 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   Future<void> _pickPhoto(ImageSource source) async {
     if (!mounted) return;
     final toolbarColor = Theme.of(context).colorScheme.primary;
-    final path = await pickAndPrepareImage(
-      source: source,
-      toolbarColor: toolbarColor,
-      title: 'Crop profile photo',
-    );
-    if (path == null) return;
     try {
-      final user = await ref.read(authRepositoryProvider).uploadPhoto(path);
+      final prepared = await pickAndPrepareImage(
+        source: source,
+        toolbarColor: toolbarColor,
+        title: 'Crop profile photo',
+      );
+      if (prepared == null) return;
+      final user = await ref.read(authRepositoryProvider).uploadPhoto(
+            prepared.path,
+            filename: prepared.filename,
+            contentType: prepared.mimeType,
+          );
+      final photoUrl = adminPhotoUrl(id: user.id, avatarUrl: user.avatarUrl);
+      if (kDebugMode) {
+        debugPrint('[PROFILE PHOTO] Returned photo URL: $photoUrl');
+        debugPrint(
+          '[PROFILE PHOTO] Image URL validation: ${photoUrl != null && Uri.tryParse(photoUrl)?.hasScheme == true}',
+        );
+      }
+      if (photoUrl != null) {
+        await CachedNetworkImage.evictFromCache(photoUrl);
+      }
       ref.read(authNotifierProvider.notifier).setUser(user);
       if (!mounted) return;
       setState(() {
@@ -126,8 +143,10 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
         _photoBust = DateTime.now().millisecondsSinceEpoch;
       });
       showSuccessToast('Profile photo updated');
+    } on FormatException catch (e) {
+      showErrorToast(e.message);
     } catch (e) {
-      showErrorToast(e is ApiException ? e.message : e.toString());
+      showErrorToast(e is ApiException ? e.message : 'Could not update that photo. Try another image.');
     }
   }
 

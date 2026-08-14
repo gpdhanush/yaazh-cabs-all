@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { prisma } from "../config/database.js";
 import { loadEnv } from "../config/env.js";
+import { prepareStoredImage } from "../utils/jpeg-jfif.js";
 import { resolveStoredFilePath, sniffImage } from "./driver-photo.service.js";
 
 export function adminPhotoPublicPath(adminId: bigint | string): string {
@@ -28,9 +29,10 @@ export async function saveAdminPhotoBytes(
   if (!sniffed) {
     throw new Error("UNSUPPORTED_IMAGE");
   }
-  const mime = sniffed.mime || (mimeHint?.startsWith("image/") ? mimeHint : "image/jpeg");
+  const prepared = prepareStoredImage(bytes);
+  const mime = sniffImage(prepared)?.mime ?? sniffed.mime;
   await ensurePhotoTable();
-  const b64 = bytes.toString("base64");
+  const b64 = prepared.toString("base64");
   await prisma.$executeRaw`
     INSERT INTO admin_profile_photos (admin_id, mime_type, data_base64, updated_at)
     VALUES (${adminId}, ${mime}, ${b64}, NOW())
@@ -41,7 +43,7 @@ export async function saveAdminPhotoBytes(
   const dir = path.resolve(env.STORAGE_PATH, "public", "admins");
   fs.mkdirSync(dir, { recursive: true });
   const filename = `${adminId}${sniffed.ext}`;
-  await fs.promises.writeFile(path.join(dir, filename), bytes);
+  await fs.promises.writeFile(path.join(dir, filename), prepared);
 
   return { mime, publicPath: adminPhotoPublicPath(adminId) };
 }
@@ -67,7 +69,11 @@ export async function loadAdminPhotoBytes(
     const row = rows[0];
     if (row?.data_base64) {
       const bytes = Buffer.from(row.data_base64, "base64");
-      if (bytes.length > 0) return { bytes, mimeType: row.mime_type || "image/jpeg" };
+      const sniffed = sniffImage(bytes);
+      if (sniffed && bytes.length > 0) {
+        const prepared = prepareStoredImage(bytes);
+        return { bytes: prepared, mimeType: sniffImage(prepared)?.mime ?? sniffed.mime };
+      }
     }
   } catch {
     /* table may not exist yet */
@@ -80,7 +86,8 @@ export async function loadAdminPhotoBytes(
       const sniffed = sniffImage(bytes);
       const mime = sniffed?.mime ?? "image/jpeg";
       void saveAdminPhotoBytes(adminId, bytes, mime).catch(() => undefined);
-      return { bytes, mimeType: mime };
+      const prepared = prepareStoredImage(bytes);
+      return { bytes: prepared, mimeType: sniffImage(prepared)?.mime ?? mime };
     }
   }
 

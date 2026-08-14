@@ -1,4 +1,5 @@
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:yaazh_admin/core/network/media_url.dart';
 import 'package:yaazh_admin/features/auth/domain/admin_user.dart';
@@ -36,7 +37,11 @@ class AdminAvatar extends StatelessWidget {
                 fit: BoxFit.cover,
                 fadeInDuration: const Duration(milliseconds: 180),
                 memCacheWidth: (size * 3).round(),
-                errorListener: (_) {},
+                errorListener: (err) {
+                  if (kDebugMode) {
+                    debugPrint('[PROFILE PHOTO] Image URL validation: decode failed for $url ($err)');
+                  }
+                },
                 placeholder: (_, _) => _InitialsBadge(user: user, radius: radius),
                 errorWidget: (_, _, _) => _InitialsBadge(user: user, radius: radius),
               ),

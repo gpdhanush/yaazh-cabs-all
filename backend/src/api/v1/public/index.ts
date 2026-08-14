@@ -25,6 +25,7 @@ export const publicRoutes: FastifyPluginAsync = async (app) => {
     return reply
       .header("Cache-Control", "public, max-age=60")
       .header("Content-Type", photo.mimeType)
+      .header("Content-Length", String(photo.bytes.length))
       .send(photo.bytes);
   });
 
@@ -40,6 +41,7 @@ export const publicRoutes: FastifyPluginAsync = async (app) => {
     return reply
       .header("Cache-Control", "public, max-age=60")
       .header("Content-Type", photo.mimeType)
+      .header("Content-Length", String(photo.bytes.length))
       .send(photo.bytes);
   });
 

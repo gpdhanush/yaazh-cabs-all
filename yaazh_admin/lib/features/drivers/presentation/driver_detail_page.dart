@@ -59,15 +59,15 @@ class _DriverDetailPageState extends ConsumerState<DriverDetailPage> {
     if (!mounted) return;
     final toolbarColor = Theme.of(context).colorScheme.primary;
 
-    final path = await pickAndPrepareImage(
+    final prepared = await pickAndPrepareImage(
       source: source,
       toolbarColor: toolbarColor,
       title: 'Crop driver photo',
     );
-    if (path == null) return;
+    if (prepared == null) return;
 
     try {
-      await ref.read(driverRepositoryProvider).uploadPhoto(widget.driverId, path);
+      await ref.read(driverRepositoryProvider).uploadPhoto(widget.driverId, prepared.path);
       setState(() => _photoBust = DateTime.now().millisecondsSinceEpoch);
       invalidateDriverCaches(ref, id: widget.driverId);
       showSuccessToast('Driver photo updated');
