@@ -1,12 +1,15 @@
-import 'package:yaazh_admin/app/constants.dart';
+import 'package:yaazh_admin/core/config/app_config.dart';
 
-const apiBaseUrl = String.fromEnvironment(
-  'API_BASE_URL',
-  defaultValue: AppConstants.defaultBaseUrl,
-);
+String get apiBaseUrl => AppConfig.apiBaseUrl;
 
-String get apiOrigin =>
-    apiBaseUrl.replaceFirst(RegExp(r'/api(?:/v1)?/?$'), '');
+String get apiOrigin => AppConfig.appUrl;
+
+bool _isLoopback(String host) {
+  return host == 'localhost' ||
+      host == '127.0.0.1' ||
+      host == '10.0.2.2' ||
+      host == '::1';
+}
 
 String? resolveMediaUrl(String? raw) {
   if (raw == null) return null;
@@ -15,7 +18,7 @@ String? resolveMediaUrl(String? raw) {
 
   final uri = Uri.tryParse(value);
   if (uri != null && uri.hasScheme && (uri.isScheme('http') || uri.isScheme('https'))) {
-    if (uri.host == 'localhost' || uri.host == '127.0.0.1' || uri.host == '10.0.2.2') {
+    if (_isLoopback(uri.host)) {
       return '$apiOrigin${uri.path}${uri.hasQuery ? '?${uri.query}' : ''}';
     }
     return value;

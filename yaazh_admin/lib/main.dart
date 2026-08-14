@@ -6,11 +6,13 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:yaazh_admin/app/constants.dart';
 import 'package:yaazh_admin/app/router.dart';
 import 'package:yaazh_admin/app/theme.dart';
+import 'package:yaazh_admin/core/config/app_config.dart';
 import 'package:yaazh_admin/core/theme/theme_controller.dart';
 import 'package:yaazh_admin/core/widgets/app_toast.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await AppConfig.load();
   _configureEasyLoading();
   SystemChrome.setSystemUIOverlayStyle(AppTheme.overlayFor(AppColors.primary));
   runApp(

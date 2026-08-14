@@ -2,19 +2,14 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:yaazh_admin/app/constants.dart';
+import 'package:yaazh_admin/core/config/app_config.dart';
 import 'package:yaazh_admin/core/network/api_exception.dart';
 import 'package:yaazh_admin/core/storage/storage_service.dart';
 
 final dioProvider = Provider<Dio>((ref) {
-  const String baseUrl = String.fromEnvironment(
-    'API_BASE_URL',
-    defaultValue: AppConstants.defaultBaseUrl,
-  );
-
   final dio = Dio(
     BaseOptions(
-      baseUrl: baseUrl,
+      baseUrl: AppConfig.apiBaseUrl,
       connectTimeout: const Duration(seconds: 20),
       receiveTimeout: const Duration(seconds: 20),
       headers: {
@@ -55,7 +50,7 @@ final dioProvider = Provider<Dio>((ref) {
 
             final refreshDio = Dio(
               BaseOptions(
-                baseUrl: baseUrl,
+                baseUrl: AppConfig.apiBaseUrl,
                 connectTimeout: const Duration(seconds: 15),
                 receiveTimeout: const Duration(seconds: 15),
                 headers: {
