@@ -4,6 +4,12 @@ String get apiBaseUrl => AppConfig.apiBaseUrl;
 
 String get apiOrigin => AppConfig.appUrl;
 
+String get backendOrigin {
+  final fromApi = apiBaseUrl.replaceFirst(RegExp(r'/api(?:/v1)?/?$'), '');
+  if (fromApi.isNotEmpty) return fromApi.replaceFirst(RegExp(r'/+$'), '');
+  return apiOrigin;
+}
+
 bool _isLoopback(String host) {
   return host == 'localhost' ||
       host == '127.0.0.1' ||
@@ -16,22 +22,20 @@ final _loopbackUrl = RegExp(
   caseSensitive: false,
 );
 
+final _invoiceShareUrl = RegExp(
+  r'https?://[^/\s]+/(?:storage/public/invoices|api/v1/public/invoices)/([^\s/?#]+)',
+  caseSensitive: false,
+);
+
 String rewriteLoopbackUrls(String text) {
-  final origin = apiOrigin;
   var next = text.replaceAllMapped(_loopbackUrl, (match) {
     final path = match.group(1) ?? '';
-    return '$origin$path';
+    return '$backendOrigin$path';
   });
-  next = next.replaceAllMapped(
-    RegExp(
-      r'https?://[^/\s]+/(?:storage/public/invoices|api/v1/public/invoices)/([^\s/?#]+)',
-      caseSensitive: false,
-    ),
-    (match) {
-      final file = match.group(1) ?? '';
-      return '$origin/api/v1/public/invoices/$file';
-    },
-  );
+  next = next.replaceAllMapped(_invoiceShareUrl, (match) {
+    final file = match.group(1) ?? '';
+    return '$backendOrigin/api/v1/public/invoices/$file';
+  });
   return next;
 }
 
@@ -57,19 +61,19 @@ String? resolveMediaUrl(String? raw) {
   final uri = Uri.tryParse(value);
   if (uri != null && uri.hasScheme && (uri.isScheme('http') || uri.isScheme('https'))) {
     if (_isLoopback(uri.host) ||
-        uri.host.endsWith('.vercel.app') ||
-        uri.path.contains('/storage/public/invoices/')) {
+        uri.path.contains('/storage/public/invoices/') ||
+        uri.path.contains('/api/v1/public/invoices/')) {
       final path = uri.path.contains('/storage/public/invoices/')
           ? uri.path.replaceFirst('/storage/public/invoices/', '/api/v1/public/invoices/')
           : uri.path;
-      return '$apiOrigin$path${uri.hasQuery ? '?${uri.query}' : ''}';
+      return '$backendOrigin$path${uri.hasQuery ? '?${uri.query}' : ''}';
     }
     return value;
   }
 
   if (value.startsWith('//')) return 'https:$value';
-  if (value.startsWith('/')) return '$apiOrigin$value';
-  return '$apiOrigin/$value';
+  if (value.startsWith('/')) return '$backendOrigin$value';
+  return '$backendOrigin/$value';
 }
 
 String? driverPhotoUrl({String? id, String? photoUrl}) {
