@@ -23,8 +23,8 @@ export const publicRoutes: FastifyPluginAsync = async (app) => {
     const photo = await loadDriverPhotoBytes(id);
     if (!photo) throw new NotFoundError("Driver photo not found.");
     return reply
-      .header("Cache-Control", "public, max-age=300")
-      .type(photo.mimeType)
+      .header("Cache-Control", "public, max-age=60")
+      .header("Content-Type", photo.mimeType)
       .send(photo.bytes);
   });
 
@@ -39,7 +39,7 @@ export const publicRoutes: FastifyPluginAsync = async (app) => {
     if (!photo) throw new NotFoundError("Admin photo not found.");
     return reply
       .header("Cache-Control", "public, max-age=60")
-      .type(photo.mimeType)
+      .header("Content-Type", photo.mimeType)
       .send(photo.bytes);
   });
 

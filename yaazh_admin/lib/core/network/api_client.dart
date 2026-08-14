@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:http_parser/http_parser.dart';
 import 'package:yaazh_admin/core/config/app_config.dart';
 import 'package:yaazh_admin/core/network/api_exception.dart';
 import 'package:yaazh_admin/core/network/firebase_perf_interceptor.dart';
@@ -259,7 +260,8 @@ class ApiClient {
       final formData = FormData.fromMap({
         fieldName: await MultipartFile.fromFile(
           filePath,
-          filename: filename ?? filePath.split(RegExp(r'[/\\]')).last,
+          filename: filename ?? 'photo.jpg',
+          contentType: MediaType('image', 'jpeg'),
         ),
       });
       final response = await _dio.post(

@@ -102,7 +102,19 @@ class _BookingDetailPageState extends ConsumerState<BookingDetailPage> {
                       context.push('/bookings/${b.id}/assign');
                     },
                     icon: const Icon(Icons.assignment_ind_rounded),
-                    label: const Text('ASSIGN DRIVER'),
+                    label: Text(
+                      b.assignedDriverId != null && b.assignedDriverId!.isNotEmpty
+                          ? 'RE-ASSIGN DRIVER'
+                          : 'ASSIGN DRIVER',
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+                if (BookingStatus.canComplete(b.status)) ...[
+                  ElevatedButton.icon(
+                    onPressed: () => _completeRide(b),
+                    icon: const Icon(Icons.flag_rounded),
+                    label: const Text('COMPLETE RIDE'),
                   ),
                   const SizedBox(height: 12),
                 ],
@@ -194,8 +206,8 @@ class _BookingDetailPageState extends ConsumerState<BookingDetailPage> {
                             IconButton.filled(
                               onPressed: () => launchUrl(Uri.parse('tel:${b.driver!.phone}')),
                               style: IconButton.styleFrom(
-                                backgroundColor: AppColors.primary,
-                                foregroundColor: Colors.white,
+                                backgroundColor: theme.colorScheme.primary,
+                                foregroundColor: theme.colorScheme.onPrimary,
                               ),
                               icon: const Icon(Icons.phone_rounded),
                             ),
@@ -246,6 +258,29 @@ class _BookingDetailPageState extends ConsumerState<BookingDetailPage> {
         ),
       ),
     );
+  }
+
+  Future<void> _completeRide(Booking b) async {
+    hideKeyboard();
+    final ok = await showConfirmSheet(
+      context,
+      title: 'Complete this ride?',
+      message:
+          'The trip will be marked complete without odometer km. Estimated fare will be used as the final amount.',
+      actionLabel: 'Complete ride',
+      icon: Icons.flag_rounded,
+      destructive: false,
+    );
+    if (!ok) return;
+    try {
+      await ref.read(bookingRepositoryProvider).completeTrip(b.id);
+      await _reload();
+      ref.invalidate(liveTripsProvider);
+      ref.invalidate(driversProvider);
+      showSuccessToast('Ride completed');
+    } catch (e) {
+      showErrorToast(e is ApiException ? e.message : e.toString());
+    }
   }
 
   Future<void> _confirm(Booking b) async {
@@ -318,7 +353,7 @@ class _BookingDetailPageState extends ConsumerState<BookingDetailPage> {
           'The invoice PDF link will open in WhatsApp for ${b.customerName} (${b.customerPhone}).',
       actionLabel: 'Send on WhatsApp',
       icon: Icons.picture_as_pdf_rounded,
-      dangerColor: AppColors.primary,
+      destructive: false,
     );
     if (!ok) return;
     try {
@@ -343,7 +378,7 @@ class _BookingDetailPageState extends ConsumerState<BookingDetailPage> {
           'A rating page link will open in WhatsApp for ${b.customerName}. They can tap stars and pick a quick review.',
       actionLabel: 'Send on WhatsApp',
       icon: Icons.star_rate_rounded,
-      dangerColor: AppColors.primary,
+      destructive: false,
     );
     if (!ok) return;
     try {

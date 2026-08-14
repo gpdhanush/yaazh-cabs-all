@@ -2,15 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:yaazh_admin/core/network/api_exception.dart';
-import 'package:yaazh_admin/core/network/media_url.dart';
 import 'package:yaazh_admin/core/widgets/app_toast.dart';
 import 'package:yaazh_admin/core/widgets/coming_soon.dart';
+import 'package:yaazh_admin/core/widgets/driver_avatar.dart';
 import 'package:yaazh_admin/core/widgets/keyboard_dismiss.dart';
 import 'package:yaazh_admin/core/widgets/status_chip.dart';
 import 'package:yaazh_admin/core/widgets/ya_dropdown.dart';
 import 'package:yaazh_admin/core/widgets/ya_loader.dart';
 import 'package:yaazh_admin/features/bookings/data/booking_repository.dart';
 import 'package:yaazh_admin/features/bookings/domain/booking.dart';
+import 'package:yaazh_admin/features/drivers/domain/driver.dart';
 import 'package:yaazh_admin/features/home/data/dashboard_repository.dart';
 
 class AssignDriverPage extends ConsumerStatefulWidget {
@@ -27,8 +28,9 @@ class _AssignDriverPageState extends ConsumerState<AssignDriverPage> {
   String _vehicleId = '';
   String _query = '';
   bool _saving = false;
+  bool _hydrated = false;
 
-  Future<void> _submit() async {
+  Future<void> _submit({required bool isReassign}) async {
     hideKeyboard();
     if (_driverId == null) {
       showErrorToast('Select a driver');
@@ -43,9 +45,14 @@ class _AssignDriverPageState extends ConsumerState<AssignDriverPage> {
           );
       ref.invalidate(bookingDetailProvider(widget.bookingId));
       ref.invalidate(bookingsProvider);
+      ref.invalidate(driversProvider);
       ref.invalidate(dashboardStatsProvider);
       ref.invalidate(liveTripsProvider);
-      showSuccessToast('Driver assigned. Customer and driver notified.');
+      showSuccessToast(
+        isReassign
+            ? 'Driver reassigned. Customer and drivers notified.'
+            : 'Driver assigned. Customer and driver notified.',
+      );
       if (mounted) context.pop();
     } catch (e) {
       showErrorToast(e is ApiException ? e.message : e.toString());
@@ -72,14 +79,28 @@ class _AssignDriverPageState extends ConsumerState<AssignDriverPage> {
             icon: Icons.cloud_off_rounded,
           ),
           data: (booking) {
+            if (!_hydrated) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (!mounted || _hydrated) return;
+                setState(() {
+                  _hydrated = true;
+                  _driverId = booking.assignedDriverId;
+                  _vehicleId = booking.vehicle?.id ?? '';
+                });
+              });
+            }
+
             if (!BookingStatus.canAssign(booking.status)) {
               return EmptyState(
                 title: 'Cannot assign',
-                subtitle: 'This booking is ${BookingStatus.label(booking.status).toLowerCase()}.',
+                subtitle:
+                    'This booking is ${BookingStatus.label(booking.status).toLowerCase()}.',
                 icon: Icons.lock_outline_rounded,
               );
             }
 
+            final currentId = booking.assignedDriverId;
+            final isReassign = currentId != null && currentId.isNotEmpty;
             final drivers = driversAsync.valueOrNull
                     ?.where((d) => d.isActive)
                     .where((d) {
@@ -105,6 +126,15 @@ class _AssignDriverPageState extends ConsumerState<AssignDriverPage> {
                   '${booking.customerName} · ${booking.pickupLocation} → ${booking.dropLocation}',
                   style: theme.textTheme.bodySmall,
                 ),
+                if (isReassign) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    'Currently assigned: ${booking.driver?.name ?? 'Driver'}. Select another driver to re-assign.',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 16),
                 TextField(
                   onChanged: (v) => setState(() => _query = v),
@@ -128,6 +158,10 @@ class _AssignDriverPageState extends ConsumerState<AssignDriverPage> {
                 else
                   ...drivers.map((d) {
                     final selected = _driverId == d.id;
+                    final onRide = d.availabilityStatus == 'on_trip' &&
+                        d.id != currentId;
+                    final disabled = onRide;
+
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 8),
                       child: Material(
@@ -137,37 +171,74 @@ class _AssignDriverPageState extends ConsumerState<AssignDriverPage> {
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14),
                           side: BorderSide(
-                            color: selected ? theme.colorScheme.primary : theme.dividerColor,
+                            color: selected
+                                ? theme.colorScheme.primary
+                                : theme.dividerColor,
                             width: selected ? 1.6 : 1,
                           ),
                         ),
                         child: InkWell(
                           borderRadius: BorderRadius.circular(14),
-                          onTap: () {
-                            hideKeyboard();
-                            setState(() => _driverId = d.id);
-                          },
-                          child: ListTile(
-                            leading: CircleAvatar(
-                              backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.14),
-                              backgroundImage: driverPhotoUrl(id: d.id, photoUrl: d.photoUrl) != null
-                                  ? NetworkImage(driverPhotoUrl(id: d.id, photoUrl: d.photoUrl)!)
-                                  : null,
-                              child: driverPhotoUrl(id: d.id, photoUrl: d.photoUrl) == null
-                                  ? Text(d.name.isNotEmpty ? d.name[0].toUpperCase() : 'D')
-                                  : null,
+                          onTap: disabled
+                              ? null
+                              : () {
+                                  hideKeyboard();
+                                  setState(() => _driverId = d.id);
+                                },
+                          child: Opacity(
+                            opacity: disabled ? 0.55 : 1,
+                            child: ListTile(
+                              enabled: !disabled,
+                              leading: DriverAvatar(
+                                id: d.id,
+                                name: d.name,
+                                photoUrl: d.photoUrl,
+                                radius: 22,
+                              ),
+                              title: Text(
+                                d.name,
+                                style: TextStyle(
+                                  color: disabled
+                                      ? theme.disabledColor
+                                      : null,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              subtitle: Text(
+                                onRide
+                                    ? 'On ride'
+                                    : [
+                                        d.phone,
+                                        if (d.id == currentId) 'Assigned',
+                                        if (d.availabilityStatus != null &&
+                                            d.id != currentId)
+                                          DriverMeta.availabilityLabel(
+                                            d.availabilityStatus!,
+                                          ),
+                                      ].join(' · '),
+                                style: onRide
+                                    ? TextStyle(
+                                        color: theme.colorScheme.primary,
+                                        fontWeight: FontWeight.w700,
+                                      )
+                                    : null,
+                              ),
+                              trailing: disabled
+                                  ? Text(
+                                      'On ride',
+                                      style: theme.textTheme.labelLarge
+                                          ?.copyWith(
+                                        color: theme.colorScheme.primary,
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                    )
+                                  : selected
+                                      ? Icon(
+                                          Icons.check_circle_rounded,
+                                          color: theme.colorScheme.primary,
+                                        )
+                                      : const Icon(Icons.circle_outlined),
                             ),
-                            title: Text(d.name),
-                            subtitle: Text(
-                              [
-                                d.phone,
-                                if (d.availabilityStatus != null)
-                                  d.availabilityStatus!.replaceAll('_', ' '),
-                              ].join(' · '),
-                            ),
-                            trailing: selected
-                                ? Icon(Icons.check_circle_rounded, color: theme.colorScheme.primary)
-                                : const Icon(Icons.circle_outlined),
                           ),
                         ),
                       ),
@@ -190,8 +261,16 @@ class _AssignDriverPageState extends ConsumerState<AssignDriverPage> {
                 ),
                 const SizedBox(height: 24),
                 ElevatedButton(
-                  onPressed: _saving ? null : _submit,
-                  child: Text(_saving ? 'SAVING…' : 'ASSIGN DRIVER'),
+                  onPressed: _saving
+                      ? null
+                      : () => _submit(isReassign: isReassign),
+                  child: Text(
+                    _saving
+                        ? 'SAVING…'
+                        : isReassign
+                            ? 'RE-ASSIGN DRIVER'
+                            : 'ASSIGN DRIVER',
+                  ),
                 ),
               ],
             );

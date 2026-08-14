@@ -11,12 +11,15 @@ Future<bool> showConfirmSheet(
   String cancelLabel = 'Cancel',
   IconData icon = Icons.warning_amber_rounded,
   Color? dangerColor,
+  bool destructive = true,
 }) async {
-  final color = dangerColor ?? AppColors.salmon;
   final result = await showYaSheet<bool>(
     context: context,
     builder: (ctx) {
       final theme = Theme.of(ctx);
+      final color = destructive
+          ? (dangerColor ?? AppColors.salmon)
+          : (dangerColor ?? theme.colorScheme.primary);
       return Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -42,7 +45,7 @@ Future<bool> showConfirmSheet(
           const SizedBox(height: 24),
           SizedBox(
             width: double.infinity,
-            child: color == AppColors.salmon
+            child: destructive
                 ? YaDangerButton(
                     onPressed: () {
                       FocusManager.instance.primaryFocus?.unfocus();
@@ -51,10 +54,6 @@ Future<bool> showConfirmSheet(
                     label: actionLabel,
                   )
                 : ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: color,
-                      foregroundColor: Colors.white,
-                    ),
                     onPressed: () {
                       FocusManager.instance.primaryFocus?.unfocus();
                       Navigator.of(ctx).pop(true);

@@ -177,7 +177,17 @@ import { YaModalPortalDirective } from '../../shared/ya-modal-portal.directive';
                   <select id="assign-driver" class="ya-field__control" [(ngModel)]="driverId">
                     <option value="">Select driver</option>
                     @for (d of drivers(); track d.id) {
-                      <option [value]="d.id">{{ d.name }} · {{ d.phone }}</option>
+                      <option
+                        [value]="d.id"
+                        [disabled]="d.availability_status === 'on_trip' && d.id !== b.assigned_driver_id"
+                      >
+                        {{ d.name }}
+                        @if (d.availability_status === 'on_trip' && d.id !== b.assigned_driver_id) {
+                          · On ride
+                        } @else {
+                          · {{ d.phone }}
+                        }
+                      </option>
                     }
                   </select>
                 </div>
@@ -188,7 +198,7 @@ import { YaModalPortalDirective } from '../../shared/ya-modal-portal.directive';
                   [disabled]="!driverId || busy()"
                   (click)="assign()"
                 >
-                  {{ busy() ? 'Assigning…' : 'Assign driver' }}
+                  {{ busy() ? 'Assigning…' : b.assigned_driver_id ? 'Re-assign driver' : 'Assign driver' }}
                 </button>
               </div>
             } @else {
@@ -412,7 +422,7 @@ export class BookingDetailPage implements OnInit {
   private readonly snack = inject(MatSnackBar);
 
   readonly booking = signal<Booking | null>(null);
-  readonly drivers = signal<Array<{ id: string; name: string; phone: string }>>([]);
+  readonly drivers = signal<Array<{ id: string; name: string; phone: string; availability_status: string }>>([]);
   readonly error = signal<string | null>(null);
   readonly busy = signal(false);
   readonly sendOpen = signal(false);
@@ -437,6 +447,7 @@ export class BookingDetailPage implements OnInit {
             id: String(d['id']),
             name: String(d['name'] ?? 'Driver'),
             phone: String(d['phone'] ?? ''),
+            availability_status: String(d['availability_status'] ?? 'available'),
           })),
         );
       },

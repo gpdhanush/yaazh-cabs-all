@@ -46,7 +46,7 @@ class Driver {
       licenseNo: json['license_no']?.toString(),
       licenseExpiryDate: json['license_expiry_date']?.toString(),
       address: json['address']?.toString(),
-      photoUrl: json['profile_image_url']?.toString() ?? json['photo_url']?.toString(),
+      photoUrl: json['photo_url']?.toString() ?? json['profile_image_url']?.toString(),
       verificationStatus: json['verification_status']?.toString() ?? 'pending',
       onlineStatus: json['online_status']?.toString() ?? 'offline',
       availabilityStatus: json['availability_status']?.toString() ?? 'available',

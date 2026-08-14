@@ -32,7 +32,7 @@ class PushNotificationService {
     _instance = this;
 
     try {
-      const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
+      const androidInit = AndroidInitializationSettings('@drawable/ic_stat_yaazh');
       await _local.initialize(
         const InitializationSettings(android: androidInit),
         onDidReceiveNotificationResponse: _onLocalTap,
@@ -103,7 +103,12 @@ class PushNotificationService {
             channelDescription: 'Bookings, trips, enquiries, and customer alerts',
             importance: Importance.high,
             priority: Priority.high,
-            icon: '@mipmap/ic_launcher',
+            icon: '@drawable/ic_stat_yaazh',
+            largeIcon: DrawableResourceAndroidBitmap('@mipmap/ic_notification_large'),
+            styleInformation: BigPictureStyleInformation(
+              DrawableResourceAndroidBitmap('@mipmap/ic_notification_large'),
+              hideExpandedLargeIcon: true,
+            ),
             color: AppColors.primary,
             playSound: true,
             enableVibration: true,

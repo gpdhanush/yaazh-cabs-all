@@ -295,7 +295,12 @@ class _BookingCard extends ConsumerWidget {
                             hideKeyboard();
                             context.push('/bookings/${b.id}/assign');
                           },
-                          child: const Text('ASSIGN DRIVER'),
+                          child: Text(
+                            b.assignedDriverId != null &&
+                                    b.assignedDriverId!.isNotEmpty
+                                ? 'RE-ASSIGN DRIVER'
+                                : 'ASSIGN DRIVER',
+                          ),
                         ),
                       ),
                   ],

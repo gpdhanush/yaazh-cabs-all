@@ -8,7 +8,7 @@ import { loadEnv } from "../../../config/env.js";
 import { ok } from "../../../utils/api-response.js";
 import { requireAuth, requirePermission, requireUser } from "../../../middleware/auth.js";
 import { bookingService, serializeBooking, serializeDriverParty, getBookingPaymentSummary, recordBookingPayment, setBookingPaymentStatus } from "../../../services/booking.service.js";
-import { saveDriverPhotoBytes } from "../../../services/driver-photo.service.js";
+import { saveDriverPhotoBytes, driverPhotoPublicPath } from "../../../services/driver-photo.service.js";
 import {
   adminPhotoPublicPath,
   deleteAdminPhoto,
@@ -1222,6 +1222,18 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
     },
   );
 
+  app.post(
+    "/bookings/:id/complete",
+    { preHandler: [requirePermission("bookings.update")] },
+    async (req, reply) => {
+      const user = requireUser(req);
+      const id = BigInt((req.params as { id: string }).id);
+      const data = await bookingService.completeByAdmin(id, user.id);
+      await audit(user.id, "booking.complete", "bookings", String(id), null, data, req);
+      return ok(reply, data, "Trip completed.");
+    },
+  );
+
   app.get(
     "/bookings/:id/payment",
     { preHandler: [requirePermission("bookings.view")] },
@@ -1510,32 +1522,21 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
     const existing = await prisma.drivers.findUnique({ where: { id } });
     if (!existing) throw new NotFoundError();
 
-    const env = loadEnv();
     const file = await req.file();
     if (!file) throw new ValidationError("Image file is required.");
     const mime = file.mimetype || "";
     if (!mime.startsWith("image/")) throw new ValidationError("Only image uploads are allowed.");
 
-    const extFromName = path.extname(file.filename || "").toLowerCase();
-    const ext =
-      extFromName && [".jpg", ".jpeg", ".png", ".webp", ".gif"].includes(extFromName)
-        ? extFromName
-        : mime === "image/png"
-          ? ".png"
-          : mime === "image/webp"
-            ? ".webp"
-            : mime === "image/gif"
-              ? ".gif"
-              : ".jpg";
-
-    const filename = `${id}-${Date.now()}-${randomUUID().slice(0, 8)}${ext}`;
-    const dir = path.resolve(env.STORAGE_PATH, "public", "documents");
-    fs.mkdirSync(dir, { recursive: true });
     const bytes = await file.toBuffer();
-    await fs.promises.writeFile(path.join(dir, filename), bytes);
-
-    const relativeUrl = `/storage/public/documents/${filename}`;
-    await saveDriverPhotoBytes(id, bytes, mime);
+    try {
+      await saveDriverPhotoBytes(id, bytes, mime);
+    } catch (err) {
+      if (err instanceof Error && err.message === "UNSUPPORTED_IMAGE") {
+        throw new ValidationError("Use a JPEG, PNG, WebP, or GIF photo.");
+      }
+      throw err;
+    }
+    const relativeUrl = driverPhotoPublicPath(id);
     const d = await prisma.drivers.update({
       where: { id },
       data: { profile_image_url: relativeUrl },

@@ -2,27 +2,10 @@ import fs from "node:fs";
 import path from "node:path";
 import { prisma } from "../config/database.js";
 import { loadEnv } from "../config/env.js";
-import { resolveStoredFilePath } from "./driver-photo.service.js";
+import { resolveStoredFilePath, sniffImage } from "./driver-photo.service.js";
 
 export function adminPhotoPublicPath(adminId: bigint | string): string {
   return `/api/v1/public/admins/${String(adminId)}/photo`;
-}
-
-function sniffImage(bytes: Buffer): { mime: string; ext: string } | null {
-  if (bytes.length < 12) return null;
-  if (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) {
-    return { mime: "image/jpeg", ext: ".jpg" };
-  }
-  if (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47) {
-    return { mime: "image/png", ext: ".png" };
-  }
-  if (bytes[0] === 0x47 && bytes[1] === 0x49 && bytes[2] === 0x46) {
-    return { mime: "image/gif", ext: ".gif" };
-  }
-  if (bytes.toString("ascii", 0, 4) === "RIFF" && bytes.toString("ascii", 8, 12) === "WEBP") {
-    return { mime: "image/webp", ext: ".webp" };
-  }
-  return null;
 }
 
 async function ensurePhotoTable(): Promise<void> {

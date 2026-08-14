@@ -515,16 +515,80 @@ export const bookingService = {
         "driver_notified",
         "driver_accepted",
         "driver_rejected",
+        "driver_assigned",
+        "on_the_way",
+        "arrived",
       ];
       if (!assignable.includes(booking.status)) {
         throw new ConflictError(`Cannot assign driver while booking is ${booking.status}.`);
       }
-      if (booking.assigned_driver_id && booking.assigned_driver_id !== params.driverId) {
-        throw new ConflictError("Booking already has a different driver assigned.");
-      }
+
+      const previousDriverId = booking.assigned_driver_id;
+      const isReassign = previousDriverId != null && previousDriverId !== params.driverId;
 
       const driver = await tx.drivers.findUnique({ where: { id: params.driverId } });
       if (!driver || !driver.is_active) throw new NotFoundError("Driver not found.");
+      if (driver.availability_status === "on_leave" || driver.availability_status === "suspended") {
+        throw new ConflictError("That driver is not available.");
+      }
+
+      const busyOnOtherTrip = await tx.bookings.count({
+        where: {
+          assigned_driver_id: params.driverId,
+          id: { not: booking.id },
+          status: {
+            in: [
+              "driver_notified",
+              "driver_accepted",
+              "driver_assigned",
+              "on_the_way",
+              "arrived",
+              "trip_started",
+            ],
+          },
+        },
+      });
+      if (busyOnOtherTrip > 0) {
+        throw new ConflictError("That driver is already on a ride.");
+      }
+
+      let previousDriver: { id: bigint; name: string; phone: string } | null = null;
+      if (isReassign && previousDriverId) {
+        previousDriver = await tx.drivers.findUnique({
+          where: { id: previousDriverId },
+          select: { id: true, name: true, phone: true },
+        });
+        await tx.bookingDriverOffers.updateMany({
+          where: {
+            booking_id: booking.id,
+            driver_id: previousDriverId,
+            status: { in: ["sent", "seen", "accepted"] },
+          },
+          data: { status: "expired" },
+        });
+        const stillBusy = await tx.bookings.count({
+          where: {
+            assigned_driver_id: previousDriverId,
+            id: { not: booking.id },
+            status: {
+              in: [
+                "driver_notified",
+                "driver_accepted",
+                "driver_assigned",
+                "on_the_way",
+                "arrived",
+                "trip_started",
+              ],
+            },
+          },
+        });
+        if (stillBusy === 0) {
+          await tx.drivers.update({
+            where: { id: previousDriverId },
+            data: { online_status: "online", availability_status: "available" },
+          });
+        }
+      }
 
       let status: BookingStatus = booking.status;
       if (status === "pending") {
@@ -591,7 +655,9 @@ export const bookingService = {
           booking_id: booking.id,
           old_status: status,
           new_status: "driver_assigned",
-          note: `Driver assigned by admin: ${driver.name}`,
+          note: isReassign
+            ? `Driver reassigned by admin: ${previousDriver?.name ?? "previous"} → ${driver.name}`
+            : `Driver assigned by admin: ${driver.name}`,
           changed_by_type: "admin",
           changed_by_admin_id: params.adminId,
         },
@@ -617,18 +683,32 @@ export const bookingService = {
         offerId: offer.id,
         driver,
         previousStatus: booking.status,
+        isReassign,
+        previousDriver,
       };
     });
 
     const b = result.booking;
     const pickupTime = b.pickup_at.toISOString();
+    const reassigned = result.isReassign;
+
+    if (reassigned && result.previousDriver) {
+      await deliverBookingNotification({
+        recipientType: "driver",
+        driverId: String(result.previousDriver.id),
+        bookingId: String(b.id),
+        jobType: "notify_driver_unassigned",
+        title: "Trip reassigned",
+        body: `Trip ${b.booking_reference} was assigned to another driver.`,
+      });
+    }
 
     await deliverBookingNotification({
       recipientType: "driver",
       driverId: String(params.driverId),
       bookingId: String(b.id),
       jobType: "notify_driver_assigned",
-      title: "New trip assigned",
+      title: reassigned ? "Trip reassigned to you" : "New trip assigned",
       body: `Trip ${b.booking_reference}: ${b.pickup_location} → ${b.drop_location}. Pickup ${pickupTime}. Fare ≈ ₹${b.estimated_total?.toString() ?? "0"}.`,
     });
 
@@ -638,8 +718,10 @@ export const bookingService = {
         customerId: String(b.customer_id),
         bookingId: String(b.id),
         jobType: "notify_booking_driver_assigned",
-        title: "Driver assigned",
-        body: `Driver ${result.driver.name} (${result.driver.phone}) is assigned to your booking ${b.booking_reference}.`,
+        title: reassigned ? "Driver changed" : "Driver assigned",
+        body: reassigned
+          ? `Your driver for ${b.booking_reference} is now ${result.driver.name} (${result.driver.phone}).`
+          : `Driver ${result.driver.name} (${result.driver.phone}) is assigned to your booking ${b.booking_reference}.`,
       });
     }
 
@@ -888,6 +970,145 @@ export const bookingService = {
       await sendBookingInvoiceEmail(final.id);
     } catch (err) {
       console.error("Invoice email after trip close failed:", err instanceof Error ? err.message : err);
+    }
+
+    return serializeBooking(final);
+  },
+
+  /**
+   * Admin completes a trip without odometer readings.
+   * Uses estimated fare/distance. Allowed until the trip is already closed.
+   */
+  async completeByAdmin(bookingId: bigint, adminId: bigint) {
+    const completable: BookingStatus[] = [
+      "driver_assigned",
+      "on_the_way",
+      "arrived",
+      "trip_started",
+    ];
+
+    const final = await prisma.$transaction(async (tx) => {
+      const rows = await tx.$queryRaw<
+        Array<{
+          id: bigint;
+          status: BookingStatus;
+          assigned_driver_id: bigint | null;
+          estimated_total: Prisma.Decimal | null;
+          estimated_distance_km: Prisma.Decimal | null;
+          actual_distance_km: Prisma.Decimal | null;
+        }>
+      >`SELECT id, status, assigned_driver_id, estimated_total, estimated_distance_km, actual_distance_km
+        FROM bookings WHERE id = ${bookingId} FOR UPDATE`;
+      const booking = rows[0];
+      if (!booking) throw new NotFoundError("Booking not found.");
+      if (!completable.includes(booking.status)) {
+        throw new ConflictError(`Cannot complete booking while status is ${booking.status}.`);
+      }
+
+      const distance =
+        booking.actual_distance_km != null
+          ? Number(booking.actual_distance_km)
+          : booking.estimated_distance_km != null
+            ? Number(booking.estimated_distance_km)
+            : null;
+
+      const updated = await tx.bookings.update({
+        where: { id: bookingId },
+        data: {
+          status: "completed",
+          completed_at: new Date(),
+          final_total: booking.estimated_total,
+          ...(distance != null && Number.isFinite(distance)
+            ? { actual_distance_km: new Prisma.Decimal(Math.round(distance * 100) / 100) }
+            : {}),
+        },
+      });
+
+      await tx.bookingStatusHistory.create({
+        data: {
+          booking_id: bookingId,
+          old_status: booking.status,
+          new_status: "completed",
+          note: "Trip completed by admin (odometer not recorded)",
+          changed_by_type: "admin",
+          changed_by_admin_id: adminId,
+        },
+      });
+
+      await tx.tripEvents.create({
+        data: {
+          booking_id: bookingId,
+          driver_id: booking.assigned_driver_id,
+          event_type: "trip_completed",
+          event_note: "Completed by admin without odometer",
+          created_by_type: "admin",
+          created_by_admin_id: adminId,
+        },
+      });
+
+      if (booking.assigned_driver_id) {
+        const stillBusy = await tx.bookings.count({
+          where: {
+            assigned_driver_id: booking.assigned_driver_id,
+            id: { not: booking.id },
+            status: {
+              in: [
+                "driver_notified",
+                "driver_accepted",
+                "driver_assigned",
+                "on_the_way",
+                "arrived",
+                "trip_started",
+              ],
+            },
+          },
+        });
+        if (stillBusy === 0) {
+          await tx.drivers.update({
+            where: { id: booking.assigned_driver_id },
+            data: {
+              online_status: "online",
+              availability_status: "available",
+              total_completed_trips: { increment: 1 },
+            },
+          });
+        } else {
+          await tx.drivers.update({
+            where: { id: booking.assigned_driver_id },
+            data: { total_completed_trips: { increment: 1 } },
+          });
+        }
+      }
+
+      return updated;
+    });
+
+    if (final.customer_id) {
+      await deliverBookingNotification({
+        recipientType: "customer",
+        customerId: String(final.customer_id),
+        bookingId: String(final.id),
+        jobType: "notify_booking_completed",
+        title: "Trip completed",
+        body: `Your trip ${final.booking_reference} is complete. Thank you for riding with Yaazh Cabs.`,
+      });
+    }
+    if (final.assigned_driver_id) {
+      await deliverBookingNotification({
+        recipientType: "driver",
+        driverId: String(final.assigned_driver_id),
+        bookingId: String(final.id),
+        jobType: "notify_booking_completed",
+        title: "Trip completed",
+        body: `Trip ${final.booking_reference} was marked complete by admin.`,
+      });
+    }
+
+    try {
+      const { sendBookingInvoiceEmail } = await import("./invoice.service.js");
+      await sendBookingInvoiceEmail(final.id);
+    } catch (err) {
+      console.error("Invoice email after admin complete failed:", err instanceof Error ? err.message : err);
     }
 
     return serializeBooking(final);
@@ -1292,13 +1513,13 @@ export function serializeDriverParty(
   if (!d) return null;
   const stored = publicMediaPath(d.profile_image_url) ?? publicMediaPath(photoOverride);
   const id = d.id != null ? String(d.id) : undefined;
-  const photo = id ? driverPhotoPublicPath(id) : stored;
+  const photo = stored && id ? driverPhotoPublicPath(id) : stored;
   return {
     id,
     name: d.name,
     phone: d.phone,
     photo_url: photo ?? null,
-    profile_image_url: stored,
+    profile_image_url: photo ?? stored ?? null,
   };
 }
 

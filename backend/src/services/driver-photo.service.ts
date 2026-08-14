@@ -45,6 +45,23 @@ export function resolveStoredFilePath(raw: string | null | undefined): string | 
   return full;
 }
 
+export function sniffImage(bytes: Buffer): { mime: string; ext: string } | null {
+  if (bytes.length < 12) return null;
+  if (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) {
+    return { mime: "image/jpeg", ext: ".jpg" };
+  }
+  if (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47) {
+    return { mime: "image/png", ext: ".png" };
+  }
+  if (bytes[0] === 0x47 && bytes[1] === 0x49 && bytes[2] === 0x46) {
+    return { mime: "image/gif", ext: ".gif" };
+  }
+  if (bytes.toString("ascii", 0, 4) === "RIFF" && bytes.toString("ascii", 8, 12) === "WEBP") {
+    return { mime: "image/webp", ext: ".webp" };
+  }
+  return null;
+}
+
 function mimeFromPath(filePath: string): string {
   const ext = path.extname(filePath).toLowerCase();
   if (ext === ".png") return "image/png";
@@ -69,8 +86,12 @@ export async function saveDriverPhotoBytes(
   bytes: Buffer,
   mimeType: string,
 ): Promise<void> {
+  const sniffed = sniffImage(bytes);
+  if (!sniffed) {
+    throw new Error("UNSUPPORTED_IMAGE");
+  }
   await ensurePhotoTable();
-  const mime = mimeType && mimeType.startsWith("image/") ? mimeType : "image/jpeg";
+  const mime = sniffed.mime || (mimeType && mimeType.startsWith("image/") ? mimeType : "image/jpeg");
   const b64 = bytes.toString("base64");
   await prisma.$executeRaw`
     INSERT INTO driver_profile_photos (driver_id, mime_type, data_base64, updated_at)
@@ -87,7 +108,11 @@ export async function saveDriverPhotoFromStoredUrl(
   if (!filePath || !fs.existsSync(filePath)) return;
   const bytes = await fs.promises.readFile(filePath);
   if (bytes.length === 0) return;
-  await saveDriverPhotoBytes(driverId, bytes, mimeFromPath(filePath));
+  try {
+    await saveDriverPhotoBytes(driverId, bytes, mimeFromPath(filePath));
+  } catch {
+    /* skip HEIC/unknown files */
+  }
 }
 
 export async function loadDriverPhotoBytes(
@@ -98,6 +123,23 @@ export async function loadDriverPhotoBytes(
     select: { profile_image_url: true },
   });
   if (!driver) return null;
+
+  try {
+    await ensurePhotoTable();
+    const rows = await prisma.$queryRaw<Array<{ mime_type: string; data_base64: string }>>`
+      SELECT mime_type, data_base64 FROM driver_profile_photos WHERE driver_id = ${driverId} LIMIT 1
+    `;
+    const row = rows[0];
+    if (row?.data_base64) {
+      const bytes = Buffer.from(row.data_base64, "base64");
+      const sniffed = sniffImage(bytes);
+      if (sniffed && bytes.length > 0) {
+        return { bytes, mimeType: sniffed.mime };
+      }
+    }
+  } catch {
+    /* table may not exist yet on a locked DB */
+  }
 
   const doc = await prisma.driverDocuments.findFirst({
     where: { driver_id: driverId, document_type: "profile_photo" },
@@ -110,24 +152,12 @@ export async function loadDriverPhotoBytes(
     const filePath = resolveStoredFilePath(raw);
     if (filePath && fs.existsSync(filePath)) {
       const bytes = await fs.promises.readFile(filePath);
-      if (bytes.length > 0) {
-        void saveDriverPhotoBytes(driverId, bytes, mimeFromPath(filePath));
-        return { bytes, mimeType: mimeFromPath(filePath) };
+      const sniffed = sniffImage(bytes);
+      if (sniffed && bytes.length > 0) {
+        void saveDriverPhotoBytes(driverId, bytes, sniffed.mime);
+        return { bytes, mimeType: sniffed.mime };
       }
     }
-  }
-
-  try {
-    await ensurePhotoTable();
-    const rows = await prisma.$queryRaw<Array<{ mime_type: string; data_base64: string }>>`
-      SELECT mime_type, data_base64 FROM driver_profile_photos WHERE driver_id = ${driverId} LIMIT 1
-    `;
-    const row = rows[0];
-    if (row?.data_base64) {
-      return { bytes: Buffer.from(row.data_base64, "base64"), mimeType: row.mime_type || "image/jpeg" };
-    }
-  } catch {
-    /* table may not exist yet on a locked DB */
   }
 
   return null;

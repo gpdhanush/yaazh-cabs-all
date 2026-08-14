@@ -34,6 +34,9 @@ class BookingStatus {
     driverNotified,
     driverAccepted,
     driverRejected,
+    driverAssigned,
+    onTheWay,
+    arrived,
   ];
 
   static String label(String status) {
@@ -72,6 +75,12 @@ class BookingStatus {
       status != completed &&
       status != cancelled &&
       status != rejected;
+
+  static bool canComplete(String status) =>
+      status == driverAssigned ||
+      status == onTheWay ||
+      status == arrived ||
+      status == tripStarted;
 
   static IconData icon(String status) {
     return switch (status) {

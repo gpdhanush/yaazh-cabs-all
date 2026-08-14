@@ -56,11 +56,23 @@ String? resolveMediaUrl(String? raw) {
 }
 
 String? driverPhotoUrl({String? id, String? photoUrl}) {
-  if (photoUrl != null && photoUrl.trim().isNotEmpty) {
-    return resolveMediaUrl(photoUrl);
-  }
+  final stored = photoUrl?.trim();
+  final hasPhoto = stored != null && stored.isNotEmpty && stored != 'null';
+  if (!hasPhoto) return null;
+  // Prefer the API photo route. Storage files are ephemeral on Render and
+  // 404 HTML is what Android ImageDecoder reports as "unimplemented".
   if (id != null && id.isNotEmpty) {
     return resolveMediaUrl('/api/v1/public/drivers/$id/photo');
   }
-  return null;
+  return resolveMediaUrl(stored);
+}
+
+String? adminPhotoUrl({String? id, String? avatarUrl}) {
+  final stored = avatarUrl?.trim();
+  final hasPhoto = stored != null && stored.isNotEmpty && stored != 'null';
+  if (!hasPhoto) return null;
+  if (id != null && id.isNotEmpty) {
+    return resolveMediaUrl('/api/v1/public/admins/$id/photo');
+  }
+  return resolveMediaUrl(stored);
 }

@@ -35,6 +35,8 @@ Future<String?> pickAndPrepareImage({
         toolbarWidgetColor: Colors.white,
         activeControlsWidgetColor: toolbarColor,
         backgroundColor: Colors.black,
+        statusBarLight: false,
+        navBarLight: false,
         cropStyle: shape == ImageCropShape.circle ? CropStyle.circle : CropStyle.rectangle,
         initAspectRatio: CropAspectRatioPreset.square,
         lockAspectRatio: true,
@@ -51,10 +53,21 @@ Future<String?> pickAndPrepareImage({
   return encodeUploadJpeg(cropped.path);
 }
 
+bool _isJpeg(List<int> bytes) {
+  return bytes.length > 3 && bytes[0] == 0xFF && bytes[1] == 0xD8 && bytes[2] == 0xFF;
+}
+
 Future<String> encodeUploadJpeg(String path, {int maxWidth = 1080}) async {
   final bytes = await File(path).readAsBytes();
   if (bytes.isEmpty) {
     throw const FormatException('That photo file is empty.');
+  }
+  final out = File('${Directory.systemTemp.path}/yaazh_upload.jpg');
+  // uCrop already writes a device JPEG. Re-encoding with dart `image` produces
+  // files some Android ImageDecoders (Huawei/Honor) reject as "unimplemented".
+  if (_isJpeg(bytes)) {
+    await out.writeAsBytes(bytes, flush: true);
+    return out.path;
   }
   final decoded = img.decodeImage(bytes);
   if (decoded == null) {
@@ -68,7 +81,6 @@ Future<String> encodeUploadJpeg(String path, {int maxWidth = 1080}) async {
   if (jpg.isEmpty) {
     throw const FormatException('Could not convert that photo.');
   }
-  final out = File('${Directory.systemTemp.path}/yaazh_upload.jpg');
   await out.writeAsBytes(jpg, flush: true);
   return out.path;
 }

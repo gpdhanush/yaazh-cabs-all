@@ -17,7 +17,7 @@ class AdminAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    var url = resolveMediaUrl(user?.avatarUrl);
+    var url = adminPhotoUrl(id: user?.id, avatarUrl: user?.avatarUrl);
     if (url != null && cacheBust != null) {
       url = '$url${url.contains('?') ? '&' : '?'}t=$cacheBust';
     }

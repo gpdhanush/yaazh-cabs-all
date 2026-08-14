@@ -82,6 +82,11 @@ class BookingRepository {
     return Booking.fromJson(Map<String, dynamic>.from(data as Map));
   }
 
+  Future<Booking> completeTrip(String bookingId) async {
+    final data = await _api.post('/admin/bookings/$bookingId/complete');
+    return Booking.fromJson(Map<String, dynamic>.from(data as Map));
+  }
+
   Future<void> recordPayment({
     required String bookingId,
     required double amount,

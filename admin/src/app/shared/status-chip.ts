@@ -30,7 +30,15 @@ export function statusLabel(status: string): string {
 }
 
 export function canAssignDriver(status: string): boolean {
-  return ['confirmed', 'driver_notified', 'driver_accepted', 'driver_rejected'].includes(status);
+  return [
+    'confirmed',
+    'driver_notified',
+    'driver_accepted',
+    'driver_rejected',
+    'driver_assigned',
+    'on_the_way',
+    'arrived',
+  ].includes(status);
 }
 
 /** Driver availability_status → display label. */
