@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import PDFDocument from "pdfkit";
 import { Prisma } from "@prisma/client";
 import { prisma } from "../config/database.js";
@@ -105,6 +106,17 @@ async function companyProfile() {
   };
 }
 
+function invoiceLogoPath(): string | null {
+  const here = path.dirname(fileURLToPath(import.meta.url));
+  const candidates = [
+    path.resolve(process.cwd(), "assets/invoice-logo.png"),
+    path.resolve(process.cwd(), "backend/assets/invoice-logo.png"),
+    path.resolve(here, "../../assets/invoice-logo.png"),
+    path.resolve(here, "../assets/invoice-logo.png"),
+  ];
+  return candidates.find((p) => fs.existsSync(p)) ?? null;
+}
+
 function invoicePdfPath(invoiceNumber: string) {
   const env = loadEnv();
   const dir = path.resolve(env.STORAGE_PATH, "public", "invoices");
@@ -178,13 +190,21 @@ async function buildInvoicePdf(params: {
   doc.rect(0, 0, pageW, 128).fill(primary);
   doc.rect(0, 128, pageW, 8).fill("#98BDFF");
 
-  doc.circle(56, 58, 22).fill("#FFFFFF");
-  doc.fillColor(primary).font("Helvetica-Bold").fontSize(13).text("YZ", 34, 51, { width: 44, align: "center" });
+  const logoPath = invoiceLogoPath();
+  if (logoPath) {
+    doc.save();
+    doc.roundedRect(18, 28, 72, 72, 10).fill("#FFFFFF");
+    doc.restore();
+    doc.image(logoPath, 24, 34, { fit: [60, 60] });
+  } else {
+    doc.circle(56, 58, 22).fill("#FFFFFF");
+    doc.fillColor(primary).font("Helvetica-Bold").fontSize(13).text("YZ", 34, 51, { width: 44, align: "center" });
+  }
 
-  doc.fillColor("#FFFFFF").font("Helvetica-Bold").fontSize(20).text(company.name, 88, 32, { width: 280 });
+  doc.fillColor("#FFFFFF").font("Helvetica-Bold").fontSize(20).text(company.name, 102, 32, { width: 250 });
   doc.font("Helvetica").fontSize(9).fillColor("#E0E7FF");
-  if (company.address) doc.text(company.address, 88, 58, { width: 300 });
-  if (contact) doc.text(contact, 88, 86, { width: 300 });
+  if (company.address) doc.text(company.address, 102, 58, { width: 250 });
+  if (contact) doc.text(contact, 102, 86, { width: 250 });
 
   doc.fillColor("#FFFFFF").font("Helvetica-Bold").fontSize(11).text("INVOICE", 360, 30, { width: 190, align: "right" });
   doc.font("Helvetica").fontSize(9).fillColor("#E0E7FF");

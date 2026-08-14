@@ -143,6 +143,7 @@ class Booking {
   final String dropLocation;
   final String pickupAt;
   final String estimatedTotal;
+  final double discountAmount;
   final String? finalTotal;
   final String? assignedDriverId;
   final double? estimatedDistanceKm;
@@ -171,6 +172,7 @@ class Booking {
     required this.dropLocation,
     required this.pickupAt,
     required this.estimatedTotal,
+    this.discountAmount = 0,
     this.finalTotal,
     this.assignedDriverId,
     this.estimatedDistanceKm,
@@ -225,6 +227,9 @@ class Booking {
       dropLocation: json['drop_location']?.toString() ?? '',
       pickupAt: json['pickup_at']?.toString() ?? '',
       estimatedTotal: json['estimated_total']?.toString() ?? '0',
+      discountAmount: parseDouble(json['discount_amount']) ??
+          parseDouble(asMap(json['payment'])?['discount_amount']) ??
+          0,
       finalTotal: json['final_total']?.toString(),
       assignedDriverId: json['assigned_driver_id']?.toString(),
       estimatedDistanceKm: parseDouble(json['estimated_distance_km']),

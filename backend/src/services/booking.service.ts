@@ -904,7 +904,7 @@ export const bookingService = {
         data: {
           status: "completed",
           completed_at: new Date(),
-          final_total: booking.estimated_total,
+          final_total: booking.final_total ?? booking.estimated_total,
           end_odometer_km: new Prisma.Decimal(endKm),
           actual_distance_km: new Prisma.Decimal(actualKm),
         },
@@ -994,11 +994,12 @@ export const bookingService = {
           status: BookingStatus;
           assigned_driver_id: bigint | null;
           estimated_total: Prisma.Decimal | null;
+          final_total: Prisma.Decimal | null;
           estimated_distance_km: Prisma.Decimal | null;
           actual_distance_km: Prisma.Decimal | null;
           payment_status: string;
         }>
-      >`SELECT id, status, assigned_driver_id, estimated_total, estimated_distance_km, actual_distance_km, payment_status
+      >`SELECT id, status, assigned_driver_id, estimated_total, final_total, estimated_distance_km, actual_distance_km, payment_status
         FROM bookings WHERE id = ${bookingId} FOR UPDATE`;
       const booking = rows[0];
       if (!booking) throw new NotFoundError("Booking not found.");
@@ -1021,7 +1022,7 @@ export const bookingService = {
         data: {
           status: "completed",
           completed_at: new Date(),
-          final_total: booking.estimated_total,
+          final_total: booking.final_total ?? booking.estimated_total,
           ...(distance != null && Number.isFinite(distance)
             ? { actual_distance_km: new Prisma.Decimal(Math.round(distance * 100) / 100) }
             : {}),
@@ -1439,6 +1440,7 @@ export function serializeBooking(b: {
   status: string | null;
   estimated_total: { toString(): string } | null;
   final_total?: { toString(): string } | null;
+  discount_amount?: { toString(): string } | null;
   customer_name: string;
   customer_phone: string;
   customer_email?: string | null;
@@ -1483,6 +1485,7 @@ export function serializeBooking(b: {
     drop_latitude: b.drop_latitude != null ? Number(b.drop_latitude) : null,
     drop_longitude: b.drop_longitude != null ? Number(b.drop_longitude) : null,
     estimated_total: b.estimated_total?.toString() ?? "0",
+    discount_amount: b.discount_amount != null ? Number(b.discount_amount) : 0,
     final_total: b.final_total?.toString() ?? null,
     assigned_driver_id: b.assigned_driver_id != null ? String(b.assigned_driver_id) : null,
     estimated_distance_km:
@@ -1550,6 +1553,7 @@ export async function getBookingPaymentSummary(bookingId: bigint) {
     payment_status: booking.payment_status,
     fare_due: fareDue,
     estimated_total: Number(booking.estimated_total ?? 0),
+    discount_amount: Number(booking.discount_amount ?? 0),
     final_total: booking.final_total != null ? Number(booking.final_total) : null,
     amount_paid: amountPaid,
     balance_due: balanceDue,
@@ -1694,6 +1698,107 @@ export async function recordBookingPayment(params: {
   });
 
   return result;
+}
+
+export async function applyBookingDiscount(params: {
+  bookingId: bigint;
+  discountAmount?: number;
+  finalTotal?: number;
+  adminId: bigint;
+}) {
+  const booking = await prisma.bookings.findUnique({ where: { id: params.bookingId } });
+  if (!booking) throw new NotFoundError("Booking not found.");
+
+  const quoted = roundMoney(Number(booking.estimated_total ?? 0));
+  if (quoted <= 0) throw new ValidationError("Quoted fare is missing.");
+
+  let discount: number;
+  let finalTotal: number;
+  if (params.finalTotal != null && Number.isFinite(params.finalTotal)) {
+    finalTotal = roundMoney(params.finalTotal);
+    if (finalTotal < 0) throw new ValidationError("Final fare cannot be negative.");
+    if (finalTotal > quoted + 0.009) {
+      throw new ValidationError(`Final fare cannot exceed quoted Rs. ${quoted}.`);
+    }
+    discount = roundMoney(quoted - finalTotal);
+  } else {
+    discount = roundMoney(params.discountAmount ?? 0);
+    if (discount < 0) throw new ValidationError("Discount cannot be negative.");
+    if (discount > quoted + 0.009) {
+      throw new ValidationError(`Discount cannot exceed quoted Rs. ${quoted}.`);
+    }
+    finalTotal = roundMoney(Math.max(0, quoted - discount));
+  }
+
+  const paidAgg = await prisma.payments.aggregate({
+    where: { booking_id: params.bookingId, status: "success" },
+    _sum: { amount: true },
+  });
+  const alreadyPaid = roundMoney(Number(paidAgg._sum.amount ?? 0));
+  if (finalTotal + 0.009 < alreadyPaid) {
+    throw new ValidationError(
+      `Final fare Rs. ${finalTotal} is below amount already paid Rs. ${alreadyPaid}.`,
+    );
+  }
+
+  const paymentStatus = alreadyPaid <= 0 ? "unpaid" : alreadyPaid >= finalTotal - 0.009 ? "paid" : "partial";
+  const balanceDue = roundMoney(Math.max(0, finalTotal - alreadyPaid));
+
+  await prisma.$transaction(async (tx) => {
+    await tx.bookings.update({
+      where: { id: params.bookingId },
+      data: {
+        discount_amount: new Prisma.Decimal(discount),
+        final_total: new Prisma.Decimal(finalTotal),
+        payment_status: paymentStatus,
+      },
+    });
+
+    await tx.bookingStatusHistory.create({
+      data: {
+        booking_id: params.bookingId,
+        old_status: booking.status,
+        new_status: booking.status,
+        note: `Fare reduced by Rs. ${discount}. Final Rs. ${finalTotal}`,
+        changed_by_type: "admin",
+        changed_by_admin_id: params.adminId,
+      },
+    });
+
+    await tx.tripEvents.create({
+      data: {
+        booking_id: params.bookingId,
+        driver_id: booking.assigned_driver_id,
+        event_type: "fare_adjusted",
+        event_note: `Fare reduced by Rs. ${discount}. Final Rs. ${finalTotal}`,
+        event_payload: {
+          quoted,
+          discount_amount: discount,
+          final_total: finalTotal,
+          amount_paid: alreadyPaid,
+          balance_due: balanceDue,
+        },
+        created_by_type: "admin",
+        created_by_admin_id: params.adminId,
+      },
+    });
+
+    const invoice = await tx.bookingInvoices.findUnique({ where: { booking_id: params.bookingId } });
+    if (invoice) {
+      await tx.bookingInvoices.update({
+        where: { id: invoice.id },
+        data: {
+          discount_amount: new Prisma.Decimal(discount),
+          total_amount: new Prisma.Decimal(finalTotal),
+          amount_paid: new Prisma.Decimal(alreadyPaid),
+          balance_amount: new Prisma.Decimal(balanceDue),
+          status: balanceDue <= 0 ? "paid" : alreadyPaid > 0 ? "partially_paid" : invoice.status,
+        },
+      });
+    }
+  });
+
+  return getBookingPaymentSummary(params.bookingId);
 }
 
 export async function collectBookingPayment(params: {

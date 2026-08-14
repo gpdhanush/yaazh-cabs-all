@@ -7,7 +7,7 @@ import { prisma } from "../../../config/database.js";
 import { loadEnv } from "../../../config/env.js";
 import { ok } from "../../../utils/api-response.js";
 import { requireAuth, requirePermission, requireUser } from "../../../middleware/auth.js";
-import { bookingService, serializeBooking, serializeDriverParty, getBookingPaymentSummary, recordBookingPayment, setBookingPaymentStatus } from "../../../services/booking.service.js";
+import { bookingService, serializeBooking, serializeDriverParty, getBookingPaymentSummary, recordBookingPayment, setBookingPaymentStatus, applyBookingDiscount } from "../../../services/booking.service.js";
 import { saveDriverPhotoBytes, driverPhotoPublicPath } from "../../../services/driver-photo.service.js";
 import {
   adminPhotoPublicPath,
@@ -1271,6 +1271,36 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
       });
       await audit(user.id, "booking.payment", "bookings", String(id), null, data, req);
       return ok(reply, data, "Payment recorded.", 201);
+    },
+  );
+
+  app.patch(
+    "/bookings/:id/fare",
+    { preHandler: [requirePermission("bookings.update")] },
+    async (req, reply) => {
+      const user = requireUser(req);
+      const id = BigInt((req.params as { id: string }).id);
+      const schema = z
+        .object({
+          discount_amount: z.number().min(0).optional(),
+          final_total: z.number().min(0).optional(),
+        })
+        .refine((d) => d.discount_amount != null || d.final_total != null, {
+          message: "Enter a discount amount or a final fare.",
+        });
+      const parsed = schema.safeParse(req.body ?? {});
+      if (!parsed.success) {
+        throw new ValidationError(parsed.error.issues[0]?.message ?? "Validation failed.");
+      }
+
+      const data = await applyBookingDiscount({
+        bookingId: id,
+        discountAmount: parsed.data.discount_amount,
+        finalTotal: parsed.data.final_total,
+        adminId: user.id,
+      });
+      await audit(user.id, "booking.fare", "bookings", String(id), null, data, req);
+      return ok(reply, data, "Discount applied.");
     },
   );
 

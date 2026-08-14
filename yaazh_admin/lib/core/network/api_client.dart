@@ -236,6 +236,23 @@ class ApiClient {
     }
   }
 
+  Future<dynamic> patch(
+    String path, {
+    dynamic data,
+    bool silent = false,
+  }) async {
+    try {
+      final response = await _dio.patch(
+        path,
+        data: data ?? const <String, dynamic>{},
+        options: _options(silent: silent),
+      );
+      return _processResponse(response);
+    } on DioException catch (e) {
+      throw ApiException.fromDioError(e);
+    }
+  }
+
   Future<dynamic> delete(String path, {bool silent = false}) async {
     try {
       final response = await _dio.delete(

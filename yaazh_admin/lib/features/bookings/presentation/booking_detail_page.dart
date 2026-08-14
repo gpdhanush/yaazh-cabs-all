@@ -31,11 +31,14 @@ class BookingDetailPage extends ConsumerStatefulWidget {
 
 class _BookingDetailPageState extends ConsumerState<BookingDetailPage> {
   final _amountController = TextEditingController();
+  final _discountController = TextEditingController();
   String _payMethod = 'cash';
+  String? _discountPrefillId;
 
   @override
   void dispose() {
     _amountController.dispose();
+    _discountController.dispose();
     super.dispose();
   }
 
@@ -72,7 +75,17 @@ class _BookingDetailPageState extends ConsumerState<BookingDetailPage> {
             subtitle: err.toString(),
             icon: Icons.cloud_off_rounded,
           ),
-          data: (b) => RefreshIndicator(
+          data: (b) {
+            if (_discountPrefillId != b.id) {
+              _discountPrefillId = b.id;
+              final existing = b.discountAmount;
+              _discountController.text = existing > 0
+                  ? (existing == existing.roundToDouble()
+                      ? existing.toStringAsFixed(0)
+                      : existing.toStringAsFixed(2))
+                  : '';
+            }
+            return RefreshIndicator(
             onRefresh: _reload,
             child: ListView(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
@@ -228,8 +241,10 @@ class _BookingDetailPageState extends ConsumerState<BookingDetailPage> {
                 _PaymentPanel(
                   booking: b,
                   amountController: _amountController,
+                  discountController: _discountController,
                   method: _payMethod,
                   onMethod: (v) => setState(() => _payMethod = v),
+                  onApplyDiscount: () => _applyDiscount(b),
                   onRecord: () => _recordPayment(b),
                   onMarkPaid: () => _markPaid(b),
                 ),
@@ -291,7 +306,8 @@ class _BookingDetailPageState extends ConsumerState<BookingDetailPage> {
                 ],
               ],
             ),
-          ),
+          );
+          },
         ),
       ),
     );
@@ -353,6 +369,29 @@ class _BookingDetailPageState extends ConsumerState<BookingDetailPage> {
       } else {
         showSuccessToast('Booking confirmed');
       }
+    } catch (e) {
+      showErrorToast(e is ApiException ? e.message : e.toString());
+    }
+  }
+
+  Future<void> _applyDiscount(Booking b) async {
+    hideKeyboard();
+    if (!BookingStatus.canRecordPayment(b.status)) {
+      showErrorToast('Confirm the booking before applying a discount');
+      return;
+    }
+    final discount = double.tryParse(_discountController.text.trim()) ?? 0;
+    if (discount < 0) {
+      showErrorToast('Discount cannot be negative');
+      return;
+    }
+    try {
+      await ref.read(bookingRepositoryProvider).applyDiscount(
+            bookingId: b.id,
+            discountAmount: discount,
+          );
+      await _reload();
+      showSuccessToast('Discount applied');
     } catch (e) {
       showErrorToast(e is ApiException ? e.message : e.toString());
     }
@@ -649,16 +688,20 @@ Widget _odo(String label, double? km) {
 class _PaymentPanel extends StatelessWidget {
   final Booking booking;
   final TextEditingController amountController;
+  final TextEditingController discountController;
   final String method;
   final ValueChanged<String> onMethod;
+  final VoidCallback onApplyDiscount;
   final VoidCallback onRecord;
   final VoidCallback onMarkPaid;
 
   const _PaymentPanel({
     required this.booking,
     required this.amountController,
+    required this.discountController,
     required this.method,
     required this.onMethod,
+    required this.onApplyDiscount,
     required this.onRecord,
     required this.onMarkPaid,
   });
@@ -666,9 +709,11 @@ class _PaymentPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final pay = booking.payment;
-    final due = pay?.fareDue ?? (double.tryParse(booking.estimatedTotal) ?? 0);
+    final quoted = double.tryParse(booking.estimatedTotal) ?? 0;
+    final due = pay?.fareDue ?? (double.tryParse(booking.finalTotal ?? booking.estimatedTotal) ?? quoted);
     final paid = pay?.amountPaid ?? 0;
-    final balance = pay?.balanceDue ?? due;
+    final balance = pay?.balanceDue ?? (due - paid);
+    final discount = booking.discountAmount;
     final theme = Theme.of(context);
 
     return _Panel(
@@ -683,9 +728,17 @@ class _PaymentPanel extends StatelessWidget {
         children: [
           Row(
             children: [
+              _money('Quoted', quoted),
+              _money('Discount', discount),
               _money('Due', due),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
               _money('Paid', paid),
               _money('Balance', balance),
+              const Expanded(child: SizedBox()),
             ],
           ),
           if (booking.isFullyPaid) ...[
@@ -703,10 +756,21 @@ class _PaymentPanel extends StatelessWidget {
           ] else ...[
             const SizedBox(height: 14),
             YaNumberField(
+              controller: discountController,
+              label: 'Discount',
+              hint: '0',
+              decimal: true,
+              maxLength: 8,
+              prefixIcon: const Icon(Icons.percent_rounded),
+              textInputAction: TextInputAction.next,
+            ),
+            const SizedBox(height: 10),
+            YaNumberField(
               controller: amountController,
               label: 'Amount',
               hint: '0',
-              maxLength: 6,
+              decimal: true,
+              maxLength: 8,
               prefixIcon: const Icon(Icons.currency_rupee_rounded),
               textInputAction: TextInputAction.done,
             ),
@@ -726,6 +790,8 @@ class _PaymentPanel extends StatelessWidget {
               },
             ),
             const SizedBox(height: 12),
+            ElevatedButton(onPressed: onApplyDiscount, child: const Text('APPLY DISCOUNT')),
+            const SizedBox(height: 8),
             ElevatedButton(onPressed: onRecord, child: const Text('RECORD PAYMENT')),
             const SizedBox(height: 8),
             OutlinedButton(

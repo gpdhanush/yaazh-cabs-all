@@ -99,6 +99,15 @@ class BookingRepository {
     });
   }
 
+  Future<void> applyDiscount({
+    required String bookingId,
+    required double discountAmount,
+  }) async {
+    await _api.patch('/admin/bookings/$bookingId/fare', data: {
+      'discount_amount': discountAmount,
+    });
+  }
+
   Future<void> markPaid(String bookingId) async {
     await _api.put('/admin/bookings/$bookingId/payment-status', data: {
       'payment_status': 'paid',
