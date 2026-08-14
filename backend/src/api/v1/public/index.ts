@@ -4,6 +4,7 @@ import { prisma } from "../../../config/database.js";
 import { ok } from "../../../utils/api-response.js";
 import { ValidationError, NotFoundError } from "../../../errors/app-error.js";
 import { bookingService } from "../../../services/booking.service.js";
+import { notifyAdmins } from "../../../services/fcm.service.js";
 import { getPublicFeedback, submitPublicFeedback } from "../../../services/feedback.service.js";
 import { loadDriverPhotoBytes } from "../../../services/driver-photo.service.js";
 import { loadAdminPhotoBytes } from "../../../services/admin-photo.service.js";
@@ -362,6 +363,12 @@ export const publicRoutes: FastifyPluginAsync = async (app) => {
         subject: parsed.data.subject ?? null,
         message: parsed.data.message,
       },
+    });
+    await notifyAdmins({
+      jobType: "notify_enquiry_created",
+      title: "New enquiry",
+      body: `${row.name} (${row.phone})${row.subject ? ` · ${row.subject}` : ""}`,
+      extra: { type: "enquiry", enquiry_id: String(row.id) },
     });
     return ok(reply, { id: String(row.id) }, "Enquiry submitted.", 201);
   });

@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:yaazh_admin/core/firebase/analytics_service.dart';
 import 'package:yaazh_admin/core/network/api_exception.dart';
 import 'package:yaazh_admin/core/storage/storage_service.dart';
 import 'package:yaazh_admin/features/auth/data/auth_repository.dart';
@@ -74,6 +75,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     state = AuthState.loading();
     try {
       final user = await _authRepo.login(email: email, password: password);
+      await AnalyticsService().logLogin();
       state = AuthState.authenticated(user);
       return true;
     } catch (e) {

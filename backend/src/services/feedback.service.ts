@@ -2,6 +2,7 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import { prisma } from "../config/database.js";
 import { loadEnv } from "../config/env.js";
 import { ForbiddenError, NotFoundError, ValidationError } from "../errors/app-error.js";
+import { notifyAdmins } from "./fcm.service.js";
 import { serializeDriverParty } from "./booking.service.js";
 
 export function signFeedbackToken(bookingId: bigint): string {
@@ -181,6 +182,16 @@ export async function submitCustomerTripRating(
       data: { rating_avg: agg._avg.customer_rating ?? 0 },
     });
   }
+
+  await notifyAdmins({
+    jobType: "notify_customer_feedback",
+    title: "New customer feedback",
+    body: `${booking.customer_name} rated ${rating}/5${reviewText ? ` · ${reviewText.slice(0, 80)}` : ""}`,
+    bookingId: String(booking.id),
+    customerId: booking.customer_id ? String(booking.customer_id) : null,
+    driverId: booking.assigned_driver_id ? String(booking.assigned_driver_id) : null,
+    extra: { type: "booking" },
+  });
 
   return {
     id: String(row.id),

@@ -6,7 +6,7 @@ import { assertTransition, canCancel } from "../domain/booking-state-machine.js"
 import { bookingReference } from "../utils/crypto.js";
 import { normalizePhone, phoneLookupVariants } from "../utils/phone.js";
 import { AppError, ConflictError, NotFoundError, ValidationError } from "../errors/app-error.js";
-import { deliverBookingNotification } from "./fcm.service.js";
+import { deliverBookingNotification, notifyAdmins } from "./fcm.service.js";
 import { driverPhotoPublicPath, publicMediaPath } from "./driver-photo.service.js";
 import { mapService } from "./map.service.js";
 
@@ -16,6 +16,27 @@ function dec(n: number) {
   return new Prisma.Decimal(n);
 }
 
+async function alertAdmins(params: {
+  title: string;
+  body: string;
+  jobType: string;
+  booking: {
+    id: bigint;
+    customer_id?: bigint | null;
+    assigned_driver_id?: bigint | null;
+  };
+}) {
+  await notifyAdmins({
+    title: params.title,
+    body: params.body,
+    jobType: params.jobType,
+    bookingId: String(params.booking.id),
+    customerId: params.booking.customer_id ? String(params.booking.customer_id) : null,
+    driverId: params.booking.assigned_driver_id ? String(params.booking.assigned_driver_id) : null,
+    extra: { type: "booking" },
+  });
+}
+
 /**
  * Website / guest bookings: one customer per mobile (unique).
  * First booking creates a record with no password. Later bookings update name + email.
@@ -23,7 +44,7 @@ function dec(n: number) {
 async function upsertCustomerByPhone(
   tx: Prisma.TransactionClient,
   input: { name: string; phone: string; email?: string | null; city?: string | null },
-): Promise<bigint> {
+): Promise<{ id: bigint; created: boolean }> {
   const phone = normalizePhone(input.phone);
   const name = input.name.trim();
   const email = input.email?.trim() || null;
@@ -38,7 +59,7 @@ async function upsertCustomerByPhone(
         ...(city ? { city } : {}),
       },
     });
-    return id;
+    return { id, created: false };
   };
 
   const existing = await tx.customers.findFirst({
@@ -58,7 +79,7 @@ async function upsertCustomerByPhone(
         app_status: "active",
       },
     });
-    return created.id;
+    return { id: created.id, created: true };
   } catch (err) {
     if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
       const raced = await tx.customers.findFirst({
@@ -290,6 +311,7 @@ export const bookingService = {
 
     const ref = await nextBookingRef();
     const phone = normalizePhone(input.customerPhone);
+    let newCustomer = false;
 
     const booking = await prisma.$transaction(async (tx) => {
       if (coupon) {
@@ -307,14 +329,18 @@ export const bookingService = {
         });
       }
 
-      const customerId =
-        input.customerId ??
-        (await upsertCustomerByPhone(tx, {
-          name: input.customerName,
-          phone,
-          email: input.customerEmail,
-          city: input.pickupCity,
-        }));
+      const customerId = input.customerId
+        ? input.customerId
+        : await (async () => {
+            const upserted = await upsertCustomerByPhone(tx, {
+              name: input.customerName,
+              phone,
+              email: input.customerEmail,
+              city: input.pickupCity,
+            });
+            newCustomer = upserted.created;
+            return upserted.id;
+          })();
 
       const created = await tx.bookings.create({
         data: {
@@ -426,6 +452,26 @@ export const bookingService = {
         jobType: "notify_booking_created",
         title: "Booking received",
         body: `Your booking ${booking.booking_reference} is pending confirmation. Pickup: ${booking.pickup_location}.`,
+      });
+    }
+
+    if (newCustomer) {
+      await notifyAdmins({
+        jobType: "notify_customer_created",
+        title: "New customer",
+        body: `${booking.customer_name} (${booking.customer_phone}) was added from a booking.`,
+        customerId: booking.customer_id ? String(booking.customer_id) : null,
+        extra: { type: "customer", customer_id: booking.customer_id ? String(booking.customer_id) : "" },
+      });
+    }
+
+    if (!input.createdByAdminId) {
+      const source = input.bookingSource === "customer_app" ? "the app" : "the website";
+      await alertAdmins({
+        booking,
+        jobType: "notify_booking_created",
+        title: "New booking",
+        body: `${booking.customer_name} booked ${booking.booking_reference} from ${source}: ${booking.pickup_location} → ${booking.drop_location}.`,
       });
     }
 
@@ -707,6 +753,23 @@ export const bookingService = {
       return result;
     });
 
+    if (updated.customer_id) {
+      await deliverBookingNotification({
+        recipientType: "customer",
+        customerId: String(updated.customer_id),
+        bookingId: String(updated.id),
+        jobType: "notify_trip_started",
+        title: "Trip started",
+        body: `Your trip ${updated.booking_reference} has started.`,
+      });
+    }
+    await alertAdmins({
+      booking: updated,
+      jobType: "notify_trip_started",
+      title: "Trip started",
+      body: `Driver started trip ${updated.booking_reference}: ${updated.pickup_location} → ${updated.drop_location}.`,
+    });
+
     return serializeBooking(updated);
   },
 
@@ -813,6 +876,12 @@ export const bookingService = {
         body: `Your trip ${final.booking_reference} is complete. Thank you for riding with Yaazh Cabs.`,
       });
     }
+    await alertAdmins({
+      booking: final,
+      jobType: "notify_booking_completed",
+      title: "Trip completed",
+      body: `Trip ${final.booking_reference} is complete (${final.customer_name}).`,
+    });
 
     try {
       const { sendBookingInvoiceEmail } = await import("./invoice.service.js");
@@ -1014,6 +1083,16 @@ export const bookingService = {
           : `Your booking ${booking.booking_reference} was cancelled.`,
       });
     }
+    if (actor.type !== "admin") {
+      await alertAdmins({
+        booking,
+        jobType: "notify_booking_cancelled",
+        title: "Booking cancelled",
+        body: reason
+          ? `${booking.booking_reference} was cancelled. ${reason}`
+          : `${booking.booking_reference} was cancelled.`,
+      });
+    }
     return cancelled;
   },
 
@@ -1118,6 +1197,12 @@ export const bookingService = {
         body: `A driver has accepted your booking ${result.booking_reference}.`,
       });
     }
+    await alertAdmins({
+      booking: result,
+      jobType: "notify_booking_driver_assigned",
+      title: "Driver accepted trip",
+      body: `A driver accepted ${result.booking_reference}: ${result.pickup_location} → ${result.drop_location}.`,
+    });
 
     return serializeBooking(result);
   },

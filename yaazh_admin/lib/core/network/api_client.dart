@@ -4,6 +4,7 @@ import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:yaazh_admin/core/config/app_config.dart';
 import 'package:yaazh_admin/core/network/api_exception.dart';
+import 'package:yaazh_admin/core/network/firebase_perf_interceptor.dart';
 import 'package:yaazh_admin/core/storage/storage_service.dart';
 
 final dioProvider = Provider<Dio>((ref) {
@@ -23,6 +24,7 @@ final dioProvider = Provider<Dio>((ref) {
   final storage = ref.watch(storageServiceProvider);
   var isRefreshing = false;
 
+  dio.interceptors.add(FirebasePerfInterceptor());
   dio.interceptors.add(EasyLoadingInterceptor());
 
   dio.interceptors.add(

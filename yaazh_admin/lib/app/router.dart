@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:yaazh_admin/app/page_transitions.dart';
+import 'package:yaazh_admin/core/firebase/analytics_service.dart';
+import 'package:yaazh_admin/core/notifications/push_notification_service.dart';
 import 'package:yaazh_admin/core/widgets/coming_soon.dart';
 import 'package:yaazh_admin/features/auth/presentation/auth_viewmodel.dart';
 import 'package:yaazh_admin/features/auth/presentation/forgot_password_page.dart';
@@ -46,10 +48,32 @@ final routerProvider = Provider<GoRouter>((ref) {
     if (previous?.status != next.status) {
       refresh.ping();
     }
+    if (next.status == AuthStatus.authenticated &&
+        previous?.status != AuthStatus.authenticated) {
+      final user = next.user;
+      if (user != null) {
+        ref.read(analyticsServiceProvider).setAdmin(user.id);
+      }
+      ref.read(pushNotificationServiceProvider).start();
+    }
+    if (next.status == AuthStatus.unauthenticated &&
+        previous?.status == AuthStatus.authenticated) {
+      ref.read(analyticsServiceProvider).clearUser();
+    }
   });
+  ref.listen<String?>(pendingNotificationLocationProvider, (previous, next) {
+    if (next != null && next.isNotEmpty) {
+      refresh.ping();
+    }
+  });
+
+  final analyticsObserver = ref.read(analyticsServiceProvider).observer();
 
   return GoRouter(
     navigatorKey: rootNavigatorKey,
+    observers: [
+      ?analyticsObserver,
+    ],
     initialLocation: '/splash',
     refreshListenable: refresh,
     errorBuilder: (context, state) => PlaceholderListPage(
@@ -74,6 +98,14 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       if (status == AuthStatus.error && !isAuthRoute && !isSplash) {
         return '/login';
+      }
+
+      if (status == AuthStatus.authenticated) {
+        final pending = ref.read(pendingNotificationLocationProvider);
+        if (pending != null && pending.isNotEmpty && loc != pending) {
+          ref.read(pendingNotificationLocationProvider.notifier).state = null;
+          return pending;
+        }
       }
 
       if (status == AuthStatus.authenticated && (isAuthRoute || isSplash)) {

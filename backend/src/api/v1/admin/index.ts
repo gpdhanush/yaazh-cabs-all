@@ -29,6 +29,7 @@ import {
 } from "../../../services/fcm.service.js";
 import type { TripType } from "@prisma/client";
 import { hashPassword } from "../../../utils/crypto.js";
+import { absolutePublicUrl } from "../../../utils/public-url.js";
 
 function haversineKm(
   a: { lat: number; lng: number },
@@ -1111,8 +1112,7 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
       const booking = await prisma.bookings.findUnique({ where: { id } });
       if (!booking) throw new NotFoundError();
       const { invoice } = await upsertBookingInvoice(id);
-      const env = loadEnv();
-      const pdfUrl = `${env.APP_URL.replace(/\/$/, "")}${invoice.pdf_url ?? ""}`;
+      const pdfUrl = absolutePublicUrl(invoice.pdf_url, req);
       const message = [
         `Yaazh Cabs invoice ${invoice.invoice_number}`,
         `Booking ${booking.booking_reference}`,

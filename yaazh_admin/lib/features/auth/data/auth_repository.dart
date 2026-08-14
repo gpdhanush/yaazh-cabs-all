@@ -1,7 +1,9 @@
 import 'dart:convert';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:yaazh_admin/app/constants.dart';
 import 'package:yaazh_admin/core/network/api_client.dart';
+import 'package:yaazh_admin/core/notifications/device_service.dart';
 import 'package:yaazh_admin/core/storage/storage_service.dart';
 import 'package:yaazh_admin/features/auth/domain/admin_user.dart';
 
@@ -9,14 +11,16 @@ final authRepositoryProvider = Provider<AuthRepository>((ref) {
   return AuthRepository(
     ref.watch(apiClientProvider),
     ref.watch(storageServiceProvider),
+    ref.watch(deviceServiceProvider),
   );
 });
 
 class AuthRepository {
   final ApiClient _apiClient;
   final StorageService _storage;
+  final DeviceService _devices;
 
-  AuthRepository(this._apiClient, this._storage);
+  AuthRepository(this._apiClient, this._storage, this._devices);
 
   Future<AdminUser> login({
     required String email,
@@ -29,6 +33,7 @@ class AuthRepository {
     await _saveTokens(response);
     final user = _userFrom(response);
     await _cacheUser(user);
+    await _devices.registerAfterLogin(appVersion: AppConstants.appVersion);
     return user;
   }
 

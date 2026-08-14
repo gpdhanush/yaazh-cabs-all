@@ -8,6 +8,7 @@ import { loadEnv } from "../../../config/env.js";
 import { ok } from "../../../utils/api-response.js";
 import { requireAuth, requireUser } from "../../../middleware/auth.js";
 import { bookingService, serializeBooking, serializeDriverParty, getBookingPaymentSummary, collectBookingPayment } from "../../../services/booking.service.js";
+import { deliverBookingNotification, notifyAdmins } from "../../../services/fcm.service.js";
 import { saveDriverPhotoFromStoredUrl } from "../../../services/driver-photo.service.js";
 import { NotFoundError, ValidationError, ConflictError } from "../../../errors/app-error.js";
 import { Prisma } from "@prisma/client";
@@ -70,6 +71,13 @@ export const driverRoutes: FastifyPluginAsync = async (app) => {
     if (parsed.data.profile_image_url) {
       await saveDriverPhotoFromStoredUrl(user.id, parsed.data.profile_image_url);
     }
+    await notifyAdmins({
+      jobType: "notify_driver_updated",
+      title: "Driver updated profile",
+      body: `${d.name} updated their details.`,
+      driverId: String(d.id),
+      extra: { type: "driver", driver_id: String(d.id) },
+    });
     return ok(reply, serializeDriverProfile(d), "Profile updated.");
   });
 
@@ -269,6 +277,60 @@ export const driverRoutes: FastifyPluginAsync = async (app) => {
           total_completed_trips: { increment: 1 },
         },
       });
+    }
+
+    const copy =
+      to === "on_the_way"
+        ? {
+            jobType: "notify_driver_on_the_way",
+            customerTitle: "Driver on the way",
+            customerBody: `Your driver is on the way for ${booking.booking_reference}.`,
+            adminTitle: "Driver on the way",
+            adminBody: `Driver is on the way for ${booking.booking_reference} (${booking.customer_name}).`,
+          }
+        : to === "arrived"
+          ? {
+              jobType: "notify_driver_arrived",
+              customerTitle: "Driver arrived",
+              customerBody: `Your driver has arrived for ${booking.booking_reference}.`,
+              adminTitle: "Driver arrived",
+              adminBody: `Driver arrived for ${booking.booking_reference} (${booking.customer_name}).`,
+            }
+          : to === "trip_started"
+            ? {
+                jobType: "notify_trip_started",
+                customerTitle: "Trip started",
+                customerBody: `Your trip ${booking.booking_reference} has started.`,
+                adminTitle: "Trip started",
+                adminBody: `Trip ${booking.booking_reference} started (${booking.customer_name}).`,
+              }
+            : null;
+
+    if (copy) {
+      try {
+        if (booking.customer_id) {
+          await deliverBookingNotification({
+            recipientType: "customer",
+            customerId: String(booking.customer_id),
+            bookingId: String(id),
+            driverId: String(user.id),
+            jobType: copy.jobType,
+            title: copy.customerTitle,
+            body: copy.customerBody,
+          });
+        }
+        await notifyAdmins({
+          jobType: copy.jobType,
+          title: copy.adminTitle,
+          body: copy.adminBody,
+          bookingId: String(id),
+          customerId: booking.customer_id ? String(booking.customer_id) : null,
+          driverId: String(user.id),
+          extra: { type: "booking" },
+        });
+      } catch (err) {
+        console.error("Trip status notify failed", err);
+      }
     }
 
     return ok(reply, data, `Trip marked ${to}.`);
@@ -483,6 +545,14 @@ export const driverRoutes: FastifyPluginAsync = async (app) => {
       });
       await saveDriverPhotoFromStoredUrl(user.id, parsed.data.file_url);
     }
+    const driver = await prisma.drivers.findUnique({ where: { id: user.id }, select: { name: true } });
+    await notifyAdmins({
+      jobType: "notify_driver_document",
+      title: "Driver uploaded a document",
+      body: `${driver?.name ?? "A driver"} uploaded ${parsed.data.document_type.replace(/_/g, " ")}.`,
+      driverId: String(user.id),
+      extra: { type: "driver", driver_id: String(user.id) },
+    });
     return ok(reply, { id: String(row.id) }, "Document uploaded.", 201);
   });
 

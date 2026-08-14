@@ -34,6 +34,7 @@ export async function sendBookingPush(params: {
   body: string;
   bookingId?: string | null;
   jobType: string;
+  extra?: Record<string, string>;
 }): Promise<"sent" | "skipped" | "failed"> {
   const app = initAdmin();
   if (!app) return "skipped";
@@ -59,12 +60,17 @@ export async function sendBookingPush(params: {
   if (devices.length === 0) return "skipped";
 
   const data: Record<string, string> = {
-    type: "booking",
+    type: params.extra?.type ?? (params.recipientType === "admin" ? params.jobType : "booking"),
     job_type: params.jobType,
     title: params.title,
     body: params.body,
+    ...params.extra,
   };
   if (params.bookingId) data.booking_id = String(params.bookingId);
+  if (params.customerId) data.customer_id = String(params.customerId);
+  if (params.driverId) data.driver_id = String(params.driverId);
+
+  const channelId = params.recipientType === "admin" ? "yaazh_admin" : "yaazh_bookings";
 
   try {
     await admin.messaging().sendEachForMulticast({
@@ -77,7 +83,7 @@ export async function sendBookingPush(params: {
       android: {
         priority: "high",
         notification: {
-          channelId: "yaazh_bookings",
+          channelId,
           sound: "default",
         },
       },
@@ -133,6 +139,53 @@ export async function deliverBookingNotification(params: {
     });
   }
   return pushStatus;
+}
+
+/** Push + log for every active admin device (admin mobile app). */
+export async function notifyAdmins(params: {
+  title: string;
+  body: string;
+  jobType: string;
+  bookingId?: string | null;
+  customerId?: string | null;
+  driverId?: string | null;
+  extra?: Record<string, string>;
+}): Promise<"sent" | "skipped" | "failed"> {
+  try {
+    const pushStatus = await sendBookingPush({
+      recipientType: "admin",
+      title: params.title,
+      body: params.body,
+      jobType: params.jobType,
+      bookingId: params.bookingId ?? null,
+      customerId: params.customerId ?? null,
+      driverId: params.driverId ?? null,
+      extra: params.extra,
+    });
+    const env = loadEnv();
+    await prisma.notificationLogs.create({
+      data: {
+        recipient_type: "admin",
+        booking_id: params.bookingId ? BigInt(params.bookingId) : null,
+        customer_id: params.customerId ? BigInt(params.customerId) : null,
+        driver_id: params.driverId ? BigInt(params.driverId) : null,
+        channel: env.fcmEnabled ? ("push" as const) : ("in_app" as const),
+        title: params.title,
+        body: params.body,
+        delivery_status: pushStatus === "sent" ? "sent" : pushStatus === "failed" ? "failed" : "queued",
+        sent_at: pushStatus === "sent" ? new Date() : null,
+        data_payload: {
+          job_type: params.jobType,
+          booking_id: params.bookingId ?? null,
+          ...params.extra,
+        },
+      },
+    });
+    return pushStatus;
+  } catch (err) {
+    console.error("Admin notify failed", err);
+    return "failed";
+  }
 }
 
 const FCM_MULTICAST_LIMIT = 500;

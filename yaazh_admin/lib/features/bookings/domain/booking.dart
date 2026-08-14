@@ -375,11 +375,12 @@ class WhatsAppShare {
   });
 
   factory WhatsAppShare.fromJson(Map<String, dynamic> json) {
+    final message = json['message']?.toString();
     return WhatsAppShare(
-      whatsappUrl: json['whatsapp_url']?.toString() ?? '',
-      pdfUrl: json['pdf_url']?.toString(),
+      whatsappUrl: rewriteWhatsAppShareUrl(json['whatsapp_url']?.toString() ?? ''),
+      pdfUrl: resolveMediaUrl(json['pdf_url']?.toString()),
       feedbackUrl: json['feedback_url']?.toString(),
-      message: json['message']?.toString(),
+      message: message == null ? null : rewriteLoopbackUrls(message),
     );
   }
 }

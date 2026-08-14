@@ -11,6 +11,32 @@ bool _isLoopback(String host) {
       host == '::1';
 }
 
+final _loopbackUrl = RegExp(
+  r'https?://(?:localhost|127\.0\.0\.1|10\.0\.2\.2|\[::1\])(?::\d+)?(/[^\s]*)?',
+  caseSensitive: false,
+);
+
+String rewriteLoopbackUrls(String text) {
+  return text.replaceAllMapped(_loopbackUrl, (match) {
+    final path = match.group(1) ?? '';
+    return '$apiOrigin$path';
+  });
+}
+
+String rewriteWhatsAppShareUrl(String url) {
+  final rewritten = rewriteLoopbackUrls(url);
+  final uri = Uri.tryParse(rewritten);
+  if (uri == null) return rewritten;
+  final text = uri.queryParameters['text'];
+  if (text == null) return rewritten;
+  final next = rewriteLoopbackUrls(text);
+  if (next == text) return rewritten;
+  return uri.replace(queryParameters: {
+    ...uri.queryParameters,
+    'text': next,
+  }).toString();
+}
+
 String? resolveMediaUrl(String? raw) {
   if (raw == null) return null;
   final value = raw.trim();

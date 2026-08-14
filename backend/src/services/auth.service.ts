@@ -4,6 +4,7 @@ import { sha256, randomToken, hashPassword, verifyPassword } from "../utils/cryp
 import { signJwt } from "../utils/jwt.js";
 import { normalizePhone, phoneLookupVariants } from "../utils/phone.js";
 import { adminPhotoPublicPath } from "./admin-photo.service.js";
+import { notifyAdmins } from "./fcm.service.js";
 import {
   AppError,
   ConflictError,
@@ -73,6 +74,7 @@ export const authService = {
     if (existing?.password_hash) throw new ConflictError("Phone already registered.");
 
     const password_hash = await hashPassword(input.password);
+    const isNew = !existing;
     const customer = existing
       ? await prisma.customers.update({
           where: { id: existing.id },
@@ -93,6 +95,16 @@ export const authService = {
             phone_verified_at: new Date(),
           },
         });
+
+    if (isNew) {
+      await notifyAdmins({
+        jobType: "notify_customer_created",
+        title: "New customer",
+        body: `${customer.name} (${customer.phone}) registered on the app.`,
+        customerId: String(customer.id),
+        extra: { type: "customer", customer_id: String(customer.id) },
+      });
+    }
 
     const tokens = await issueTokens({
       userType: "customer",
