@@ -17,7 +17,7 @@ function dec(n: number) {
 }
 
 function money(n: number): string {
-  return `₹${n.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  return `Rs. ${n.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 export type InvoiceDto = {
@@ -142,7 +142,7 @@ async function buildInvoicePdf(params: {
   };
 }): Promise<Buffer> {
   const company = await companyProfile();
-  const doc = new PDFDocument({ size: "A4", margin: 48 });
+  const doc = new PDFDocument({ size: "A4", margin: 0 });
   const chunks: Buffer[] = [];
   doc.on("data", (c: Buffer) => chunks.push(c));
   const done = new Promise<Buffer>((resolve, reject) => {
@@ -150,6 +150,14 @@ async function buildInvoicePdf(params: {
     doc.on("error", reject);
   });
 
+  const pageW = doc.page.width;
+  const pageH = doc.page.height;
+  const primary = "#4B49AC";
+  const text = "#1F1E39";
+  const muted = "#6B7289";
+  const line = "#E4E7F1";
+  const card = "#F4F6FB";
+  const paid = params.amounts.balance <= 0 && params.amounts.total > 0;
   const tripLabel = params.booking.trip_type.replace(/_/g, " ");
   const km =
     params.booking.actual_distance_km != null
@@ -157,61 +165,109 @@ async function buildInvoicePdf(params: {
       : params.booking.estimated_distance_km != null
         ? Number(params.booking.estimated_distance_km)
         : null;
+  const contact = [company.phone, company.email].filter(Boolean).join("  |  ");
+  const invoiceDate = params.invoiceDate.toISOString().slice(0, 10);
+  const pickup = params.booking.pickup_at.toLocaleString("en-IN", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
 
-  doc.fillColor("#0f172a").fontSize(22).font("Helvetica-Bold").text(company.name);
-  doc.fontSize(10).font("Helvetica").fillColor("#475569");
-  if (company.address) doc.text(company.address);
-  const contact = [company.phone, company.email].filter(Boolean).join("  ·  ");
-  if (contact) doc.text(contact);
+  doc.rect(0, 0, pageW, 128).fill(primary);
+  doc.rect(0, 128, pageW, 8).fill("#98BDFF");
 
-  doc.moveDown(1.2);
-  doc.fillColor("#0f172a").fontSize(18).font("Helvetica-Bold").text("Booking invoice");
-  doc.fontSize(10).font("Helvetica").fillColor("#475569");
-  doc.text(`Invoice ${params.invoiceNumber}`);
-  doc.text(`Date ${params.invoiceDate.toISOString().slice(0, 10)}`);
-  doc.text(`Booking ${params.booking.booking_reference}`);
+  doc.circle(56, 58, 22).fill("#FFFFFF");
+  doc.fillColor(primary).font("Helvetica-Bold").fontSize(13).text("YZ", 34, 51, { width: 44, align: "center" });
 
-  doc.moveDown(1);
-  doc.fillColor("#0f172a").fontSize(11).font("Helvetica-Bold").text("Bill to");
-  doc.font("Helvetica").fontSize(10).fillColor("#334155");
-  doc.text(params.booking.customer_name);
-  doc.text(params.booking.customer_phone);
-  if (params.booking.customer_email) doc.text(params.booking.customer_email);
+  doc.fillColor("#FFFFFF").font("Helvetica-Bold").fontSize(20).text(company.name, 88, 32, { width: 280 });
+  doc.font("Helvetica").fontSize(9).fillColor("#E0E7FF");
+  if (company.address) doc.text(company.address, 88, 58, { width: 300 });
+  if (contact) doc.text(contact, 88, 86, { width: 300 });
 
-  doc.moveDown(0.8);
-  doc.fillColor("#0f172a").fontSize(11).font("Helvetica-Bold").text("Trip");
-  doc.font("Helvetica").fontSize(10).fillColor("#334155");
-  doc.text(`${params.booking.pickup_location}  →  ${params.booking.drop_location}`);
-  doc.text(`${tripLabel}  ·  Pickup ${params.booking.pickup_at.toLocaleString("en-IN")}`);
-  if (km != null) doc.text(`Distance ${km} km`);
+  doc.fillColor("#FFFFFF").font("Helvetica-Bold").fontSize(11).text("INVOICE", 360, 30, { width: 190, align: "right" });
+  doc.font("Helvetica").fontSize(9).fillColor("#E0E7FF");
+  doc.text(params.invoiceNumber, 360, 48, { width: 190, align: "right" });
+  doc.text(`Date ${invoiceDate}`, 360, 62, { width: 190, align: "right" });
+  doc.text(`Booking ${params.booking.booking_reference}`, 360, 76, { width: 190, align: "right" });
 
-  doc.moveDown(1.2);
-  const tableTop = doc.y;
-  const labelX = 48;
-  const valueX = 400;
-  const rows: Array<[string, string]> = [
-    ["Subtotal", money(params.amounts.subtotal)],
-    ["Discount", `- ${money(params.amounts.discount)}`],
-    ["Taxable amount", money(params.amounts.taxable)],
-    [`GST (${params.amounts.gstPct}%)`, money(params.amounts.gst)],
-    ["Total", money(params.amounts.total)],
-    ["Amount paid", money(params.amounts.paid)],
-    ["Balance due", money(params.amounts.balance)],
+  const pill = paid ? "PAID" : params.amounts.paid > 0 ? "PARTIAL" : "DUE";
+  const pillColor = paid ? "#22C55E" : params.amounts.paid > 0 ? "#F59E0B" : "#F3797E";
+  doc.roundedRect(pageW - 86, 94, 50, 16, 8).fill(pillColor);
+  doc.fillColor("#FFFFFF").font("Helvetica-Bold").fontSize(8).text(pill, pageW - 86, 98, { width: 50, align: "center" });
+
+  const left = 40;
+  const colW = 247;
+  const gap = 16;
+  let y = 156;
+
+  doc.roundedRect(left, y, colW, 118, 8).fill(card);
+  doc.roundedRect(left + colW + gap, y, colW, 118, 8).fill(card);
+
+  doc.fillColor(primary).font("Helvetica-Bold").fontSize(8).text("BILL TO", left + 16, y + 14);
+  doc.fillColor(text).font("Helvetica-Bold").fontSize(12).text(params.booking.customer_name, left + 16, y + 32, {
+    width: colW - 32,
+  });
+  doc.font("Helvetica").fontSize(10).fillColor(muted);
+  doc.text(params.booking.customer_phone, left + 16, y + 54, { width: colW - 32 });
+  if (params.booking.customer_email) {
+    doc.text(params.booking.customer_email, left + 16, y + 70, { width: colW - 32 });
+  }
+
+  const tripX = left + colW + gap;
+  doc.fillColor(primary).font("Helvetica-Bold").fontSize(8).text("TRIP", tripX + 16, y + 14);
+  doc.fillColor(text).font("Helvetica-Bold").fontSize(11).text(
+    `${params.booking.pickup_location}  to  ${params.booking.drop_location}`,
+    tripX + 16,
+    y + 32,
+    { width: colW - 32 },
+  );
+  doc.font("Helvetica").fontSize(10).fillColor(muted);
+  doc.text(`${tripLabel}  |  Pickup ${pickup}`, tripX + 16, y + 72, { width: colW - 32 });
+  if (km != null) doc.text(`Distance ${km} km`, tripX + 16, y + 90, { width: colW - 32 });
+
+  y += 140;
+  doc.fillColor(text).font("Helvetica-Bold").fontSize(13).text("Fare summary", left, y);
+  y += 22;
+
+  const tableW = pageW - left * 2;
+  const rows: Array<[string, string, boolean]> = [
+    ["Subtotal", money(params.amounts.subtotal), false],
+    ["Discount", `- ${money(params.amounts.discount)}`, false],
+    ["Taxable amount", money(params.amounts.taxable), false],
+    [`GST (${params.amounts.gstPct}%)`, money(params.amounts.gst), false],
+    ["Total", money(params.amounts.total), true],
+    ["Amount paid", money(params.amounts.paid), true],
+    ["Balance due", money(params.amounts.balance), true],
   ];
-  doc.fontSize(10);
-  rows.forEach(([label, value], i) => {
-    const y = tableTop + i * 20;
-    const last = i >= rows.length - 3;
-    doc.font(last ? "Helvetica-Bold" : "Helvetica").fillColor("#0f172a");
-    doc.text(label, labelX, y, { width: 280 });
-    doc.text(value, valueX, y, { width: 140, align: "right" });
+
+  doc.roundedRect(left, y, tableW, rows.length * 32 + 8, 10).fill(card);
+  rows.forEach(([label, value, emphasis], i) => {
+    const rowY = y + 8 + i * 32;
+    if (i === 4) {
+      doc.rect(left, rowY - 4, tableW, 32).fill(primary);
+      doc.fillColor("#FFFFFF").font("Helvetica-Bold").fontSize(11);
+    } else {
+      if (i % 2 === 1 && i < 4) {
+        doc.rect(left, rowY - 4, tableW, 32).fill("#EEF0F8");
+      }
+      doc.fillColor(emphasis ? text : muted).font(emphasis ? "Helvetica-Bold" : "Helvetica").fontSize(10);
+    }
+    doc.text(label, left + 18, rowY + 6, { width: 240 });
+    doc.text(value, left + tableW - 200, rowY + 6, { width: 182, align: "right" });
   });
 
-  doc.moveDown(4);
-  doc.font("Helvetica").fontSize(9).fillColor("#64748b");
-  doc.text("Thank you for riding with Yaazh Cabs. Toll, parking and permit charges are extra when applicable.", 48, doc.y + 16, {
-    width: 500,
-  });
+  y += rows.length * 32 + 36;
+  doc.moveTo(left, y).lineTo(pageW - left, y).strokeColor(line).lineWidth(1).stroke();
+  doc.font("Helvetica").fontSize(9).fillColor(muted);
+  doc.text(
+    "Thank you for riding with Yaazh Cabs. Toll, parking and permit charges are extra when applicable.",
+    left,
+    y + 14,
+    { width: tableW, align: "center" },
+  );
+  doc.text("This is a computer-generated invoice.", left, pageH - 36, { width: tableW, align: "center" });
 
   doc.end();
   return done;
