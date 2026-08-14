@@ -64,8 +64,14 @@ class BookingStatus {
 
   static bool canSendFeedback(String status) => status == completed;
 
+  static bool canRecordPayment(String status) =>
+      status != pending && status != rejected;
+
   static bool canCancel(String status) =>
-      status != completed && status != cancelled && status != rejected;
+      status != pending &&
+      status != completed &&
+      status != cancelled &&
+      status != rejected;
 
   static IconData icon(String status) {
     return switch (status) {

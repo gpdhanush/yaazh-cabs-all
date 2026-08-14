@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:yaazh_admin/app/theme.dart';
+import 'package:yaazh_admin/core/image_encode.dart';
 import 'package:yaazh_admin/core/network/api_exception.dart';
 import 'package:yaazh_admin/core/widgets/app_toast.dart';
 import 'package:yaazh_admin/core/widgets/driver_avatar.dart';
@@ -128,18 +129,20 @@ class _DriverFormPageState extends ConsumerState<DriverFormPage> {
       ],
     );
     if (source == null) return;
+    if (!mounted) return;
+    final toolbarColor = Theme.of(context).colorScheme.primary;
 
-    final file = await ImagePicker().pickImage(
+    final path = await pickAndPrepareImage(
       source: source,
-      maxWidth: 1200,
-      imageQuality: 85,
+      toolbarColor: toolbarColor,
+      title: 'Crop driver photo',
     );
-    if (file == null) return;
+    if (path == null) return;
 
     try {
       final updated = await ref
           .read(driverRepositoryProvider)
-          .uploadPhoto(widget.driverId!, file.path);
+          .uploadPhoto(widget.driverId!, path);
       invalidateDriverCaches(ref, id: widget.driverId);
       setState(() {
         _driver = updated;

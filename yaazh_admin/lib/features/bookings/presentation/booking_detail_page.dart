@@ -265,6 +265,10 @@ class _BookingDetailPageState extends ConsumerState<BookingDetailPage> {
 
   Future<void> _recordPayment(Booking b) async {
     hideKeyboard();
+    if (!BookingStatus.canRecordPayment(b.status)) {
+      showErrorToast('Confirm the booking before recording a payment');
+      return;
+    }
     final amount = double.tryParse(_amountController.text.trim()) ?? 0;
     if (amount <= 0) {
       showErrorToast('Enter a valid amount');
@@ -286,6 +290,10 @@ class _BookingDetailPageState extends ConsumerState<BookingDetailPage> {
 
   Future<void> _markPaid(Booking b) async {
     hideKeyboard();
+    if (!BookingStatus.canRecordPayment(b.status)) {
+      showErrorToast('Confirm the booking before recording a payment');
+      return;
+    }
     try {
       await ref.read(bookingRepositoryProvider).markPaid(b.id);
       await _reload();
@@ -527,7 +535,19 @@ class _PaymentPanel extends StatelessWidget {
               _money('Balance', balance),
             ],
           ),
-          if (!booking.isFullyPaid) ...[
+          if (booking.isFullyPaid) ...[
+            const SizedBox(height: 8),
+            Text(
+              'Customer has paid. Amount and method are not needed.',
+              style: theme.textTheme.bodySmall,
+            ),
+          ] else if (!BookingStatus.canRecordPayment(booking.status)) ...[
+            const SizedBox(height: 8),
+            Text(
+              'Confirm the booking before recording a payment.',
+              style: theme.textTheme.bodySmall,
+            ),
+          ] else ...[
             const SizedBox(height: 14),
             YaNumberField(
               controller: amountController,
@@ -558,12 +578,6 @@ class _PaymentPanel extends StatelessWidget {
             OutlinedButton(
               onPressed: balance <= 0 ? null : onMarkPaid,
               child: const Text('MARK FULLY PAID'),
-            ),
-          ] else ...[
-            const SizedBox(height: 8),
-            Text(
-              'Customer has paid. Amount and method are not needed.',
-              style: theme.textTheme.bodySmall,
             ),
           ],
           if (pay != null && pay.payments.isNotEmpty) ...[

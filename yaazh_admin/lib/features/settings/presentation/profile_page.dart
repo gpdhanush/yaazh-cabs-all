@@ -109,15 +109,16 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   }
 
   Future<void> _pickPhoto(ImageSource source) async {
-    final file = await ImagePicker().pickImage(
+    if (!mounted) return;
+    final toolbarColor = Theme.of(context).colorScheme.primary;
+    final path = await pickAndPrepareImage(
       source: source,
-      maxWidth: 1200,
-      imageQuality: 85,
+      toolbarColor: toolbarColor,
+      title: 'Crop profile photo',
     );
-    if (file == null) return;
+    if (path == null) return;
     try {
-      final encoded = await encodeAvatarPng(file.path);
-      final user = await ref.read(authRepositoryProvider).uploadPhoto(encoded);
+      final user = await ref.read(authRepositoryProvider).uploadPhoto(path);
       ref.read(authNotifierProvider.notifier).setUser(user);
       if (!mounted) return;
       setState(() {

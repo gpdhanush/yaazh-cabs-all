@@ -63,10 +63,15 @@ class YaazhAdminApp extends ConsumerWidget {
     final overlay = AppTheme.overlayFor(header, navBar: navBar);
 
     EasyLoading.instance
-      ..backgroundColor = AppColors.primary
+      ..backgroundColor = header
       ..indicatorColor = Colors.white
       ..progressColor = Colors.white
-      ..textColor = Colors.white;
+      ..textColor = Colors.white
+      ..textStyle = GoogleFonts.arimo(
+        color: Colors.white,
+        fontWeight: FontWeight.w600,
+        fontSize: 14,
+      );
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: overlay,

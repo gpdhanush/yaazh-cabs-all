@@ -18,6 +18,7 @@ class YaDangerButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
     final child = icon == null
         ? Text(label)
         : Row(
@@ -30,12 +31,18 @@ class YaDangerButton extends StatelessWidget {
             ],
           );
 
+    final shape = RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(AppConstants.radiusM),
+    );
+
     if (isDark) {
       return OutlinedButton(
         style: OutlinedButton.styleFrom(
           foregroundColor: color,
           side: BorderSide(color: color, width: 1.4),
-          minimumSize: const Size.fromHeight(40),
+          minimumSize: const Size(double.infinity, 52),
+          shape: shape,
+          textStyle: theme.outlinedButtonTheme.style?.textStyle?.resolve({}),
         ),
         onPressed: onPressed,
         child: child,
@@ -46,7 +53,12 @@ class YaDangerButton extends StatelessWidget {
       style: ElevatedButton.styleFrom(
         backgroundColor: color,
         foregroundColor: Colors.white,
-        minimumSize: const Size.fromHeight(40),
+        disabledBackgroundColor: color.withValues(alpha: 0.4),
+        disabledForegroundColor: Colors.white.withValues(alpha: 0.7),
+        elevation: 0,
+        minimumSize: const Size(double.infinity, 52),
+        shape: shape,
+        textStyle: theme.elevatedButtonTheme.style?.textStyle?.resolve({}),
       ),
       onPressed: onPressed,
       child: child,

@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:yaazh_admin/app/constants.dart';
 import 'package:yaazh_admin/app/theme.dart';
 import 'package:yaazh_admin/core/format.dart';
+import 'package:yaazh_admin/core/image_encode.dart';
 import 'package:yaazh_admin/core/network/api_exception.dart';
 import 'package:yaazh_admin/core/widgets/app_toast.dart';
 import 'package:yaazh_admin/core/widgets/coming_soon.dart';
@@ -55,16 +56,18 @@ class _DriverDetailPageState extends ConsumerState<DriverDetailPage> {
       ],
     );
     if (source == null) return;
+    if (!mounted) return;
+    final toolbarColor = Theme.of(context).colorScheme.primary;
 
-    final file = await ImagePicker().pickImage(
+    final path = await pickAndPrepareImage(
       source: source,
-      maxWidth: 1200,
-      imageQuality: 85,
+      toolbarColor: toolbarColor,
+      title: 'Crop driver photo',
     );
-    if (file == null) return;
+    if (path == null) return;
 
     try {
-      await ref.read(driverRepositoryProvider).uploadPhoto(widget.driverId, file.path);
+      await ref.read(driverRepositoryProvider).uploadPhoto(widget.driverId, path);
       setState(() => _photoBust = DateTime.now().millisecondsSinceEpoch);
       invalidateDriverCaches(ref, id: widget.driverId);
       showSuccessToast('Driver photo updated');

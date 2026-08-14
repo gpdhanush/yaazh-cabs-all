@@ -11,6 +11,25 @@ import 'package:yaazh_admin/features/home/data/dashboard_repository.dart';
 
 enum BookingReasonAction { reject, cancel }
 
+const _cancelPresets = [
+  'Customer requested cancellation',
+  'Duplicate booking',
+  'Driver unavailable',
+  'Vehicle issue',
+  'Pickup time changed',
+  'Customer no-show',
+  'Weather or road conditions',
+];
+
+const _rejectPresets = [
+  'Duplicate booking',
+  'Out of service area',
+  'Invalid pickup or drop',
+  'Customer not reachable',
+  'Fare not agreed',
+  'Spam or test booking',
+];
+
 class BookingReasonPage extends ConsumerStatefulWidget {
   final String bookingId;
   final BookingReasonAction action;
@@ -27,6 +46,7 @@ class BookingReasonPage extends ConsumerStatefulWidget {
 
 class _BookingReasonPageState extends ConsumerState<BookingReasonPage> {
   final _reasonController = TextEditingController();
+  final _selected = <String>{};
   bool _saving = false;
 
   @override
@@ -35,28 +55,41 @@ class _BookingReasonPageState extends ConsumerState<BookingReasonPage> {
     super.dispose();
   }
 
-  String get _title =>
-      widget.action == BookingReasonAction.reject ? 'Reject booking' : 'Cancel booking';
+  bool get _isCancel => widget.action == BookingReasonAction.cancel;
 
-  String get _hint => widget.action == BookingReasonAction.reject
-      ? 'Why is this booking being rejected?'
-      : 'Why is this booking being cancelled?';
+  List<String> get _presets => _isCancel ? _cancelPresets : _rejectPresets;
 
-  String get _cta =>
-      widget.action == BookingReasonAction.reject ? 'REJECT BOOKING' : 'CANCEL BOOKING';
+  String get _title => _isCancel ? 'Cancel booking' : 'Reject booking';
+
+  String get _hint => _isCancel
+      ? 'Pick a quick reason. Add a note if you need more detail.'
+      : 'Pick a quick reason. Add a note if you need more detail.';
+
+  String get _cta => _isCancel ? 'CANCEL BOOKING' : 'REJECT BOOKING';
+
+  String? _composedReason() {
+    final extra = _reasonController.text.trim();
+    final parts = [..._selected, if (extra.isNotEmpty) extra];
+    if (parts.isEmpty) return null;
+    return parts.join('. ');
+  }
 
   Future<void> _submit() async {
     hideKeyboard();
-    final reason = _reasonController.text.trim();
+    final reason = _composedReason();
+    if (reason == null) {
+      showErrorToast('Select a reason or type one');
+      return;
+    }
     setState(() => _saving = true);
     try {
       final repo = ref.read(bookingRepositoryProvider);
-      if (widget.action == BookingReasonAction.reject) {
-        await repo.reject(widget.bookingId, reason: reason.isEmpty ? 'Rejected by admin' : reason);
-        showSuccessToast('Booking rejected');
-      } else {
-        await repo.cancel(widget.bookingId, reason: reason.isEmpty ? 'Cancelled by admin' : reason);
+      if (_isCancel) {
+        await repo.cancel(widget.bookingId, reason: reason);
         showSuccessToast('Booking cancelled');
+      } else {
+        await repo.reject(widget.bookingId, reason: reason);
+        showSuccessToast('Booking rejected');
       }
       ref.invalidate(bookingDetailProvider(widget.bookingId));
       ref.invalidate(bookingsProvider);
@@ -71,25 +104,53 @@ class _BookingReasonPageState extends ConsumerState<BookingReasonPage> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return KeyboardDismiss(
       child: Scaffold(
         appBar: AppBar(title: Text(_title)),
         body: ListView(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
           children: [
-            Text(_hint, style: Theme.of(context).textTheme.bodyMedium),
+            Text(_hint, style: theme.textTheme.bodyMedium),
+            const SizedBox(height: 16),
+            YaField(
+              label: 'Quick reasons',
+              required: true,
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (final item in _presets)
+                    FilterChip(
+                      label: Text(item),
+                      selected: _selected.contains(item),
+                      onSelected: (on) {
+                        setState(() {
+                          if (on) {
+                            _selected.add(item);
+                          } else {
+                            _selected.remove(item);
+                          }
+                        });
+                      },
+                    ),
+                ],
+              ),
+            ),
             const SizedBox(height: 16),
             YaTextField(
-              label: 'Reason',
-              hint: _hint,
+              label: 'Anything else?',
+              hint: 'Optional extra note',
               controller: _reasonController,
-              minLines: 4,
-              maxLines: 6,
+              minLines: 3,
+              maxLines: 5,
+              maxLength: 400,
               textInputAction: TextInputAction.done,
               onFieldSubmitted: (_) => _submit(),
             ),
             const SizedBox(height: 24),
-            if (widget.action == BookingReasonAction.cancel)
+            if (_isCancel)
               YaDangerButton(
                 onPressed: _saving ? null : _submit,
                 label: _saving ? 'SAVING…' : _cta,

@@ -36,7 +36,7 @@ class HomePage extends ConsumerWidget {
       child: Scaffold(
         appBar: AppBar(
           leading: const YaDrawerButton(),
-          title: const Text('Home'),
+          automaticallyImplyLeading: false,
           actions: [
             IconButton(
               tooltip: 'Notifications',

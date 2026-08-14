@@ -127,14 +127,17 @@ class AppTheme {
         foregroundColor: onPrimary,
         elevation: 0,
         scrolledUnderElevation: 0,
-        centerTitle: false,
+        centerTitle: true,
         systemOverlayStyle: overlayFor(
           primary,
           navBar: surface,
         ),
         iconTheme: IconThemeData(color: onPrimary),
         actionsIconTheme: IconThemeData(color: onPrimary),
-        titleTextStyle: textTheme.titleLarge?.copyWith(color: onPrimary),
+        titleTextStyle: textTheme.titleLarge?.copyWith(
+          color: onPrimary,
+          fontWeight: FontWeight.w800,
+        ),
       ),
       cardTheme: CardThemeData(
         color: surface,
