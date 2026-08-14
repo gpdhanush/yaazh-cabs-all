@@ -4,20 +4,70 @@ import { prisma } from "../config/database.js";
 import { calculateFare, type FareBreakdown } from "../domain/fare.js";
 import { assertTransition, canCancel } from "../domain/booking-state-machine.js";
 import { bookingReference } from "../utils/crypto.js";
+import { normalizePhone, phoneLookupVariants } from "../utils/phone.js";
 import { AppError, ConflictError, NotFoundError, ValidationError } from "../errors/app-error.js";
 import { deliverBookingNotification } from "./fcm.service.js";
 import { driverPhotoPublicPath, publicMediaPath } from "./driver-photo.service.js";
 import { mapService } from "./map.service.js";
 
+export { normalizePhone };
+
 function dec(n: number) {
   return new Prisma.Decimal(n);
 }
 
-export function normalizePhone(phone: string): string {
-  const digits = phone.replace(/\D/g, "");
-  if (digits.length === 12 && digits.startsWith("91")) return digits.slice(2);
-  if (digits.length === 11 && digits.startsWith("0")) return digits.slice(1);
-  return digits;
+/**
+ * Website / guest bookings: one customer per mobile (unique).
+ * First booking creates a record with no password. Later bookings update name + email.
+ */
+async function upsertCustomerByPhone(
+  tx: Prisma.TransactionClient,
+  input: { name: string; phone: string; email?: string | null; city?: string | null },
+): Promise<bigint> {
+  const phone = normalizePhone(input.phone);
+  const name = input.name.trim();
+  const email = input.email?.trim() || null;
+  const city = input.city?.trim() || null;
+
+  const applyProfile = async (id: bigint) => {
+    await tx.customers.update({
+      where: { id },
+      data: {
+        name,
+        ...(email ? { email } : {}),
+        ...(city ? { city } : {}),
+      },
+    });
+    return id;
+  };
+
+  const existing = await tx.customers.findFirst({
+    where: { phone: { in: phoneLookupVariants(phone) } },
+  });
+  if (existing) return applyProfile(existing.id);
+
+  try {
+    const created = await tx.customers.create({
+      data: {
+        name,
+        phone,
+        email,
+        city,
+        password_hash: null,
+        is_active: true,
+        app_status: "active",
+      },
+    });
+    return created.id;
+  } catch (err) {
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+      const raced = await tx.customers.findFirst({
+        where: { phone: { in: phoneLookupVariants(phone) } },
+      });
+      if (raced) return applyProfile(raced.id);
+    }
+    throw err;
+  }
 }
 
 export type QuoteFareInput = {
@@ -257,10 +307,19 @@ export const bookingService = {
         });
       }
 
+      const customerId =
+        input.customerId ??
+        (await upsertCustomerByPhone(tx, {
+          name: input.customerName,
+          phone,
+          email: input.customerEmail,
+          city: input.pickupCity,
+        }));
+
       const created = await tx.bookings.create({
         data: {
           booking_reference: ref,
-          customer_id: input.customerId ?? null,
+          customer_id: customerId,
           vehicle_category_id: input.vehicleCategoryId,
           route_id: input.routeId ?? null,
           coupon_id: coupon?.id ?? null,
@@ -350,9 +409,9 @@ export const bookingService = {
           old_status: null,
           new_status: "pending",
           note: "Booking created",
-          changed_by_type: input.createdByAdminId ? "admin" : input.customerId ? "customer" : "system",
+          changed_by_type: input.createdByAdminId ? "admin" : customerId ? "customer" : "system",
           changed_by_admin_id: input.createdByAdminId ?? null,
-          changed_by_customer_id: input.customerId ?? null,
+          changed_by_customer_id: customerId,
         },
       });
 

@@ -15,6 +15,7 @@ import {
   serializeInvoice,
   upsertBookingInvoice,
 } from "../../../services/invoice.service.js";
+import { feedbackPageUrl, whatsappUrl } from "../../../services/feedback.service.js";
 import { NotFoundError, ValidationError, ConflictError } from "../../../errors/app-error.js";
 import {
   deliverAdminNotification,
@@ -501,8 +502,119 @@ function serializeVehicle(
   };
 }
 
+function serializeAdminProfile(a: {
+  id: bigint;
+  name: string;
+  email: string;
+  phone: string | null;
+  avatar_url: string | null;
+  role_id: bigint;
+}) {
+  return {
+    id: String(a.id),
+    name: a.name,
+    email: a.email,
+    phone: a.phone,
+    avatar_url: a.avatar_url,
+    role_id: String(a.role_id),
+  };
+}
+
 export const adminRoutes: FastifyPluginAsync = async (app) => {
   app.addHook("preHandler", requireAuth("admin"));
+
+  app.get("/profile", async (req, reply) => {
+    const user = requireUser(req);
+    const admin = await prisma.adminUsers.findUnique({ where: { id: user.id } });
+    if (!admin) throw new NotFoundError("Admin not found.");
+    return ok(reply, serializeAdminProfile(admin));
+  });
+
+  app.put("/profile", async (req, reply) => {
+    const user = requireUser(req);
+    const existing = await prisma.adminUsers.findUnique({ where: { id: user.id } });
+    if (!existing) throw new NotFoundError("Admin not found.");
+    const schema = z.object({
+      name: z.string().min(2).max(120),
+      email: z.string().email().max(150),
+      phone: z.string().min(8).max(20).optional().nullable(),
+      password: z.string().min(8).max(120).optional().nullable(),
+    });
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) throw new ValidationError("Validation failed.", parsed.error.flatten());
+    const d = parsed.data;
+    const email = d.email.trim().toLowerCase();
+    const phone = d.phone?.trim() || null;
+
+    const emailClash = await prisma.adminUsers.findFirst({
+      where: { email, NOT: { id: user.id } },
+    });
+    if (emailClash) throw new ConflictError("Email already in use.");
+    if (phone) {
+      const phoneClash = await prisma.adminUsers.findFirst({
+        where: { phone, NOT: { id: user.id } },
+      });
+      if (phoneClash) throw new ConflictError("Phone already in use.");
+    }
+
+    const updated = await prisma.adminUsers.update({
+      where: { id: user.id },
+      data: {
+        name: d.name.trim(),
+        email,
+        phone,
+        ...(d.password ? { password_hash: await hashPassword(d.password) } : {}),
+      },
+    });
+    await audit(
+      user.id,
+      "admin.profile.update",
+      "admin_users",
+      String(user.id),
+      serializeAdminProfile(existing),
+      serializeAdminProfile(updated),
+      req,
+    );
+    return ok(reply, serializeAdminProfile(updated), "Profile updated.");
+  });
+
+  app.post("/profile/photo", async (req, reply) => {
+    const user = requireUser(req);
+    const existing = await prisma.adminUsers.findUnique({ where: { id: user.id } });
+    if (!existing) throw new NotFoundError("Admin not found.");
+
+    const env = loadEnv();
+    const file = await req.file();
+    if (!file) throw new ValidationError("Image file is required.");
+    const mime = file.mimetype || "";
+    if (!mime.startsWith("image/")) throw new ValidationError("Only image uploads are allowed.");
+
+    const extFromName = path.extname(file.filename || "").toLowerCase();
+    const ext =
+      extFromName && [".jpg", ".jpeg", ".png", ".webp", ".gif"].includes(extFromName)
+        ? extFromName
+        : mime === "image/png"
+          ? ".png"
+          : mime === "image/webp"
+            ? ".webp"
+            : mime === "image/gif"
+              ? ".gif"
+              : ".jpg";
+
+    const filename = `${user.id}-${Date.now()}-${randomUUID().slice(0, 8)}${ext}`;
+    const dir = path.resolve(env.STORAGE_PATH, "public", "admins");
+    fs.mkdirSync(dir, { recursive: true });
+    const bytes = await file.toBuffer();
+    await fs.promises.writeFile(path.join(dir, filename), bytes);
+
+    const relativeUrl = `/storage/public/admins/${filename}`;
+    const updated = await prisma.adminUsers.update({
+      where: { id: user.id },
+      data: { avatar_url: relativeUrl },
+    });
+    await audit(user.id, "admin.profile.photo", "admin_users", String(user.id), null, { avatar_url: relativeUrl }, req);
+    return ok(reply, serializeAdminProfile(updated), "Profile photo updated.");
+  });
 
   app.post("/devices", async (req, reply) => {
     const user = requireUser(req);
@@ -967,6 +1079,88 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
         reply,
         { ...result.invoice, email_sent: true, email_to: result.email },
         `Invoice emailed to ${result.email}.`,
+      );
+    },
+  );
+
+  app.post(
+    "/bookings/:id/invoice/whatsapp",
+    { preHandler: [requirePermission("bookings.update")] },
+    async (req, reply) => {
+      const user = requireUser(req);
+      const id = BigInt((req.params as { id: string }).id);
+      const booking = await prisma.bookings.findUnique({ where: { id } });
+      if (!booking) throw new NotFoundError();
+      const { invoice } = await upsertBookingInvoice(id);
+      const env = loadEnv();
+      const pdfUrl = `${env.APP_URL.replace(/\/$/, "")}${invoice.pdf_url ?? ""}`;
+      const message = [
+        `Yaazh Cabs invoice ${invoice.invoice_number}`,
+        `Booking ${booking.booking_reference}`,
+        `${booking.pickup_location} → ${booking.drop_location}`,
+        "",
+        "Download your invoice PDF:",
+        pdfUrl,
+      ].join("\n");
+      const wa = whatsappUrl(booking.customer_phone, message);
+      await audit(
+        user.id,
+        "booking.invoice_whatsapp",
+        "bookings",
+        String(id),
+        null,
+        { phone: booking.customer_phone, pdf_url: pdfUrl },
+        req,
+      );
+      return ok(
+        reply,
+        {
+          invoice,
+          pdf_url: pdfUrl,
+          whatsapp_url: wa,
+          phone: booking.customer_phone,
+          message,
+        },
+        "Invoice ready to send on WhatsApp.",
+      );
+    },
+  );
+
+  app.post(
+    "/bookings/:id/feedback-link",
+    { preHandler: [requirePermission("bookings.update")] },
+    async (req, reply) => {
+      const user = requireUser(req);
+      const id = BigInt((req.params as { id: string }).id);
+      const booking = await prisma.bookings.findUnique({ where: { id } });
+      if (!booking) throw new NotFoundError();
+      const feedbackUrl = feedbackPageUrl(id);
+      const message = [
+        `Hi ${booking.customer_name},`,
+        `Thank you for riding with Yaazh Cabs (${booking.booking_reference}).`,
+        "",
+        "Please rate your trip and share a short review:",
+        feedbackUrl,
+      ].join("\n");
+      const wa = whatsappUrl(booking.customer_phone, message);
+      await audit(
+        user.id,
+        "booking.feedback_link",
+        "bookings",
+        String(id),
+        null,
+        { phone: booking.customer_phone, feedback_url: feedbackUrl },
+        req,
+      );
+      return ok(
+        reply,
+        {
+          feedback_url: feedbackUrl,
+          whatsapp_url: wa,
+          phone: booking.customer_phone,
+          message,
+        },
+        "Feedback link ready to send on WhatsApp.",
       );
     },
   );

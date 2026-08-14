@@ -2,6 +2,7 @@ import { prisma } from "../config/database.js";
 import { loadEnv } from "../config/env.js";
 import { sha256, randomToken, hashPassword, verifyPassword } from "../utils/crypto.js";
 import { signJwt } from "../utils/jwt.js";
+import { normalizePhone, phoneLookupVariants } from "../utils/phone.js";
 import {
   AppError,
   ConflictError,
@@ -64,19 +65,33 @@ export const authService = {
     ip?: string;
     userAgent?: string;
   }) {
-    const existing = await prisma.customers.findUnique({ where: { phone: input.phone } });
-    if (existing) throw new ConflictError("Phone already registered.");
+    const phone = normalizePhone(input.phone);
+    const existing = await prisma.customers.findFirst({
+      where: { phone: { in: phoneLookupVariants(phone) } },
+    });
+    if (existing?.password_hash) throw new ConflictError("Phone already registered.");
 
     const password_hash = await hashPassword(input.password);
-    const customer = await prisma.customers.create({
-      data: {
-        name: input.name,
-        phone: input.phone,
-        email: input.email ?? null,
-        password_hash,
-        phone_verified_at: new Date(),
-      },
-    });
+    const customer = existing
+      ? await prisma.customers.update({
+          where: { id: existing.id },
+          data: {
+            name: input.name,
+            phone,
+            email: input.email ?? existing.email,
+            password_hash,
+            phone_verified_at: new Date(),
+          },
+        })
+      : await prisma.customers.create({
+          data: {
+            name: input.name,
+            phone,
+            email: input.email ?? null,
+            password_hash,
+            phone_verified_at: new Date(),
+          },
+        });
 
     const tokens = await issueTokens({
       userType: "customer",
@@ -102,7 +117,9 @@ export const authService = {
     ip?: string;
     userAgent?: string;
   }) {
-    const customer = await prisma.customers.findUnique({ where: { phone: input.phone } });
+    const customer = await prisma.customers.findFirst({
+      where: { phone: { in: phoneLookupVariants(input.phone) } },
+    });
     if (!customer?.password_hash) throw new UnauthorizedError("Invalid credentials.");
     if (!customer.is_active || customer.app_status !== "active") {
       throw new UnauthorizedError("Account is not active.");
@@ -197,6 +214,8 @@ export const authService = {
         id: String(admin.id),
         name: admin.name,
         email: admin.email,
+        phone: admin.phone,
+        avatar_url: admin.avatar_url,
         role_id: String(admin.role_id),
       },
       ...tokens,

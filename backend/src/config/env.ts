@@ -52,6 +52,7 @@ const envSchema = z
     PORT: z.coerce.number().int().positive().default(3000),
     HOST: z.string().default("0.0.0.0"),
     APP_URL: z.string().default("http://localhost:3000"),
+    PUBLIC_WEB_URL: z.string().default("https://yaazhcabs.in"),
     API_PREFIX: z.string().default("/api"),
     APP_NAME: z.string().default("Yaazh Cab Booking API"),
 

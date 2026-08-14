@@ -4,6 +4,7 @@ import { prisma } from "../../../config/database.js";
 import { ok } from "../../../utils/api-response.js";
 import { ValidationError, NotFoundError } from "../../../errors/app-error.js";
 import { bookingService } from "../../../services/booking.service.js";
+import { getPublicFeedback, submitPublicFeedback } from "../../../services/feedback.service.js";
 import { loadDriverPhotoBytes } from "../../../services/driver-photo.service.js";
 import { mapService } from "../../../services/map.service.js";
 import type { TripType } from "@prisma/client";
@@ -475,5 +476,23 @@ export const publicRoutes: FastifyPluginAsync = async (app) => {
       couponCode: d.coupon_code,
     });
     return ok(reply, data, "Booking created successfully.", 201);
+  });
+
+  app.get("/feedback/:token", async (req, reply) => {
+    const { token } = req.params as { token: string };
+    const data = await getPublicFeedback(token);
+    return ok(reply, data, "Feedback form loaded.");
+  });
+
+  app.post("/feedback/:token", async (req, reply) => {
+    const { token } = req.params as { token: string };
+    const schema = z.object({
+      rating: z.number().int().min(1).max(5),
+      review: z.string().max(800).optional().nullable(),
+    });
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) throw new ValidationError("Validation failed.", parsed.error.flatten());
+    const data = await submitPublicFeedback(token, parsed.data);
+    return ok(reply, data, "Thank you for your feedback.", 201);
   });
 };

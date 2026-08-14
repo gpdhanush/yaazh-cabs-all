@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as StatusRouteImport } from './routes/status'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
+import { Route as FeedbackTokenRouteImport } from './routes/feedback.$token'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -34,18 +35,25 @@ const ApiChatRoute = ApiChatRouteImport.update({
   path: '/api/chat',
   getParentRoute: () => rootRouteImport,
 } as any)
+const FeedbackTokenRoute = FeedbackTokenRouteImport.update({
+  id: '/feedback/$token',
+  path: '/feedback/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/status': typeof StatusRoute
   '/api/chat': typeof ApiChatRoute
+  '/feedback/$token': typeof FeedbackTokenRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/status': typeof StatusRoute
   '/api/chat': typeof ApiChatRoute
+  '/feedback/$token': typeof FeedbackTokenRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -53,13 +61,20 @@ export interface FileRoutesById {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/status': typeof StatusRoute
   '/api/chat': typeof ApiChatRoute
+  '/feedback/$token': typeof FeedbackTokenRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/sitemap.xml' | '/status' | '/api/chat'
+  fullPaths: '/' | '/sitemap.xml' | '/status' | '/api/chat' | '/feedback/$token'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/sitemap.xml' | '/status' | '/api/chat'
-  id: '__root__' | '/' | '/sitemap.xml' | '/status' | '/api/chat'
+  to: '/' | '/sitemap.xml' | '/status' | '/api/chat' | '/feedback/$token'
+  id:
+    | '__root__'
+    | '/'
+    | '/sitemap.xml'
+    | '/status'
+    | '/api/chat'
+    | '/feedback/$token'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -67,6 +82,7 @@ export interface RootRouteChildren {
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   StatusRoute: typeof StatusRoute
   ApiChatRoute: typeof ApiChatRoute
+  FeedbackTokenRoute: typeof FeedbackTokenRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -99,6 +115,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiChatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/feedback/$token': {
+      id: '/feedback/$token'
+      path: '/feedback/$token'
+      fullPath: '/feedback/$token'
+      preLoaderRoute: typeof FeedbackTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -107,6 +130,7 @@ const rootRouteChildren: RootRouteChildren = {
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   StatusRoute: StatusRoute,
   ApiChatRoute: ApiChatRoute,
+  FeedbackTokenRoute: FeedbackTokenRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

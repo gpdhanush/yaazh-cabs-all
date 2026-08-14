@@ -1,0 +1,212 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:yaazh_admin/app/constants.dart';
+import 'package:yaazh_admin/core/format.dart';
+import 'package:yaazh_admin/core/widgets/coming_soon.dart';
+import 'package:yaazh_admin/core/widgets/keyboard_dismiss.dart';
+import 'package:yaazh_admin/core/widgets/status_chip.dart';
+import 'package:yaazh_admin/features/enquiries/data/enquiry_repository.dart';
+import 'package:yaazh_admin/features/enquiries/domain/enquiry.dart';
+import 'package:yaazh_admin/features/shell/admin_shell.dart';
+
+final enquirySearchProvider = StateProvider<String>((ref) => '');
+
+class EnquiriesPage extends ConsumerWidget {
+  const EnquiriesPage({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return DefaultTabController(
+      length: 4,
+      child: KeyboardDismiss(
+        child: Scaffold(
+          appBar: AppBar(
+            leading: const YaDrawerButton(),
+            title: const Text('Enquiries'),
+            bottom: const TabBar(
+              isScrollable: true,
+              tabAlignment: TabAlignment.start,
+              tabs: [
+                Tab(text: 'All'),
+                Tab(text: 'New'),
+                Tab(text: 'In progress'),
+                Tab(text: 'Closed'),
+              ],
+            ),
+          ),
+          body: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                child: TextField(
+                  textInputAction: TextInputAction.search,
+                  onChanged: (value) =>
+                      ref.read(enquirySearchProvider.notifier).state = value,
+                  decoration: const InputDecoration(
+                    hintText: 'Search name, phone, subject…',
+                    prefixIcon: Icon(Icons.search_rounded),
+                  ),
+                ),
+              ),
+              const Expanded(
+                child: TabBarView(
+                  children: [
+                    _EnquiryList(tab: _EnquiryTab.all),
+                    _EnquiryList(tab: _EnquiryTab.fresh),
+                    _EnquiryList(tab: _EnquiryTab.inProgress),
+                    _EnquiryList(tab: _EnquiryTab.closed),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+enum _EnquiryTab { all, fresh, inProgress, closed }
+
+class _EnquiryList extends ConsumerWidget {
+  final _EnquiryTab tab;
+
+  const _EnquiryList({required this.tab});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final async = ref.watch(enquiriesProvider);
+    final query = ref.watch(enquirySearchProvider).trim().toLowerCase();
+
+    return async.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (err, _) => EmptyState(
+        title: 'Could not load enquiries',
+        subtitle: err.toString(),
+        icon: Icons.cloud_off_rounded,
+      ),
+      data: (rows) {
+        final filtered = rows.where((e) {
+          final inTab = switch (tab) {
+            _EnquiryTab.all => true,
+            _EnquiryTab.fresh => e.status == 'new',
+            _EnquiryTab.inProgress => e.status == 'in_progress',
+            _EnquiryTab.closed => e.status == 'closed' || e.status == 'spam',
+          };
+          if (!inTab) return false;
+          if (query.isEmpty) return true;
+          final hay = [
+            e.name,
+            e.phone,
+            e.email,
+            e.subject,
+            e.message,
+            e.status,
+          ].join(' ').toLowerCase();
+          return hay.contains(query);
+        }).toList();
+
+        return RefreshIndicator(
+          onRefresh: () async {
+            ref.invalidate(enquiriesProvider);
+            await ref.read(enquiriesProvider.future);
+          },
+          child: filtered.isEmpty
+              ? ListView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  children: const [
+                    SizedBox(height: 80),
+                    EmptyState(
+                      title: 'No enquiries',
+                      subtitle: 'Website contact messages will show up here.',
+                      icon: Icons.mail_outline_rounded,
+                    ),
+                  ],
+                )
+              : ListView.separated(
+                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 28),
+                  itemCount: filtered.length,
+                  separatorBuilder: (_, _) => const SizedBox(height: 10),
+                  itemBuilder: (context, index) {
+                    return _EnquiryCard(enquiry: filtered[index]);
+                  },
+                ),
+        );
+      },
+    );
+  }
+}
+
+class _EnquiryCard extends StatelessWidget {
+  final Enquiry enquiry;
+
+  const _EnquiryCard({required this.enquiry});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final e = enquiry;
+
+    return Material(
+      color: theme.colorScheme.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppConstants.radiusL),
+        side: BorderSide(color: theme.dividerColor),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(AppConstants.radiusL),
+        onTap: () => context.push('/enquiries/${e.id}'),
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      e.subject?.isNotEmpty == true ? e.subject! : 'No subject',
+                      style: theme.textTheme.titleSmall,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  StatusChip(
+                    status: e.status,
+                    label: EnquiryMeta.label(e.status),
+                    tone: EnquiryMeta.color(e.status),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Text(e.name, style: theme.textTheme.bodyMedium),
+              const SizedBox(height: 2),
+              Text(
+                [
+                  if (e.phone?.isNotEmpty == true) e.phone,
+                  if (e.email?.isNotEmpty == true) e.email,
+                ].join(' · '),
+                style: theme.textTheme.bodySmall,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                e.message,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.bodySmall,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                formatDateTime(e.createdAt),
+                style: theme.textTheme.bodySmall,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}

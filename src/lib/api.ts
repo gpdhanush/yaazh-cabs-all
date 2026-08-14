@@ -287,6 +287,36 @@ export function trackBooking(booking_reference: string, customer_phone: string) 
   });
 }
 
+export type PublicFeedback = {
+  booking_reference: string;
+  status: string;
+  trip_type: string;
+  customer_name: string;
+  pickup_location: string;
+  drop_location: string;
+  pickup_at: string;
+  completed_at: string | null;
+  estimated_total: number;
+  final_total: number | null;
+  can_submit: boolean;
+  already_submitted: boolean;
+  submitted_rating: number | null;
+  submitted_review: string | null;
+  driver: { id?: string; name: string; phone: string; photo_url?: string | null } | null;
+  vehicle: { name: string; registration: string | null } | null;
+};
+
+export function getPublicFeedback(token: string) {
+  return request<PublicFeedback>(`/feedback/${encodeURIComponent(token)}`);
+}
+
+export function submitPublicFeedback(token: string, payload: { rating: number; review?: string }) {
+  return request<{ id: string; rating: number; review: string }>(`/feedback/${encodeURIComponent(token)}`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
 /** Map UI trip labels to API enum. */
 export function toApiTripType(label: string): TripTypeApi {
   switch (label) {
