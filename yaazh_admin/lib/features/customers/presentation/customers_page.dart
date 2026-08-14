@@ -5,6 +5,7 @@ import 'package:yaazh_admin/app/constants.dart';
 import 'package:yaazh_admin/core/widgets/coming_soon.dart';
 import 'package:yaazh_admin/core/widgets/keyboard_dismiss.dart';
 import 'package:yaazh_admin/core/widgets/status_chip.dart';
+import 'package:yaazh_admin/core/widgets/ya_loader.dart';
 import 'package:yaazh_admin/features/customers/data/customer_repository.dart';
 import 'package:yaazh_admin/features/customers/domain/customer.dart';
 
@@ -75,7 +76,7 @@ class _CustomerList extends ConsumerWidget {
     final query = ref.watch(customerSearchProvider).trim().toLowerCase();
 
     return async.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
+      loading: () => const Center(child: YaLoader()),
       error: (err, _) => EmptyState(
         title: 'Could not load customers',
         subtitle: err.toString(),

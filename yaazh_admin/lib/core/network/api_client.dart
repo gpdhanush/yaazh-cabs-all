@@ -23,6 +23,7 @@ final dioProvider = Provider<Dio>((ref) {
       },
     ),
   );
+  dio.transformer = BackgroundTransformer();
 
   final storage = ref.watch(storageServiceProvider);
   var isRefreshing = false;
@@ -109,9 +110,10 @@ final dioProvider = Provider<Dio>((ref) {
   if (kDebugMode) {
     dio.interceptors.add(
       LogInterceptor(
-        requestBody: true,
-        responseBody: true,
+        requestBody: false,
+        responseBody: false,
         requestHeader: false,
+        responseHeader: false,
         logPrint: (obj) {
           final text = obj.toString();
           if (text.contains('Bearer ')) return;
@@ -131,7 +133,8 @@ final apiClientProvider = Provider<ApiClient>((ref) {
 class EasyLoadingInterceptor extends Interceptor {
   int _active = 0;
 
-  bool _silent(RequestOptions options) => options.extra['silent'] == true;
+  bool _skip(RequestOptions options) =>
+      options.extra['silent'] == true || options.method.toUpperCase() == 'GET';
 
   void _show() {
     _active++;
@@ -149,19 +152,19 @@ class EasyLoadingInterceptor extends Interceptor {
 
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
-    if (!_silent(options)) _show();
+    if (!_skip(options)) _show();
     handler.next(options);
   }
 
   @override
   void onResponse(Response response, ResponseInterceptorHandler handler) {
-    if (!_silent(response.requestOptions)) _hide();
+    if (!_skip(response.requestOptions)) _hide();
     handler.next(response);
   }
 
   @override
   void onError(DioException err, ErrorInterceptorHandler handler) {
-    if (!_silent(err.requestOptions)) _hide();
+    if (!_skip(err.requestOptions)) _hide();
     handler.next(err);
   }
 }

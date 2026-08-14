@@ -133,16 +133,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             const SizedBox(height: 4),
             ElevatedButton(
               onPressed: isLoading ? null : _onLoginSubmitted,
-              child: isLoading
-                  ? SizedBox(
-                      width: 22,
-                      height: 22,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2.2,
-                        color: Theme.of(context).colorScheme.onPrimary,
-                      ),
-                    )
-                  : const Text('SIGN IN'),
+                    child: Text(isLoading ? 'SIGNING IN…' : 'SIGN IN'),
             ),
           ],
         ),

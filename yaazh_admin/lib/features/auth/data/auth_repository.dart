@@ -66,6 +66,13 @@ class AuthRepository {
     return user;
   }
 
+  Future<AdminUser> removePhoto() async {
+    final data = await _apiClient.delete('/admin/profile/photo');
+    final user = AdminUser.fromJson(Map<String, dynamic>.from(data as Map));
+    await _cacheUser(user);
+    return user;
+  }
+
   Future<void> logout() async {
     try {
       final refreshToken = await _storage.getRefreshToken();

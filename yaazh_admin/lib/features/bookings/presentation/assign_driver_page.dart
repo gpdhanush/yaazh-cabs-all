@@ -8,6 +8,7 @@ import 'package:yaazh_admin/core/widgets/coming_soon.dart';
 import 'package:yaazh_admin/core/widgets/keyboard_dismiss.dart';
 import 'package:yaazh_admin/core/widgets/status_chip.dart';
 import 'package:yaazh_admin/core/widgets/ya_dropdown.dart';
+import 'package:yaazh_admin/core/widgets/ya_loader.dart';
 import 'package:yaazh_admin/features/bookings/data/booking_repository.dart';
 import 'package:yaazh_admin/features/bookings/domain/booking.dart';
 import 'package:yaazh_admin/features/home/data/dashboard_repository.dart';
@@ -64,7 +65,7 @@ class _AssignDriverPageState extends ConsumerState<AssignDriverPage> {
       child: Scaffold(
         appBar: AppBar(title: const Text('Assign driver')),
         body: bookingAsync.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
+          loading: () => const Center(child: YaLoader()),
           error: (err, _) => EmptyState(
             title: 'Could not load booking',
             subtitle: err.toString(),
@@ -117,7 +118,7 @@ class _AssignDriverPageState extends ConsumerState<AssignDriverPage> {
                 if (driversAsync.isLoading)
                   const Padding(
                     padding: EdgeInsets.all(24),
-                    child: Center(child: CircularProgressIndicator()),
+                    child: Center(child: YaLoader()),
                   )
                 else if (drivers.isEmpty)
                   const Padding(
@@ -190,16 +191,7 @@ class _AssignDriverPageState extends ConsumerState<AssignDriverPage> {
                 const SizedBox(height: 24),
                 ElevatedButton(
                   onPressed: _saving ? null : _submit,
-                  child: _saving
-                      ? SizedBox(
-                          width: 22,
-                          height: 22,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2.2,
-                            color: Theme.of(context).colorScheme.onPrimary,
-                          ),
-                        )
-                      : const Text('ASSIGN DRIVER'),
+                  child: Text(_saving ? 'SAVING…' : 'ASSIGN DRIVER'),
                 ),
               ],
             );

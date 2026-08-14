@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:yaazh_admin/app/constants.dart';
 import 'package:yaazh_admin/core/network/api_client.dart';
 import 'package:yaazh_admin/core/widgets/keyboard_dismiss.dart';
+import 'package:yaazh_admin/core/widgets/ya_loader.dart';
 import 'package:yaazh_admin/features/auth/presentation/auth_scaffold.dart';
 
 final _supportPhoneProvider = FutureProvider<String>((ref) async {
@@ -47,7 +48,7 @@ class ForgotPasswordPage extends ConsumerWidget {
         loading: () => const Center(
           child: Padding(
             padding: EdgeInsets.all(16),
-            child: CircularProgressIndicator(),
+            child: YaLoader(),
           ),
         ),
         error: (_, _) => ElevatedButton.icon(

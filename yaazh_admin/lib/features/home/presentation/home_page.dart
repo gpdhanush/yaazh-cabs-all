@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:line_awesome_flutter/line_awesome_flutter.dart';
 import 'package:yaazh_admin/app/constants.dart';
+import 'package:yaazh_admin/app/theme.dart';
 import 'package:yaazh_admin/core/widgets/admin_avatar.dart';
 import 'package:yaazh_admin/core/widgets/coming_soon.dart';
 import 'package:yaazh_admin/core/widgets/keyboard_dismiss.dart';
@@ -105,21 +106,23 @@ class _DashboardBody extends StatelessWidget {
         Row(
           children: [
             Expanded(
-              child: _StatCard(
+              child: _GlassCard(
                 label: 'Today',
                 value: '${data.bookingsToday}',
                 hint: 'Trips booked',
                 icon: LineAwesomeIcons.calendar,
+                color: AppColors.primary,
                 onTap: () => context.go('/bookings'),
               ),
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: _StatCard(
+              child: _GlassCard(
                 label: 'Pending',
                 value: '${data.pendingBookings}',
                 hint: 'Need action',
                 icon: LineAwesomeIcons.clock,
+                color: AppColors.warning,
                 onTap: () => context.go('/bookings'),
               ),
             ),
@@ -134,30 +137,34 @@ class _DashboardBody extends StatelessWidget {
           crossAxisCount: isTablet ? 4 : 2,
           mainAxisSpacing: 12,
           crossAxisSpacing: 12,
-          childAspectRatio: isTablet ? 1.55 : 1.35,
+          childAspectRatio: isTablet ? 1.55 : 1.28,
           children: [
-            _StatCard(
+            _GlassCard(
               label: 'Bookings',
               value: '${data.totalBookings}',
               icon: LineAwesomeIcons.taxi_solid,
+              color: AppColors.primary,
               onTap: () => context.go('/bookings'),
             ),
-            _StatCard(
+            _GlassCard(
               label: 'Drivers',
               value: '${data.activeDrivers}',
               icon: LineAwesomeIcons.id_card,
+              color: AppColors.supportBlue,
               onTap: () => context.push('/drivers'),
             ),
-            _StatCard(
+            _GlassCard(
               label: 'Customers',
               value: '${data.customers}',
               icon: LineAwesomeIcons.users_solid,
+              color: AppColors.supportPurple,
               onTap: () => context.push('/customers'),
             ),
-            _StatCard(
+            _GlassCard(
               label: 'Enquiries',
               value: '${data.enquiries}',
               icon: LineAwesomeIcons.envelope,
+              color: AppColors.salmon,
               onTap: () => context.go('/enquiries'),
             ),
           ],
@@ -171,36 +178,42 @@ class _DashboardBody extends StatelessWidget {
           crossAxisCount: isTablet ? 4 : 2,
           mainAxisSpacing: 12,
           crossAxisSpacing: 12,
-          childAspectRatio: isTablet ? 1.8 : 1.7,
+          childAspectRatio: isTablet ? 1.8 : 1.65,
           children: [
-            _ShortcutTile(
+            _GlassShortcut(
               icon: LineAwesomeIcons.user_check_solid,
               label: 'Assign driver',
+              color: AppColors.primary,
               onTap: () => context.go('/bookings'),
             ),
-            _ShortcutTile(
+            _GlassShortcut(
+              icon: LineAwesomeIcons.car_solid,
+              label: 'Fleet',
+              color: AppColors.supportBlue,
+              onTap: () => context.push('/fleet'),
+            ),
+            _GlassShortcut(
               icon: LineAwesomeIcons.map_marked_solid,
               label: 'Live tracking',
+              color: AppColors.supportPurple,
               onTap: () => context.push('/tracking'),
             ),
-            _ShortcutTile(
+            _GlassShortcut(
               icon: LineAwesomeIcons.id_card,
               label: 'Drivers',
+              color: AppColors.warning,
               onTap: () => context.push('/drivers'),
             ),
-            _ShortcutTile(
-              icon: LineAwesomeIcons.envelope,
-              label: 'Enquiries',
-              onTap: () => context.go('/enquiries'),
-            ),
-            _ShortcutTile(
+            _GlassShortcut(
               icon: LineAwesomeIcons.bullhorn_solid,
               label: 'Push alerts',
+              color: AppColors.salmon,
               onTap: () => context.push('/notifications'),
             ),
-            _ShortcutTile(
+            _GlassShortcut(
               icon: LineAwesomeIcons.chart_bar,
               label: 'Reports',
+              color: AppColors.primary,
               onTap: () => showComingSoon('Reports'),
             ),
           ],
@@ -210,92 +223,136 @@ class _DashboardBody extends StatelessWidget {
   }
 }
 
-class _StatCard extends StatelessWidget {
+class _GlassCard extends StatelessWidget {
   final String label;
   final String value;
   final String? hint;
   final IconData icon;
+  final Color color;
   final VoidCallback onTap;
 
-  const _StatCard({
+  const _GlassCard({
     required this.label,
     required this.value,
     this.hint,
     required this.icon,
+    required this.color,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Material(
-      color: theme.colorScheme.surface,
-      borderRadius: BorderRadius.circular(AppConstants.radiusField),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(AppConstants.radiusField),
-        child: Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(AppConstants.radiusField),
-            border: Border.all(color: theme.dividerColor, width: 1),
+    final onColor = AppTheme.onPrimaryOf(color);
+    return _GlassSurface(
+      color: color,
+      onTap: onTap,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 22, color: onColor.withValues(alpha: 0.95)),
+          const SizedBox(height: 14),
+          Text(
+            value,
+            style: TextStyle(
+              color: onColor,
+              fontSize: 26,
+              fontWeight: FontWeight.w800,
+            ),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(icon, size: 22, color: theme.colorScheme.primary),
-              const SizedBox(height: 12),
-              Text(
-                value,
-                style: theme.textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(label, style: theme.textTheme.titleSmall),
-              if (hint != null)
-                Text(hint!, style: theme.textTheme.bodySmall),
-            ],
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: TextStyle(
+              color: onColor,
+              fontWeight: FontWeight.w700,
+              fontSize: 14,
+            ),
           ),
-        ),
+          if (hint != null)
+            Text(
+              hint!,
+              style: TextStyle(color: onColor.withValues(alpha: 0.78), fontSize: 12),
+            ),
+        ],
       ),
     );
   }
 }
 
-class _ShortcutTile extends StatelessWidget {
+class _GlassShortcut extends StatelessWidget {
   final IconData icon;
   final String label;
+  final Color color;
   final VoidCallback onTap;
 
-  const _ShortcutTile({
+  const _GlassShortcut({
     required this.icon,
     required this.label,
+    required this.color,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Material(
-      color: theme.colorScheme.surface,
-      borderRadius: BorderRadius.circular(AppConstants.radiusField),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(AppConstants.radiusField),
-        child: Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(AppConstants.radiusField),
-            border: Border.all(color: theme.dividerColor, width: 1),
+    final onColor = AppTheme.onPrimaryOf(color);
+    return _GlassSurface(
+      color: color,
+      onTap: onTap,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: onColor),
+          const Spacer(),
+          Text(
+            label,
+            style: TextStyle(
+              color: onColor,
+              fontWeight: FontWeight.w700,
+              fontSize: 14,
+            ),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(icon, color: theme.colorScheme.primary),
-              const Spacer(),
-              Text(label, style: theme.textTheme.titleSmall),
-            ],
+        ],
+      ),
+    );
+  }
+}
+
+class _GlassSurface extends StatelessWidget {
+  final Color color;
+  final VoidCallback onTap;
+  final Widget child;
+
+  const _GlassSurface({
+    required this.color,
+    required this.onTap,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(18),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          child: Ink(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(18),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color.alphaBlend(Colors.white.withValues(alpha: 0.28), color),
+                  color.withValues(alpha: 0.88),
+                ],
+              ),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.38)),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(14),
+              child: child,
+            ),
           ),
         ),
       ),
@@ -311,12 +368,11 @@ class _ErrorBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(AppConstants.radiusField),
-        border: Border.all(color: theme.dividerColor, width: 1),
+        color: AppColors.salmon.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

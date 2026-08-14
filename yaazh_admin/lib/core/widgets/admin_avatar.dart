@@ -24,15 +24,15 @@ class AdminAvatar extends StatelessWidget {
     }
     return CircleAvatar(
       radius: radius,
-      backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.18),
+      backgroundColor: theme.colorScheme.primary,
       backgroundImage: url != null ? CachedNetworkImageProvider(url) : null,
       child: url == null
           ? Text(
-              user?.initials ?? 'YA',
+              user?.initials ?? 'A',
               style: TextStyle(
-                color: theme.colorScheme.primary,
+                color: theme.colorScheme.onPrimary,
                 fontWeight: FontWeight.w700,
-                fontSize: radius * 0.7,
+                fontSize: radius * 0.78,
               ),
             )
           : null,

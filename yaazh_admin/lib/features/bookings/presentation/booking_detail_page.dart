@@ -13,6 +13,7 @@ import 'package:yaazh_admin/core/widgets/driver_avatar.dart';
 import 'package:yaazh_admin/core/widgets/keyboard_dismiss.dart';
 import 'package:yaazh_admin/core/widgets/status_chip.dart';
 import 'package:yaazh_admin/core/widgets/ya_dropdown.dart';
+import 'package:yaazh_admin/core/widgets/ya_loader.dart';
 import 'package:yaazh_admin/core/widgets/ya_number_field.dart';
 import 'package:yaazh_admin/features/bookings/data/booking_repository.dart';
 import 'package:yaazh_admin/features/bookings/domain/booking.dart';
@@ -64,7 +65,7 @@ class _BookingDetailPageState extends ConsumerState<BookingDetailPage> {
           ],
         ),
         body: async.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
+          loading: () => const Center(child: YaLoader()),
           error: (err, _) => EmptyState(
             title: 'Could not load booking',
             subtitle: err.toString(),
@@ -207,27 +208,7 @@ class _BookingDetailPageState extends ConsumerState<BookingDetailPage> {
                   title: 'Timeline',
                   child: b.history.isEmpty
                       ? Text('No history yet.', style: theme.textTheme.bodySmall)
-                      : Column(
-                          children: [
-                            for (final h in b.history)
-                              ListTile(
-                                dense: true,
-                                contentPadding: EdgeInsets.zero,
-                                leading: Icon(
-                                  Icons.circle,
-                                  size: 10,
-                                  color: BookingStatus.color(h.newStatus),
-                                ),
-                                title: Text(BookingStatus.label(h.newStatus)),
-                                subtitle: Text(
-                                  [
-                                    formatDateTime(h.changedAt),
-                                    if (h.note != null && h.note!.isNotEmpty) h.note,
-                                  ].join(' · '),
-                                ),
-                              ),
-                          ],
-                        ),
+                      : _StatusTimeline(history: b.history),
                 ),
                 if (BookingStatus.canCancel(b.status)) ...[
                   const SizedBox(height: 20),
@@ -410,8 +391,9 @@ class _HeroCard extends StatelessWidget {
 class _Panel extends StatelessWidget {
   final String title;
   final Widget child;
+  final Widget? trailing;
 
-  const _Panel({required this.title, required this.child});
+  const _Panel({required this.title, required this.child, this.trailing});
 
   @override
   Widget build(BuildContext context) {
@@ -427,7 +409,12 @@ class _Panel extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: theme.textTheme.titleMedium),
+          Row(
+            children: [
+              Expanded(child: Text(title, style: theme.textTheme.titleMedium)),
+              ?trailing,
+            ],
+          ),
           const SizedBox(height: 10),
           child,
         ],
@@ -506,8 +493,13 @@ class _PaymentPanel extends StatelessWidget {
 
     return _Panel(
       title: 'Payment',
+      trailing: StatusChip(
+        status: booking.isFullyPaid ? 'paid' : (pay?.paymentStatus ?? booking.paymentStatus),
+        label: booking.isFullyPaid ? 'Customer paid' : null,
+        tone: booking.isFullyPaid ? AppColors.success : AppColors.warning,
+      ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
@@ -515,12 +507,6 @@ class _PaymentPanel extends StatelessWidget {
               _money('Paid', paid),
               _money('Balance', balance),
             ],
-          ),
-          const SizedBox(height: 14),
-          StatusChip(
-            status: booking.isFullyPaid ? 'paid' : (pay?.paymentStatus ?? booking.paymentStatus),
-            label: booking.isFullyPaid ? 'Customer paid' : null,
-            tone: booking.isFullyPaid ? AppColors.success : AppColors.warning,
           ),
           if (!booking.isFullyPaid) ...[
             const SizedBox(height: 14),
@@ -574,6 +560,107 @@ class _PaymentPanel extends StatelessWidget {
                 ),
               ),
           ],
+        ],
+      ),
+    );
+  }
+}
+
+class _StatusTimeline extends StatelessWidget {
+  final List<BookingHistoryItem> history;
+
+  const _StatusTimeline({required this.history});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      children: [
+        for (var i = 0; i < history.length; i++)
+          _StatusTimelineRow(
+            item: history[i],
+            isLast: i == history.length - 1,
+            theme: theme,
+          ),
+      ],
+    );
+  }
+}
+
+class _StatusTimelineRow extends StatelessWidget {
+  final BookingHistoryItem item;
+  final bool isLast;
+  final ThemeData theme;
+
+  const _StatusTimelineRow({
+    required this.item,
+    required this.isLast,
+    required this.theme,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final color = BookingStatus.color(item.newStatus);
+    final note = item.note?.trim();
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 36,
+            child: Column(
+              children: [
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.18),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    BookingStatus.icon(item.newStatus),
+                    size: 16,
+                    color: color,
+                  ),
+                ),
+                if (!isLast)
+                  Expanded(
+                    child: Container(
+                      width: 2,
+                      margin: const EdgeInsets.symmetric(vertical: 4),
+                      decoration: BoxDecoration(
+                        color: color.withValues(alpha: 0.4),
+                        borderRadius: BorderRadius.circular(99),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Padding(
+              padding: EdgeInsets.only(top: 4, bottom: isLast ? 0 : 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    BookingStatus.label(item.newStatus),
+                    style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    formatDateTime(item.changedAt),
+                    style: theme.textTheme.bodySmall,
+                  ),
+                  if (note != null && note.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(note, style: theme.textTheme.bodySmall),
+                  ],
+                ],
+              ),
+            ),
+          ),
         ],
       ),
     );

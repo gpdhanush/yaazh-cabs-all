@@ -314,12 +314,10 @@ class AppTheme {
         unselectedLabelStyle: GoogleFonts.arimo(fontWeight: FontWeight.w500, fontSize: 14),
       ),
       snackBarTheme: SnackBarThemeData(
-        behavior: SnackBarBehavior.floating,
-        backgroundColor: AppColors.primary,
-        contentTextStyle: GoogleFonts.arimo(color: Colors.white, fontWeight: FontWeight.w600),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppConstants.radiusField),
-        ),
+        behavior: SnackBarBehavior.fixed,
+        backgroundColor: isDark ? const Color(0xFF323232) : const Color(0xFF323232),
+        contentTextStyle: GoogleFonts.arimo(color: Colors.white, fontSize: 14),
+        actionTextColor: Colors.white,
       ),
       dialogTheme: DialogThemeData(
         backgroundColor: surface,

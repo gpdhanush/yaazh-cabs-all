@@ -9,6 +9,7 @@ import 'package:yaazh_admin/core/widgets/coming_soon.dart';
 import 'package:yaazh_admin/core/widgets/keyboard_dismiss.dart';
 import 'package:yaazh_admin/core/widgets/status_chip.dart';
 import 'package:yaazh_admin/core/widgets/ya_dropdown.dart';
+import 'package:yaazh_admin/core/widgets/ya_loader.dart';
 import 'package:yaazh_admin/features/customers/data/customer_repository.dart';
 import 'package:yaazh_admin/features/customers/domain/customer.dart';
 
@@ -59,7 +60,7 @@ class _CustomerDetailPageState extends ConsumerState<CustomerDetailPage> {
       child: Scaffold(
         appBar: AppBar(title: const Text('Customer')),
         body: async.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
+          loading: () => const Center(child: YaLoader()),
           error: (err, _) => EmptyState(
             title: 'Could not load customer',
             subtitle: err.toString(),

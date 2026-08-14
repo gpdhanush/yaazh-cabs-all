@@ -6,6 +6,7 @@ import 'package:yaazh_admin/core/format.dart';
 import 'package:yaazh_admin/core/widgets/coming_soon.dart';
 import 'package:yaazh_admin/core/widgets/keyboard_dismiss.dart';
 import 'package:yaazh_admin/core/widgets/status_chip.dart';
+import 'package:yaazh_admin/core/widgets/ya_loader.dart';
 import 'package:yaazh_admin/features/enquiries/data/enquiry_repository.dart';
 import 'package:yaazh_admin/features/enquiries/domain/enquiry.dart';
 import 'package:yaazh_admin/features/shell/admin_shell.dart';
@@ -80,7 +81,7 @@ class _EnquiryList extends ConsumerWidget {
     final query = ref.watch(enquirySearchProvider).trim().toLowerCase();
 
     return async.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
+      loading: () => const Center(child: YaLoader()),
       error: (err, _) => EmptyState(
         title: 'Could not load enquiries',
         subtitle: err.toString(),

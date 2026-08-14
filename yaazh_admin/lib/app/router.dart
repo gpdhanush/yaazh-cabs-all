@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:yaazh_admin/app/page_transitions.dart';
 import 'package:yaazh_admin/core/widgets/coming_soon.dart';
 import 'package:yaazh_admin/features/auth/presentation/auth_viewmodel.dart';
 import 'package:yaazh_admin/features/auth/presentation/forgot_password_page.dart';
@@ -17,6 +18,8 @@ import 'package:yaazh_admin/features/drivers/presentation/driver_form_page.dart'
 import 'package:yaazh_admin/features/drivers/presentation/drivers_page.dart';
 import 'package:yaazh_admin/features/enquiries/presentation/enquiries_page.dart';
 import 'package:yaazh_admin/features/enquiries/presentation/enquiry_detail_page.dart';
+import 'package:yaazh_admin/features/fleet/presentation/fleet_page.dart';
+import 'package:yaazh_admin/features/fleet/presentation/vehicle_form_page.dart';
 import 'package:yaazh_admin/features/home/presentation/home_page.dart';
 import 'package:yaazh_admin/features/notifications/presentation/notification_compose_page.dart';
 import 'package:yaazh_admin/features/notifications/presentation/notifications_page.dart';
@@ -83,53 +86,73 @@ final routerProvider = Provider<GoRouter>((ref) {
     },
     routes: [
       GoRoute(path: '/splash', builder: (context, state) => const SplashPage()),
-      GoRoute(path: '/login', builder: (context, state) => const LoginPage()),
-      GoRoute(
+      slideRoute(
+        path: '/login',
+        builder: (context, state) => const LoginPage(),
+      ),
+      slideRoute(
         path: '/forgot-password',
         builder: (context, state) => const ForgotPasswordPage(),
       ),
-      GoRoute(
+      slideRoute(
         path: '/profile',
         parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const ProfilePage(),
       ),
-      GoRoute(
+      slideRoute(
         path: '/tracking',
         parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const LiveTrackingPage(),
       ),
-      GoRoute(
+      slideRoute(
         path: '/drivers/new',
         parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const DriverFormPage(),
       ),
-      GoRoute(
+      slideRoute(
         path: '/drivers/:id/edit',
         parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => DriverFormPage(
           driverId: state.pathParameters['id'],
         ),
       ),
-      GoRoute(
+      slideRoute(
         path: '/drivers/:id',
         parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => DriverDetailPage(
           driverId: state.pathParameters['id']!,
         ),
       ),
-      GoRoute(
+      slideRoute(
         path: '/drivers',
         parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const DriversPage(),
       ),
-      GoRoute(
+      slideRoute(
+        path: '/fleet/new',
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const VehicleFormPage(),
+      ),
+      slideRoute(
+        path: '/fleet/:id/edit',
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => VehicleFormPage(
+          vehicleId: state.pathParameters['id'],
+        ),
+      ),
+      slideRoute(
+        path: '/fleet',
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const FleetPage(),
+      ),
+      slideRoute(
         path: '/bookings/:id/assign',
         parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => AssignDriverPage(
           bookingId: state.pathParameters['id']!,
         ),
       ),
-      GoRoute(
+      slideRoute(
         path: '/bookings/:id/reject',
         parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => BookingReasonPage(
@@ -137,7 +160,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           action: BookingReasonAction.reject,
         ),
       ),
-      GoRoute(
+      slideRoute(
         path: '/bookings/:id/cancel',
         parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => BookingReasonPage(
@@ -145,60 +168,60 @@ final routerProvider = Provider<GoRouter>((ref) {
           action: BookingReasonAction.cancel,
         ),
       ),
-      GoRoute(
+      slideRoute(
         path: '/bookings/:id',
         parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => BookingDetailPage(
           bookingId: state.pathParameters['id']!,
         ),
       ),
-      GoRoute(
+      slideRoute(
         path: '/enquiries/:id',
         parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => EnquiryDetailPage(
           enquiryId: state.pathParameters['id']!,
         ),
       ),
-      GoRoute(
+      slideRoute(
         path: '/testimonials/new',
         parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const TestimonialFormPage(),
       ),
-      GoRoute(
+      slideRoute(
         path: '/testimonials/:id/edit',
         parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => TestimonialFormPage(
           testimonialId: state.pathParameters['id'],
         ),
       ),
-      GoRoute(
+      slideRoute(
         path: '/testimonials',
         parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const TestimonialsPage(),
       ),
-      GoRoute(
+      slideRoute(
         path: '/notifications/new',
         parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const NotificationComposePage(),
       ),
-      GoRoute(
+      slideRoute(
         path: '/notifications',
         parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const NotificationsPage(),
       ),
-      GoRoute(
+      slideRoute(
         path: '/web-settings',
         parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const WebSettingsPage(),
       ),
-      GoRoute(
+      slideRoute(
         path: '/customers/:id',
         parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => CustomerDetailPage(
           customerId: state.pathParameters['id']!,
         ),
       ),
-      GoRoute(
+      slideRoute(
         path: '/customers',
         parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const CustomersPage(),

@@ -90,16 +90,7 @@ class _BookingReasonPageState extends ConsumerState<BookingReasonPage> {
             const SizedBox(height: 24),
             ElevatedButton(
               onPressed: _saving ? null : _submit,
-              child: _saving
-                  ? SizedBox(
-                      width: 22,
-                      height: 22,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2.2,
-                        color: Theme.of(context).colorScheme.onPrimary,
-                      ),
-                    )
-                  : Text(_cta),
+              child: Text(_saving ? 'SAVING…' : _cta),
             ),
           ],
         ),

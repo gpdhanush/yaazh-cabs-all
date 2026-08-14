@@ -412,3 +412,10 @@ class LiveLocation {
     );
   }
 }
+
+List<Booking> decodeBookings(List<Map<String, dynamic>> raw) =>
+    raw.map(Booking.fromJson).toList();
+
+List<LiveTrip> decodeLiveTrips(List<Map<String, dynamic>> raw) =>
+    raw.map(LiveTrip.fromJson).toList();
+

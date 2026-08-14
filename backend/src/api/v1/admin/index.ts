@@ -616,6 +616,18 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
     return ok(reply, serializeAdminProfile(updated), "Profile photo updated.");
   });
 
+  app.delete("/profile/photo", async (req, reply) => {
+    const user = requireUser(req);
+    const existing = await prisma.adminUsers.findUnique({ where: { id: user.id } });
+    if (!existing) throw new NotFoundError("Admin not found.");
+    const updated = await prisma.adminUsers.update({
+      where: { id: user.id },
+      data: { avatar_url: null },
+    });
+    await audit(user.id, "admin.profile.photo.remove", "admin_users", String(user.id), { avatar_url: existing.avatar_url }, { avatar_url: null }, req);
+    return ok(reply, serializeAdminProfile(updated), "Profile photo removed.");
+  });
+
   app.post("/devices", async (req, reply) => {
     const user = requireUser(req);
     const schema = z.object({

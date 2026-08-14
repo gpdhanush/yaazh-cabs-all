@@ -9,6 +9,7 @@ import 'package:yaazh_admin/core/widgets/coming_soon.dart';
 import 'package:yaazh_admin/core/widgets/confirm_sheet.dart';
 import 'package:yaazh_admin/core/widgets/keyboard_dismiss.dart';
 import 'package:yaazh_admin/core/widgets/status_chip.dart';
+import 'package:yaazh_admin/core/widgets/ya_loader.dart';
 import 'package:yaazh_admin/features/testimonials/data/testimonial_repository.dart';
 import 'package:yaazh_admin/features/testimonials/domain/testimonial.dart';
 
@@ -88,7 +89,7 @@ class _TestimonialList extends ConsumerWidget {
     final query = ref.watch(testimonialSearchProvider).trim().toLowerCase();
 
     return async.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
+      loading: () => const Center(child: YaLoader()),
       error: (err, _) => EmptyState(
         title: 'Could not load testimonials',
         subtitle: err.toString(),

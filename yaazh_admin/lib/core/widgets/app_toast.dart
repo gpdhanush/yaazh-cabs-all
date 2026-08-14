@@ -13,24 +13,12 @@ void showAppToast(String message, {AppSnackKind kind = AppSnackKind.info}) {
     ..hideCurrentSnackBar()
     ..showSnackBar(
       SnackBar(
-        content: Text(
-          message,
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
+        content: Text(message),
         backgroundColor: switch (kind) {
           AppSnackKind.success => AppColors.success,
           AppSnackKind.error => AppColors.salmon,
-          AppSnackKind.info => AppColors.primary,
+          AppSnackKind.info => null,
         },
-        behavior: SnackBarBehavior.floating,
-        margin: const EdgeInsets.fromLTRB(16, 0, 16, 88),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppConstants.radiusField),
-        ),
-        duration: const Duration(seconds: 3),
       ),
     );
 }

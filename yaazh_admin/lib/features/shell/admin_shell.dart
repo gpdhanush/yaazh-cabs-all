@@ -229,7 +229,8 @@ class _AdminDrawer extends ConsumerWidget {
                     context,
                     icon: Icons.directions_car_rounded,
                     label: 'Fleet',
-                    onTap: () => _open('soon:Fleet'),
+                    selected: location.startsWith('/fleet'),
+                    onTap: () => _open('/fleet'),
                   ),
                   _item(
                     context,
@@ -267,11 +268,11 @@ class _AdminDrawer extends ConsumerWidget {
               padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
               child: OutlinedButton.icon(
                 onPressed: () async {
+                  final auth = ref.read(authNotifierProvider.notifier);
                   _close();
                   final ok = await showLogoutSheet(parentContext);
-                  if (ok && parentContext.mounted) {
-                    await ref.read(authNotifierProvider.notifier).logout();
-                  }
+                  if (!ok) return;
+                  await auth.logout();
                 },
                 icon: const Icon(Icons.logout_rounded),
                 label: const Text('Sign out'),

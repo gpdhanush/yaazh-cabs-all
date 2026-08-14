@@ -6,6 +6,7 @@ import 'package:yaazh_admin/core/widgets/app_toast.dart';
 import 'package:yaazh_admin/core/widgets/coming_soon.dart';
 import 'package:yaazh_admin/core/widgets/keyboard_dismiss.dart';
 import 'package:yaazh_admin/core/widgets/ya_field.dart';
+import 'package:yaazh_admin/core/widgets/ya_loader.dart';
 import 'package:yaazh_admin/features/settings/data/web_settings_repository.dart';
 import 'package:yaazh_admin/features/settings/domain/app_setting.dart';
 
@@ -80,7 +81,7 @@ class _WebSettingsPageState extends ConsumerState<WebSettingsPage> {
       child: Scaffold(
         appBar: AppBar(title: const Text('Web settings')),
         body: async.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
+          loading: () => const Center(child: YaLoader()),
           error: (err, _) => EmptyState(
             title: 'Could not load settings',
             subtitle: err.toString(),

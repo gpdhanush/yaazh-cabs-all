@@ -9,6 +9,7 @@ import 'package:yaazh_admin/app/constants.dart';
 import 'package:yaazh_admin/core/widgets/coming_soon.dart';
 import 'package:yaazh_admin/core/widgets/keyboard_dismiss.dart';
 import 'package:yaazh_admin/core/widgets/status_chip.dart';
+import 'package:yaazh_admin/core/widgets/ya_loader.dart';
 import 'package:yaazh_admin/features/bookings/data/booking_repository.dart';
 import 'package:yaazh_admin/features/bookings/domain/booking.dart';
 
@@ -154,7 +155,7 @@ class _LiveTrackingPageState extends ConsumerState<LiveTrackingPage> {
             Expanded(
               flex: 4,
               child: _loading && _trips.isEmpty
-                  ? const Center(child: CircularProgressIndicator())
+                  ? const Center(child: YaLoader())
                   : _error != null && _trips.isEmpty
                       ? EmptyState(
                           title: 'Tracking unavailable',

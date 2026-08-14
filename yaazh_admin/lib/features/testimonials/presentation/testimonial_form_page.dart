@@ -6,6 +6,7 @@ import 'package:yaazh_admin/core/widgets/app_toast.dart';
 import 'package:yaazh_admin/core/widgets/keyboard_dismiss.dart';
 import 'package:yaazh_admin/core/widgets/ya_dropdown.dart';
 import 'package:yaazh_admin/core/widgets/ya_field.dart';
+import 'package:yaazh_admin/core/widgets/ya_loader.dart';
 import 'package:yaazh_admin/core/widgets/ya_number_field.dart';
 import 'package:yaazh_admin/features/testimonials/data/testimonial_repository.dart';
 
@@ -111,7 +112,7 @@ class _TestimonialFormPageState extends ConsumerState<TestimonialFormPage> {
           title: Text(widget.isEdit ? 'Edit testimonial' : 'Add testimonial'),
         ),
         body: !_hydrated
-            ? const Center(child: CircularProgressIndicator())
+            ? const Center(child: YaLoader())
             : Form(
                 key: _formKey,
                 child: ListView(

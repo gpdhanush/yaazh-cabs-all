@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:yaazh_admin/core/format.dart';
+import 'package:yaazh_admin/core/isolate_parse.dart';
 import 'package:yaazh_admin/core/network/api_client.dart';
 import 'package:yaazh_admin/features/bookings/domain/booking.dart';
 
@@ -39,7 +40,7 @@ class BookingRepository {
       'per_page': 200,
       if (status != null && status.isNotEmpty) 'status': status,
     });
-    return asMapList(data).map(Booking.fromJson).toList();
+    return parseJsonListInIsolate(asMapList(data), decodeBookings);
   }
 
   Future<Booking> getById(String id) async {
@@ -128,6 +129,6 @@ class BookingRepository {
 
   Future<List<LiveTrip>> liveTracking({bool silent = false}) async {
     final data = await _api.get('/admin/live-tracking', silent: silent);
-    return asMapList(data).map(LiveTrip.fromJson).toList();
+    return parseJsonListInIsolate(asMapList(data), decodeLiveTrips);
   }
 }

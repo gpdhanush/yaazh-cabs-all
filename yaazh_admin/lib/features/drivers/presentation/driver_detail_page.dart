@@ -13,6 +13,7 @@ import 'package:yaazh_admin/core/widgets/confirm_sheet.dart';
 import 'package:yaazh_admin/core/widgets/driver_avatar.dart';
 import 'package:yaazh_admin/core/widgets/keyboard_dismiss.dart';
 import 'package:yaazh_admin/core/widgets/status_chip.dart';
+import 'package:yaazh_admin/core/widgets/ya_loader.dart';
 import 'package:yaazh_admin/features/drivers/data/driver_repository.dart';
 import 'package:yaazh_admin/features/drivers/domain/driver.dart';
 
@@ -159,7 +160,7 @@ class _DriverDetailPageState extends ConsumerState<DriverDetailPage> {
           ],
         ),
         body: async.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
+          loading: () => const Center(child: YaLoader()),
           error: (err, _) => EmptyState(
             title: 'Could not load driver',
             subtitle: err.toString(),

@@ -10,6 +10,7 @@ import 'package:yaazh_admin/core/widgets/keyboard_dismiss.dart';
 import 'package:yaazh_admin/core/widgets/status_chip.dart';
 import 'package:yaazh_admin/core/widgets/ya_dropdown.dart';
 import 'package:yaazh_admin/core/widgets/ya_field.dart';
+import 'package:yaazh_admin/core/widgets/ya_loader.dart';
 import 'package:yaazh_admin/features/enquiries/data/enquiry_repository.dart';
 import 'package:yaazh_admin/features/enquiries/domain/enquiry.dart';
 
@@ -68,7 +69,7 @@ class _EnquiryDetailPageState extends ConsumerState<EnquiryDetailPage> {
       child: Scaffold(
         appBar: AppBar(title: const Text('Enquiry')),
         body: async.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
+          loading: () => const Center(child: YaLoader()),
           error: (err, _) => EmptyState(
             title: 'Could not load enquiry',
             subtitle: err.toString(),

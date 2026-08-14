@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:yaazh_admin/app/constants.dart';
 import 'package:yaazh_admin/core/widgets/coming_soon.dart';
+import 'package:yaazh_admin/core/widgets/ya_loader.dart';
 import 'package:yaazh_admin/core/widgets/driver_avatar.dart';
 import 'package:yaazh_admin/core/widgets/keyboard_dismiss.dart';
 import 'package:yaazh_admin/core/widgets/status_chip.dart';
@@ -85,7 +86,7 @@ class _DriverList extends ConsumerWidget {
     final query = ref.watch(driverSearchProvider).trim().toLowerCase();
 
     return async.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
+      loading: () => const Center(child: YaLoader()),
       error: (err, _) => EmptyState(
         title: 'Could not load drivers',
         subtitle: err.toString(),

@@ -9,6 +9,7 @@ import 'package:yaazh_admin/core/widgets/coming_soon.dart';
 import 'package:yaazh_admin/core/widgets/confirm_sheet.dart';
 import 'package:yaazh_admin/core/widgets/keyboard_dismiss.dart';
 import 'package:yaazh_admin/core/widgets/status_chip.dart';
+import 'package:yaazh_admin/core/widgets/ya_loader.dart';
 import 'package:yaazh_admin/features/notifications/data/notification_repository.dart';
 import 'package:yaazh_admin/features/notifications/domain/notification_log.dart';
 
@@ -95,7 +96,7 @@ class _NotificationList extends ConsumerWidget {
     final query = ref.watch(notificationSearchProvider).trim().toLowerCase();
 
     return async.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
+      loading: () => const Center(child: YaLoader()),
       error: (err, _) => EmptyState(
         title: 'Could not load alerts',
         subtitle: err.toString(),

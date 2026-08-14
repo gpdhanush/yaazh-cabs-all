@@ -62,6 +62,25 @@ class BookingStatus {
   static bool canCancel(String status) =>
       status != completed && status != cancelled && status != rejected;
 
+  static IconData icon(String status) {
+    return switch (status) {
+      pending => Icons.schedule_rounded,
+      confirmed => Icons.check_circle_rounded,
+      driverNotified => Icons.notifications_rounded,
+      driverAccepted => Icons.thumb_up_rounded,
+      driverRejected => Icons.thumb_down_rounded,
+      driverAssigned => Icons.badge_rounded,
+      onTheWay => Icons.directions_car_rounded,
+      arrived => Icons.location_on_rounded,
+      tripStarted => Icons.play_arrow_rounded,
+      completed => Icons.done_all_rounded,
+      cancelled => Icons.cancel_rounded,
+      rejected => Icons.block_rounded,
+      noShow => Icons.person_off_rounded,
+      _ => Icons.circle,
+    };
+  }
+
   static Color color(String status) {
     if ([pending, driverNotified].contains(status)) return AppColors.warning;
     if (active.contains(status)) return AppColors.supportBlue;
@@ -83,18 +102,22 @@ class StatusChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = tone ?? BookingStatus.color(status);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.14),
-        borderRadius: BorderRadius.circular(99),
-      ),
-      child: Text(
-        label ?? BookingStatus.label(status),
-        style: TextStyle(
-          color: color,
-          fontSize: 12,
-          fontWeight: FontWeight.w700,
+    return UnconstrainedBox(
+      alignment: Alignment.centerLeft,
+      constrainedAxis: Axis.vertical,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.14),
+          borderRadius: BorderRadius.circular(99),
+        ),
+        child: Text(
+          label ?? BookingStatus.label(status),
+          style: TextStyle(
+            color: color,
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+          ),
         ),
       ),
     );

@@ -16,15 +16,10 @@ class AdminUser {
   });
 
   String get initials {
-    final parts = name.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty);
-    if (parts.length >= 2) {
-      return (parts.first[0] + parts.elementAt(1)[0]).toUpperCase();
-    }
-    if (name.trim().isNotEmpty) {
-      return name.trim().substring(0, name.trim().length >= 2 ? 2 : 1).toUpperCase();
-    }
-    if (email.isNotEmpty) return email.substring(0, 1).toUpperCase();
-    return 'YA';
+    final name = this.name.trim();
+    if (name.isNotEmpty) return name[0].toUpperCase();
+    if (email.isNotEmpty) return email[0].toUpperCase();
+    return 'A';
   }
 
   AdminUser copyWith({

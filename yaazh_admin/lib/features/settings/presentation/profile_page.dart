@@ -31,6 +31,8 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   int? _photoBust;
   AdminUser? _profile;
 
+  bool get _hasPhoto => (_profile?.avatarUrl ?? '').isNotEmpty;
+
   @override
   void initState() {
     super.initState();
@@ -70,9 +72,9 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     }
   }
 
-  Future<void> _pickPhoto() async {
+  Future<void> _openPhotoOptions() async {
     hideKeyboard();
-    final source = await showModalBottomSheet<ImageSource>(
+    final action = await showModalBottomSheet<String>(
       context: context,
       backgroundColor: Colors.transparent,
       builder: (ctx) {
@@ -84,20 +86,27 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
               decoration: BoxDecoration(
                 color: theme.colorScheme.surface,
                 borderRadius: BorderRadius.circular(AppConstants.radiusField),
+                border: Border.all(color: theme.dividerColor),
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   ListTile(
-                    leading: const Icon(Icons.photo_library_rounded),
-                    title: const Text('Choose from gallery'),
-                    onTap: () => Navigator.pop(ctx, ImageSource.gallery),
+                    leading: const Icon(Icons.photo_camera_outlined),
+                    title: const Text('Camera'),
+                    onTap: () => Navigator.pop(ctx, 'camera'),
                   ),
                   ListTile(
-                    leading: const Icon(Icons.photo_camera_rounded),
-                    title: const Text('Take a photo'),
-                    onTap: () => Navigator.pop(ctx, ImageSource.camera),
+                    leading: const Icon(Icons.photo_library_outlined),
+                    title: const Text('Gallery'),
+                    onTap: () => Navigator.pop(ctx, 'gallery'),
                   ),
+                  if (_hasPhoto)
+                    ListTile(
+                      leading: const Icon(Icons.delete_outline_rounded),
+                      title: const Text('Remove photo'),
+                      onTap: () => Navigator.pop(ctx, 'remove'),
+                    ),
                 ],
               ),
             ),
@@ -105,15 +114,23 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
         );
       },
     );
-    if (source == null) return;
+    if (action == null) return;
+    if (action == 'remove') {
+      await _removePhoto();
+      return;
+    }
+    await _pickPhoto(
+      action == 'camera' ? ImageSource.camera : ImageSource.gallery,
+    );
+  }
 
+  Future<void> _pickPhoto(ImageSource source) async {
     final file = await ImagePicker().pickImage(
       source: source,
       maxWidth: 1200,
       imageQuality: 85,
     );
     if (file == null) return;
-
     try {
       final user = await ref.read(authRepositoryProvider).uploadPhoto(file.path);
       ref.read(authNotifierProvider.notifier).setUser(user);
@@ -123,6 +140,21 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
         _photoBust = DateTime.now().millisecondsSinceEpoch;
       });
       showSuccessToast('Profile photo updated');
+    } catch (e) {
+      showErrorToast(e is ApiException ? e.message : e.toString());
+    }
+  }
+
+  Future<void> _removePhoto() async {
+    try {
+      final user = await ref.read(authRepositoryProvider).removePhoto();
+      ref.read(authNotifierProvider.notifier).setUser(user);
+      if (!mounted) return;
+      setState(() {
+        _profile = user;
+        _photoBust = DateTime.now().millisecondsSinceEpoch;
+      });
+      showSuccessToast('Profile photo removed');
     } catch (e) {
       showErrorToast(e is ApiException ? e.message : e.toString());
     }
@@ -181,13 +213,13 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                               shape: const CircleBorder(),
                               child: InkWell(
                                 customBorder: const CircleBorder(),
-                                onTap: _pickPhoto,
-                                child: const Padding(
-                                  padding: EdgeInsets.all(8),
+                                onTap: _openPhotoOptions,
+                                child: Padding(
+                                  padding: const EdgeInsets.all(8),
                                   child: Icon(
                                     Icons.camera_alt_rounded,
                                     size: 16,
-                                    color: Colors.white,
+                                    color: theme.colorScheme.onPrimary,
                                   ),
                                 ),
                               ),
@@ -198,7 +230,9 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Tap the camera to change photo',
+                      _hasPhoto
+                          ? 'Camera, gallery or remove photo'
+                          : 'Camera or gallery',
                       textAlign: TextAlign.center,
                       style: theme.textTheme.bodySmall,
                     ),
@@ -252,7 +286,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                   ],
                 ),
               ),
-        ),
+      ),
     );
   }
 }
