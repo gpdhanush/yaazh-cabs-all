@@ -384,6 +384,20 @@ class WhatsAppShare {
   }
 }
 
+class InvoiceEmailResult {
+  final String? emailTo;
+  final bool sent;
+
+  const InvoiceEmailResult({this.emailTo, required this.sent});
+
+  factory InvoiceEmailResult.fromJson(Map<String, dynamic> json) {
+    return InvoiceEmailResult(
+      emailTo: json['email_to']?.toString(),
+      sent: json['email_sent'] == true,
+    );
+  }
+}
+
 class LiveLocation {
   final double latitude;
   final double longitude;

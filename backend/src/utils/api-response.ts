@@ -32,6 +32,7 @@ export function fail(
   status: number,
   message: string,
   errors: Record<string, unknown> | null = null,
+  code?: string,
 ) {
   const requestId = (reply.request as { requestId?: string }).requestId ?? null;
   return reply.status(status).send({
@@ -40,6 +41,7 @@ export function fail(
     data: null,
     meta: null,
     errors,
+    code: code ?? null,
     request_id: requestId,
   });
 }

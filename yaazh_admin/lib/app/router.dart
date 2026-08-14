@@ -11,6 +11,7 @@ import 'package:yaazh_admin/features/bookings/presentation/assign_driver_page.da
 import 'package:yaazh_admin/features/bookings/presentation/booking_detail_page.dart';
 import 'package:yaazh_admin/features/bookings/presentation/booking_reason_page.dart';
 import 'package:yaazh_admin/features/bookings/presentation/bookings_page.dart';
+import 'package:yaazh_admin/features/bookings/presentation/send_invoice_email_page.dart';
 import 'package:yaazh_admin/features/customers/presentation/customer_detail_page.dart';
 import 'package:yaazh_admin/features/customers/presentation/customers_page.dart';
 import 'package:yaazh_admin/features/drivers/presentation/driver_detail_page.dart';
@@ -158,6 +159,13 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => BookingReasonPage(
           bookingId: state.pathParameters['id']!,
           action: BookingReasonAction.reject,
+        ),
+      ),
+      slideRoute(
+        path: '/bookings/:id/invoice-email',
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => SendInvoiceEmailPage(
+          bookingId: state.pathParameters['id']!,
         ),
       ),
       slideRoute(

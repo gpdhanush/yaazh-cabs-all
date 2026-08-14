@@ -106,6 +106,19 @@ class BookingRepository {
     return WhatsAppShare.fromJson(Map<String, dynamic>.from(data as Map));
   }
 
+  Future<InvoiceEmailResult> sendInvoiceEmail({
+    required String bookingId,
+    required String email,
+  }) async {
+    final data = await _api.post(
+      '/admin/bookings/$bookingId/invoice/resend',
+      data: {'email': email},
+      receiveTimeout: const Duration(seconds: 50),
+    );
+    final map = data is Map ? Map<String, dynamic>.from(data) : <String, dynamic>{};
+    return InvoiceEmailResult.fromJson(map);
+  }
+
   Future<WhatsAppShare> sendFeedbackLink(String bookingId) async {
     final data = await _api.post('/admin/bookings/$bookingId/feedback-link');
     return WhatsAppShare.fromJson(Map<String, dynamic>.from(data as Map));

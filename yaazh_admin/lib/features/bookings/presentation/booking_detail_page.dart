@@ -105,9 +105,18 @@ class _BookingDetailPageState extends ConsumerState<BookingDetailPage> {
                   const SizedBox(height: 12),
                 ],
                 ElevatedButton.icon(
-                  onPressed: () => _sendInvoice(b),
+                  onPressed: () {
+                    hideKeyboard();
+                    context.push('/bookings/${b.id}/invoice-email');
+                  },
+                  icon: const Icon(Icons.mail_outline_rounded),
+                  label: const Text('SEND INVOICE EMAIL'),
+                ),
+                const SizedBox(height: 8),
+                OutlinedButton.icon(
+                  onPressed: () => _sendInvoiceWhatsApp(b),
                   icon: const Icon(Icons.picture_as_pdf_rounded),
-                  label: const Text('SEND INVOICE'),
+                  label: const Text('SEND INVOICE ON WHATSAPP'),
                 ),
                 const SizedBox(height: 8),
                 OutlinedButton.icon(
@@ -282,7 +291,7 @@ class _BookingDetailPageState extends ConsumerState<BookingDetailPage> {
     if (!ok) showErrorToast('Could not open WhatsApp');
   }
 
-  Future<void> _sendInvoice(Booking b) async {
+  Future<void> _sendInvoiceWhatsApp(Booking b) async {
     hideKeyboard();
     final ok = await showConfirmSheet(
       context,

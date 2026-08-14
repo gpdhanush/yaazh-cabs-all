@@ -199,12 +199,16 @@ class ApiClient {
     String path, {
     dynamic data,
     bool silent = false,
+    Duration? receiveTimeout,
   }) async {
     try {
       final response = await _dio.post(
         path,
         data: data ?? const <String, dynamic>{},
-        options: _options(silent: silent),
+        options: Options(
+          extra: {'silent': silent},
+          receiveTimeout: receiveTimeout,
+        ),
       );
       return _processResponse(response);
     } on DioException catch (e) {

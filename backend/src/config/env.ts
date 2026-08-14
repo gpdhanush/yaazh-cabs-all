@@ -85,9 +85,10 @@ const envSchema = z
     MAIL_DEBUG: z.string().optional(),
     MAIL_LOGGER: z.string().optional(),
     MAIL_TLS_REJECT: z.string().optional(),
-    MAIL_CONN_TIMEOUT: z.coerce.number().int().positive().default(15_000),
-    MAIL_GREETING_TIMEOUT: z.coerce.number().int().positive().default(15_000),
-    MAIL_SOCKET_TIMEOUT: z.coerce.number().int().positive().default(20_000),
+    MAIL_CONN_TIMEOUT: z.coerce.number().int().positive().default(30_000),
+    MAIL_GREETING_TIMEOUT: z.coerce.number().int().positive().default(20_000),
+    MAIL_SOCKET_TIMEOUT: z.coerce.number().int().positive().default(45_000),
+    MAIL_IPV4: z.string().optional(),
     SMS_ENABLED: z.string().optional(),
     WHATSAPP_ENABLED: z.string().optional(),
     PAYMENT_ENABLED: z.string().optional(),
@@ -125,6 +126,7 @@ export type Env = z.output<typeof envSchema> & {
   mailDebug: boolean;
   mailLogger: boolean;
   mailTlsRejectUnauthorized: boolean;
+  mailIpv4: boolean;
   smsEnabled: boolean;
   whatsappEnabled: boolean;
   paymentEnabled: boolean;
@@ -151,6 +153,7 @@ function applyEmailAliases(env: NodeJS.ProcessEnv) {
   setIfEmpty("MAIL_CONN_TIMEOUT", "EMAIL_CONN_TIMEOUT");
   setIfEmpty("MAIL_GREETING_TIMEOUT", "EMAIL_GREETING_TIMEOUT");
   setIfEmpty("MAIL_SOCKET_TIMEOUT", "EMAIL_SOCKET_TIMEOUT");
+  setIfEmpty("MAIL_IPV4", "EMAIL_IPV4");
   if (!env.MAIL_ENABLED && (env.EMAIL_HOST || env.MAIL_HOST)) env.MAIL_ENABLED = "true";
 
   if (!env.MAIL_ENCRYPTION) {
@@ -191,6 +194,7 @@ export function loadEnv(raw?: NodeJS.ProcessEnv): Env {
     mailDebug: bool(parsed.MAIL_DEBUG, false),
     mailLogger: bool(parsed.MAIL_LOGGER, false),
     mailTlsRejectUnauthorized: bool(parsed.MAIL_TLS_REJECT, true),
+    mailIpv4: bool(parsed.MAIL_IPV4, true),
     smsEnabled: bool(parsed.SMS_ENABLED, false),
     whatsappEnabled: bool(parsed.WHATSAPP_ENABLED, false),
     paymentEnabled: bool(parsed.PAYMENT_ENABLED, false),

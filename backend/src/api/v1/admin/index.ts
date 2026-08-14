@@ -16,7 +16,7 @@ import {
   upsertBookingInvoice,
 } from "../../../services/invoice.service.js";
 import { feedbackPageUrl, whatsappUrl } from "../../../services/feedback.service.js";
-import { NotFoundError, ValidationError, ConflictError } from "../../../errors/app-error.js";
+import { NotFoundError, ValidationError, ConflictError, ServiceUnavailableError } from "../../../errors/app-error.js";
 import {
   deliverAdminNotification,
   deliverBookingNotification,
@@ -1074,7 +1074,15 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
       const id = BigInt((req.params as { id: string }).id);
       const booking = await prisma.bookings.findUnique({ where: { id } });
       if (!booking) throw new NotFoundError();
-      const override = (req.body as { email?: string } | null)?.email?.trim();
+      const parsed = z
+        .object({
+          email: z.string().email("Enter a valid email address.").max(150).optional(),
+        })
+        .safeParse(req.body ?? {});
+      if (!parsed.success) {
+        throw new ValidationError(parsed.error.issues[0]?.message ?? "Enter a valid email address.");
+      }
+      const override = parsed.data.email?.trim();
       const result = await sendBookingInvoiceEmail(id, override);
       await audit(
         user.id,
@@ -1086,7 +1094,9 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
         req,
       );
       if (!result.email) throw new ValidationError("Customer has no email address.");
-      if (!result.sent) throw new ValidationError(result.error || "Failed to send invoice email.");
+      if (!result.sent) {
+        throw new ServiceUnavailableError(result.error || "Failed to send invoice email.");
+      }
       return ok(
         reply,
         { ...result.invoice, email_sent: true, email_to: result.email },

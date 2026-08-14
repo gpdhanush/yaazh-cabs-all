@@ -1,5 +1,6 @@
 import nodemailer from "nodemailer";
 import type { Transporter } from "nodemailer";
+import type SMTPTransport from "nodemailer/lib/smtp-transport/index.js";
 import { loadEnv } from "../config/env.js";
 
 let transporter: Transporter | null = null;
@@ -10,6 +11,28 @@ function mailFrom(): string {
   const name = env.MAIL_FROM_NAME?.trim() || "Yaazh Cabs";
   const address = env.MAIL_FROM_ADDRESS?.trim() || env.MAIL_USERNAME;
   return address ? `"${name}" <${address}>` : name;
+}
+
+function describeMailError(err: unknown): string {
+  const raw = err instanceof Error ? err.message : "Failed to send email.";
+  const lower = raw.toLowerCase();
+  if (
+    lower.includes("timeout") ||
+    lower.includes("timed out") ||
+    lower.includes("etimedout") ||
+    lower.includes("econnrefused") ||
+    lower.includes("enotfound")
+  ) {
+    return "Could not connect to the mail server. Check MAIL_HOST, MAIL_PORT (465 SSL or 587 TLS), and that SMTP is allowed from the API host.";
+  }
+  if (lower.includes("invalid login") || lower.includes("eauth") || lower.includes("authentication")) {
+    return "Mail server rejected the login. Check MAIL_USERNAME and MAIL_PASSWORD.";
+  }
+  return raw;
+}
+
+export function resetMailTransporter() {
+  transporter = null;
 }
 
 export function getMailTransporter(): Transporter | null {
@@ -26,7 +49,7 @@ export function getMailTransporter(): Transporter | null {
   const encryption = (env.MAIL_ENCRYPTION || "tls").toLowerCase();
   const secure = encryption === "ssl" || env.MAIL_PORT === 465;
 
-  transporter = nodemailer.createTransport({
+  const options: SMTPTransport.Options = {
     host: env.MAIL_HOST,
     port: env.MAIL_PORT,
     secure,
@@ -43,7 +66,12 @@ export function getMailTransporter(): Transporter | null {
     socketTimeout: env.MAIL_SOCKET_TIMEOUT,
     logger: env.mailLogger,
     debug: env.mailDebug,
-  });
+  };
+  if (env.mailIpv4) {
+    Object.assign(options, { family: 4 });
+  }
+
+  transporter = nodemailer.createTransport(options);
   return transporter;
 }
 
@@ -73,8 +101,9 @@ export async function sendMail(input: SendMailInput): Promise<{ sent: boolean; e
     });
     return { sent: true };
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Failed to send email.";
-    console.error("Mail send failed:", message);
+    resetMailTransporter();
+    const message = describeMailError(err);
+    console.error("Mail send failed:", err instanceof Error ? err.message : message);
     return { sent: false, error: message };
   }
 }

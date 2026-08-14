@@ -16,7 +16,7 @@ export const requestContextPlugin: FastifyPluginAsync = async (app) => {
 
   app.setErrorHandler((err, req, reply) => {
     if (err instanceof AppError) {
-      return fail(reply, err.statusCode, err.message, err.errors);
+      return fail(reply, err.statusCode, err.message, err.errors, err.code);
     }
 
     if (err && typeof err === "object" && "validation" in err) {
