@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:yaazh_admin/app/constants.dart';
 import 'package:yaazh_admin/core/widgets/keyboard_dismiss.dart';
+import 'package:yaazh_admin/core/widgets/ya_bottom_sheet.dart';
 import 'package:yaazh_admin/core/widgets/ya_field.dart';
 
 final _monthYear = DateFormat('MMMM yyyy');
@@ -85,10 +86,8 @@ Future<YaDatePick?> showYaDatePicker(
   required DateTime maxDate,
   bool allowClear = true,
 }) {
-  return showModalBottomSheet<YaDatePick>(
+  return showYaSheet<YaDatePick>(
     context: context,
-    isScrollControlled: true,
-    backgroundColor: Colors.transparent,
     builder: (ctx) => _YaDatePickerSheet(
       initialDate: initialDate,
       minDate: minDate,
@@ -175,94 +174,70 @@ class _YaDatePickerSheetState extends State<_YaDatePickerSheet> {
       cells.add(null);
     }
 
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: theme.colorScheme.surface,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: theme.dividerColor),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Row(
+          children: [
+            _navBtn(theme, Icons.keyboard_double_arrow_left_rounded, () => _shiftYear(-1)),
+            _navBtn(theme, Icons.chevron_left_rounded, () => _shiftMonth(-1)),
+            Expanded(
+              child: Text(
+                _monthYear.format(_view),
+                textAlign: TextAlign.center,
+                style: theme.textTheme.titleMedium,
+              ),
+            ),
+            _navBtn(theme, Icons.chevron_right_rounded, () => _shiftMonth(1)),
+            _navBtn(theme, Icons.keyboard_double_arrow_right_rounded, () => _shiftYear(1)),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            for (final d in const ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'])
+              Expanded(
+                child: Text(
+                  d,
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        for (var r = 0; r < cells.length / 7; r++)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 4),
+            child: Row(
               children: [
-                Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: theme.dividerColor,
-                    borderRadius: BorderRadius.circular(99),
-                  ),
-                ),
-                const SizedBox(height: 14),
-                Row(
-                  children: [
-                    _navBtn(theme, Icons.keyboard_double_arrow_left_rounded, () => _shiftYear(-1)),
-                    _navBtn(theme, Icons.chevron_left_rounded, () => _shiftMonth(-1)),
-                    Expanded(
-                      child: Text(
-                        _monthYear.format(_view),
-                        textAlign: TextAlign.center,
-                        style: theme.textTheme.titleMedium,
-                      ),
-                    ),
-                    _navBtn(theme, Icons.chevron_right_rounded, () => _shiftMonth(1)),
-                    _navBtn(theme, Icons.keyboard_double_arrow_right_rounded, () => _shiftYear(1)),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    for (final d in const ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'])
-                      Expanded(
-                        child: Text(
-                          d,
-                          textAlign: TextAlign.center,
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                for (var r = 0; r < cells.length / 7; r++)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 4),
-                    child: Row(
-                      children: [
-                        for (var c = 0; c < 7; c++)
-                          Expanded(child: _dayCell(theme, today, cells[r * 7 + c])),
-                      ],
-                    ),
-                  ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    TextButton(
-                      onPressed: _selectable(today) ? () => _pick(today) : null,
-                      child: const Text('Today'),
-                    ),
-                    if (widget.allowClear)
-                      TextButton(
-                        onPressed: () => Navigator.pop(context, const YaDatePick(null)),
-                        child: const Text('Clear'),
-                      ),
-                    const Spacer(),
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text('Close'),
-                    ),
-                  ],
-                ),
+                for (var c = 0; c < 7; c++)
+                  Expanded(child: _dayCell(theme, today, cells[r * 7 + c])),
               ],
             ),
           ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            TextButton(
+              onPressed: _selectable(today) ? () => _pick(today) : null,
+              child: const Text('Today'),
+            ),
+            if (widget.allowClear)
+              TextButton(
+                onPressed: () => Navigator.pop(context, const YaDatePick(null)),
+                child: const Text('Clear'),
+              ),
+            const Spacer(),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Close'),
+            ),
+          ],
         ),
-      ),
+      ],
     );
   }
 

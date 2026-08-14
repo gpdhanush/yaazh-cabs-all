@@ -24,6 +24,7 @@ import 'package:yaazh_admin/features/fleet/presentation/vehicle_form_page.dart';
 import 'package:yaazh_admin/features/home/presentation/home_page.dart';
 import 'package:yaazh_admin/features/notifications/presentation/notification_compose_page.dart';
 import 'package:yaazh_admin/features/notifications/presentation/notifications_page.dart';
+import 'package:yaazh_admin/features/reports/presentation/reports_page.dart';
 import 'package:yaazh_admin/features/settings/presentation/app_settings_page.dart';
 import 'package:yaazh_admin/features/settings/presentation/profile_page.dart';
 import 'package:yaazh_admin/features/settings/presentation/web_settings_page.dart';
@@ -206,6 +207,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/testimonials',
         parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const TestimonialsPage(),
+      ),
+      slideRoute(
+        path: '/reports',
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const ReportsPage(),
       ),
       slideRoute(
         path: '/notifications/new',

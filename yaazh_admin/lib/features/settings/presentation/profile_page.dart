@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:yaazh_admin/app/constants.dart';
 import 'package:yaazh_admin/core/network/api_exception.dart';
 import 'package:yaazh_admin/core/widgets/admin_avatar.dart';
 import 'package:yaazh_admin/core/widgets/app_toast.dart';
 import 'package:yaazh_admin/core/widgets/keyboard_dismiss.dart';
+import 'package:yaazh_admin/core/widgets/ya_bottom_sheet.dart';
 import 'package:yaazh_admin/core/widgets/ya_field.dart';
 import 'package:yaazh_admin/core/widgets/ya_loader.dart';
 import 'package:yaazh_admin/features/auth/data/auth_repository.dart';
@@ -74,45 +74,28 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
 
   Future<void> _openPhotoOptions() async {
     hideKeyboard();
-    final action = await showModalBottomSheet<String>(
+    final action = await showYaActionSheet<String>(
       context: context,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) {
-        final theme = Theme.of(ctx);
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: theme.colorScheme.surface,
-                borderRadius: BorderRadius.circular(AppConstants.radiusField),
-                border: Border.all(color: theme.dividerColor),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  ListTile(
-                    leading: const Icon(Icons.photo_camera_outlined),
-                    title: const Text('Camera'),
-                    onTap: () => Navigator.pop(ctx, 'camera'),
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.photo_library_outlined),
-                    title: const Text('Gallery'),
-                    onTap: () => Navigator.pop(ctx, 'gallery'),
-                  ),
-                  if (_hasPhoto)
-                    ListTile(
-                      leading: const Icon(Icons.delete_outline_rounded),
-                      title: const Text('Remove photo'),
-                      onTap: () => Navigator.pop(ctx, 'remove'),
-                    ),
-                ],
-              ),
-            ),
+      title: 'Profile photo',
+      actions: [
+        const YaSheetAction(
+          value: 'camera',
+          label: 'Camera',
+          icon: Icons.photo_camera_outlined,
+        ),
+        const YaSheetAction(
+          value: 'gallery',
+          label: 'Gallery',
+          icon: Icons.photo_library_outlined,
+        ),
+        if (_hasPhoto)
+          const YaSheetAction(
+            value: 'remove',
+            label: 'Remove photo',
+            icon: Icons.delete_outline_rounded,
+            destructive: true,
           ),
-        );
-      },
+      ],
     );
     if (action == null) return;
     if (action == 'remove') {

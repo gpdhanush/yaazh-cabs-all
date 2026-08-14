@@ -327,8 +327,16 @@ class AppTheme {
       ),
       bottomSheetTheme: BottomSheetThemeData(
         backgroundColor: surface,
-        surfaceTintColor: Colors.transparent,
         modalBackgroundColor: surface,
+        surfaceTintColor: Colors.transparent,
+        showDragHandle: true,
+        dragHandleColor: muted.withValues(alpha: 0.45),
+        dragHandleSize: const Size(40, 4),
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        clipBehavior: Clip.antiAlias,
+        elevation: 0,
       ),
       popupMenuTheme: PopupMenuThemeData(
         color: surface,

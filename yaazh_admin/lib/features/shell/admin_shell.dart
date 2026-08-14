@@ -252,7 +252,8 @@ class _AdminDrawer extends ConsumerWidget {
                     context,
                     icon: Icons.insights_rounded,
                     label: 'Reports',
-                    onTap: () => _open('soon:Reports'),
+                    selected: location.startsWith('/reports'),
+                    onTap: () => _open('/reports'),
                   ),
                   _item(
                     context,

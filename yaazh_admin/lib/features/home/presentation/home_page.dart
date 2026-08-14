@@ -6,7 +6,6 @@ import 'package:line_awesome_flutter/line_awesome_flutter.dart';
 import 'package:yaazh_admin/app/constants.dart';
 import 'package:yaazh_admin/app/theme.dart';
 import 'package:yaazh_admin/core/widgets/admin_avatar.dart';
-import 'package:yaazh_admin/core/widgets/coming_soon.dart';
 import 'package:yaazh_admin/core/widgets/keyboard_dismiss.dart';
 import 'package:yaazh_admin/core/widgets/ya_loader.dart';
 import 'package:yaazh_admin/features/auth/presentation/auth_viewmodel.dart';
@@ -214,7 +213,7 @@ class _DashboardBody extends StatelessWidget {
               icon: LineAwesomeIcons.chart_bar,
               label: 'Reports',
               color: AppColors.primary,
-              onTap: () => showComingSoon('Reports'),
+              onTap: () => context.push('/reports'),
             ),
           ],
         ),

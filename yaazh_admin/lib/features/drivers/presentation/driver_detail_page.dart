@@ -13,6 +13,7 @@ import 'package:yaazh_admin/core/widgets/confirm_sheet.dart';
 import 'package:yaazh_admin/core/widgets/driver_avatar.dart';
 import 'package:yaazh_admin/core/widgets/keyboard_dismiss.dart';
 import 'package:yaazh_admin/core/widgets/status_chip.dart';
+import 'package:yaazh_admin/core/widgets/ya_bottom_sheet.dart';
 import 'package:yaazh_admin/core/widgets/ya_loader.dart';
 import 'package:yaazh_admin/features/drivers/data/driver_repository.dart';
 import 'package:yaazh_admin/features/drivers/domain/driver.dart';
@@ -36,40 +37,21 @@ class _DriverDetailPageState extends ConsumerState<DriverDetailPage> {
 
   Future<void> _pickPhoto() async {
     hideKeyboard();
-    final source = await showModalBottomSheet<ImageSource>(
+    final source = await showYaActionSheet<ImageSource>(
       context: context,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) {
-        final theme = Theme.of(ctx);
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: theme.colorScheme.surface,
-                borderRadius: BorderRadius.circular(24),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const SizedBox(height: 8),
-                  ListTile(
-                    leading: const Icon(Icons.photo_library_rounded),
-                    title: const Text('Choose from gallery'),
-                    onTap: () => Navigator.pop(ctx, ImageSource.gallery),
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.photo_camera_rounded),
-                    title: const Text('Take a photo'),
-                    onTap: () => Navigator.pop(ctx, ImageSource.camera),
-                  ),
-                  const SizedBox(height: 8),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
+      title: 'Driver photo',
+      actions: const [
+        YaSheetAction(
+          value: ImageSource.gallery,
+          label: 'Choose from gallery',
+          icon: Icons.photo_library_rounded,
+        ),
+        YaSheetAction(
+          value: ImageSource.camera,
+          label: 'Take a photo',
+          icon: Icons.photo_camera_rounded,
+        ),
+      ],
     );
     if (source == null) return;
 
