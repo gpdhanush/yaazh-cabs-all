@@ -30,6 +30,15 @@ double? parseDouble(dynamic value) {
   return double.tryParse(value.toString());
 }
 
+String capitalizeWords(String value) {
+  final cleaned = value.replaceAll('_', ' ').trim();
+  if (cleaned.isEmpty) return value;
+  return cleaned.split(RegExp(r'\s+')).map((word) {
+    if (word.isEmpty) return word;
+    return '${word[0].toUpperCase()}${word.substring(1).toLowerCase()}';
+  }).join(' ');
+}
+
 int? parseInt(dynamic value) {
   if (value == null) return null;
   return int.tryParse(value.toString());

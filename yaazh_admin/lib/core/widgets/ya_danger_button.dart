@@ -5,12 +5,14 @@ class YaDangerButton extends StatelessWidget {
   final VoidCallback? onPressed;
   final String label;
   final IconData? icon;
+  final Color color;
 
   const YaDangerButton({
     super.key,
     required this.onPressed,
     required this.label,
     this.icon,
+    this.color = AppColors.salmon,
   });
 
   @override
@@ -31,8 +33,9 @@ class YaDangerButton extends StatelessWidget {
     if (isDark) {
       return OutlinedButton(
         style: OutlinedButton.styleFrom(
-          foregroundColor: AppColors.salmon,
-          side: const BorderSide(color: AppColors.salmon, width: 1.4),
+          foregroundColor: color,
+          side: BorderSide(color: color, width: 1.4),
+          minimumSize: const Size.fromHeight(40),
         ),
         onPressed: onPressed,
         child: child,
@@ -41,8 +44,9 @@ class YaDangerButton extends StatelessWidget {
 
     return ElevatedButton(
       style: ElevatedButton.styleFrom(
-        backgroundColor: AppColors.salmon,
+        backgroundColor: color,
         foregroundColor: Colors.white,
+        minimumSize: const Size.fromHeight(40),
       ),
       onPressed: onPressed,
       child: child,

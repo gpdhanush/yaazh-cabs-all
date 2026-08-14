@@ -10,6 +10,7 @@ import 'package:yaazh_admin/core/widgets/coming_soon.dart';
 import 'package:yaazh_admin/core/widgets/ya_loader.dart';
 import 'package:yaazh_admin/core/widgets/keyboard_dismiss.dart';
 import 'package:yaazh_admin/core/widgets/status_chip.dart';
+import 'package:yaazh_admin/core/widgets/ya_danger_button.dart';
 import 'package:yaazh_admin/features/bookings/data/booking_repository.dart';
 import 'package:yaazh_admin/features/bookings/domain/booking.dart';
 import 'package:yaazh_admin/features/home/data/dashboard_repository.dart';
@@ -278,12 +279,13 @@ class _BookingCard extends ConsumerWidget {
                       ),
                       const SizedBox(width: 8),
                       Expanded(
-                        child: OutlinedButton(
+                        child: YaDangerButton(
                           onPressed: () {
                             hideKeyboard();
                             context.push('/bookings/${b.id}/reject');
                           },
-                          child: const Text('REJECT'),
+                          label: 'REJECT',
+                          color: const Color(0xFFE53935),
                         ),
                       ),
                     ] else if (BookingStatus.canAssign(b.status))

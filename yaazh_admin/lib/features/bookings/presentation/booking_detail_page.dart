@@ -85,12 +85,13 @@ class _BookingDetailPageState extends ConsumerState<BookingDetailPage> {
                     child: const Text('CONFIRM BOOKING'),
                   ),
                   const SizedBox(height: 8),
-                  OutlinedButton(
+                  YaDangerButton(
                     onPressed: () {
                       hideKeyboard();
                       context.push('/bookings/${b.id}/reject');
                     },
-                    child: const Text('REJECT'),
+                    label: 'REJECT',
+                    color: const Color(0xFFE53935),
                   ),
                   const SizedBox(height: 12),
                 ],
@@ -105,27 +106,31 @@ class _BookingDetailPageState extends ConsumerState<BookingDetailPage> {
                   ),
                   const SizedBox(height: 12),
                 ],
-                ElevatedButton.icon(
-                  onPressed: () {
-                    hideKeyboard();
-                    context.push('/bookings/${b.id}/invoice-email');
-                  },
-                  icon: const Icon(Icons.mail_outline_rounded),
-                  label: const Text('SEND INVOICE EMAIL'),
-                ),
-                const SizedBox(height: 8),
-                OutlinedButton.icon(
-                  onPressed: () => _sendInvoiceWhatsApp(b),
-                  icon: const Icon(Icons.picture_as_pdf_rounded),
-                  label: const Text('SEND INVOICE ON WHATSAPP'),
-                ),
-                const SizedBox(height: 8),
-                OutlinedButton.icon(
-                  onPressed: () => _sendFeedback(b),
-                  icon: const Icon(Icons.star_rate_rounded),
-                  label: const Text('SEND FEEDBACK'),
-                ),
-                const SizedBox(height: 12),
+                if (BookingStatus.canSendInvoice(b.status)) ...[
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      hideKeyboard();
+                      context.push('/bookings/${b.id}/invoice-email');
+                    },
+                    icon: const Icon(Icons.mail_outline_rounded),
+                    label: const Text('SEND INVOICE EMAIL'),
+                  ),
+                  const SizedBox(height: 8),
+                  OutlinedButton.icon(
+                    onPressed: () => _sendInvoiceWhatsApp(b),
+                    icon: const Icon(Icons.picture_as_pdf_rounded),
+                    label: const Text('SEND INVOICE ON WHATSAPP'),
+                  ),
+                  const SizedBox(height: 8),
+                ],
+                if (BookingStatus.canSendFeedback(b.status)) ...[
+                  OutlinedButton.icon(
+                    onPressed: () => _sendFeedback(b),
+                    icon: const Icon(Icons.star_rate_rounded),
+                    label: const Text('SEND FEEDBACK'),
+                  ),
+                  const SizedBox(height: 12),
+                ],
                 _Panel(
                   title: 'Trip',
                   child: Column(
@@ -186,8 +191,12 @@ class _BookingDetailPageState extends ConsumerState<BookingDetailPage> {
                                 ],
                               ),
                             ),
-                            IconButton(
+                            IconButton.filled(
                               onPressed: () => launchUrl(Uri.parse('tel:${b.driver!.phone}')),
+                              style: IconButton.styleFrom(
+                                backgroundColor: AppColors.primary,
+                                foregroundColor: Colors.white,
+                              ),
                               icon: const Icon(Icons.phone_rounded),
                             ),
                           ],
@@ -228,6 +237,7 @@ class _BookingDetailPageState extends ConsumerState<BookingDetailPage> {
                       context.push('/bookings/${b.id}/cancel');
                     },
                     label: 'CANCEL BOOKING',
+                    color: const Color(0xFFE53935),
                   ),
                 ],
               ],

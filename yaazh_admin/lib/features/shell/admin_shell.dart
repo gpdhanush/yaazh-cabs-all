@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 import 'package:yaazh_admin/app/constants.dart';
 import 'package:yaazh_admin/app/theme.dart';
 import 'package:yaazh_admin/core/widgets/app_logo.dart';
-import 'package:yaazh_admin/core/widgets/app_toast.dart';
 import 'package:yaazh_admin/core/widgets/coming_soon.dart';
 import 'package:yaazh_admin/core/widgets/confirm_sheet.dart';
 import 'package:yaazh_admin/core/widgets/keyboard_dismiss.dart';
@@ -14,7 +13,6 @@ import 'package:yaazh_admin/features/auth/presentation/auth_viewmodel.dart';
 
 final GlobalKey<ScaffoldState> adminScaffoldKey = GlobalKey<ScaffoldState>();
 
-DateTime? _lastRootBackAt;
 bool _exitPromptOpen = false;
 
 class YaDrawerButton extends StatelessWidget {
@@ -53,17 +51,8 @@ class AdminShell extends ConsumerWidget {
       return;
     }
 
-    final now = DateTime.now();
-    if (_lastRootBackAt != null &&
-        now.difference(_lastRootBackAt!) <= const Duration(seconds: 2)) {
-      await SystemNavigator.pop();
-      return;
-    }
-    _lastRootBackAt = now;
-
     if (_exitPromptOpen) return;
     _exitPromptOpen = true;
-    showAppToast('Press back again to exit');
     try {
       final ok = await showConfirmSheet(
         context,
