@@ -6,6 +6,7 @@ import { ValidationError, NotFoundError } from "../../../errors/app-error.js";
 import { bookingService } from "../../../services/booking.service.js";
 import { getPublicFeedback, submitPublicFeedback } from "../../../services/feedback.service.js";
 import { loadDriverPhotoBytes } from "../../../services/driver-photo.service.js";
+import { loadAdminPhotoBytes } from "../../../services/admin-photo.service.js";
 import { mapService } from "../../../services/map.service.js";
 import type { TripType } from "@prisma/client";
 
@@ -22,6 +23,21 @@ export const publicRoutes: FastifyPluginAsync = async (app) => {
     if (!photo) throw new NotFoundError("Driver photo not found.");
     return reply
       .header("Cache-Control", "public, max-age=300")
+      .type(photo.mimeType)
+      .send(photo.bytes);
+  });
+
+  app.get("/admins/:id/photo", async (req, reply) => {
+    const id = BigInt((req.params as { id: string }).id);
+    const admin = await prisma.adminUsers.findUnique({
+      where: { id },
+      select: { avatar_url: true },
+    });
+    if (!admin) throw new NotFoundError("Admin photo not found.");
+    const photo = await loadAdminPhotoBytes(id, admin.avatar_url);
+    if (!photo) throw new NotFoundError("Admin photo not found.");
+    return reply
+      .header("Cache-Control", "public, max-age=60")
       .type(photo.mimeType)
       .send(photo.bytes);
   });

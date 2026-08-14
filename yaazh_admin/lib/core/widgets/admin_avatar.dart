@@ -17,25 +17,57 @@ class AdminAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     var url = resolveMediaUrl(user?.avatarUrl);
     if (url != null && cacheBust != null) {
       url = '$url${url.contains('?') ? '&' : '?'}t=$cacheBust';
     }
-    return CircleAvatar(
-      radius: radius,
-      backgroundColor: theme.colorScheme.primary,
-      backgroundImage: url != null ? CachedNetworkImageProvider(url) : null,
-      child: url == null
-          ? Text(
-              user?.initials ?? 'A',
-              style: TextStyle(
-                color: theme.colorScheme.onPrimary,
-                fontWeight: FontWeight.w700,
-                fontSize: radius * 0.78,
+    final size = radius * 2;
+
+    return ClipOval(
+      child: SizedBox(
+        width: size,
+        height: size,
+        child: url == null
+            ? _InitialsBadge(user: user, radius: radius)
+            : CachedNetworkImage(
+                imageUrl: url,
+                width: size,
+                height: size,
+                fit: BoxFit.cover,
+                fadeInDuration: const Duration(milliseconds: 180),
+                memCacheWidth: (size * 3).round(),
+                errorListener: (_) {},
+                placeholder: (_, _) => _InitialsBadge(user: user, radius: radius),
+                errorWidget: (_, _, _) => _InitialsBadge(user: user, radius: radius),
               ),
-            )
-          : null,
+      ),
+    );
+  }
+}
+
+class _InitialsBadge extends StatelessWidget {
+  final AdminUser? user;
+  final double radius;
+
+  const _InitialsBadge({required this.user, required this.radius});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final letters = user?.initials ?? 'A';
+    return ColoredBox(
+      color: theme.colorScheme.primary,
+      child: Center(
+        child: Text(
+          letters,
+          style: TextStyle(
+            color: theme.colorScheme.onPrimary,
+            fontWeight: FontWeight.w800,
+            fontSize: radius * (letters.length > 1 ? 0.72 : 0.82),
+            height: 1,
+          ),
+        ),
+      ),
     );
   }
 }

@@ -6,6 +6,7 @@ import 'package:yaazh_admin/core/network/api_exception.dart';
 import 'package:yaazh_admin/core/widgets/app_toast.dart';
 import 'package:yaazh_admin/core/widgets/confirm_sheet.dart';
 import 'package:yaazh_admin/core/widgets/keyboard_dismiss.dart';
+import 'package:yaazh_admin/core/widgets/ya_danger_button.dart';
 import 'package:yaazh_admin/core/widgets/ya_date_picker.dart';
 import 'package:yaazh_admin/core/widgets/ya_dropdown.dart';
 import 'package:yaazh_admin/core/widgets/ya_field.dart';
@@ -266,6 +267,14 @@ class _VehicleFormPageState extends ConsumerState<VehicleFormPage> {
                       onPressed: _saving ? null : _submit,
                       child: Text(_saving ? 'SAVING…' : 'SAVE'),
                     ),
+                    if (widget.isEdit) ...[
+                      const SizedBox(height: 10),
+                      YaDangerButton(
+                        onPressed: _saving ? null : _delete,
+                        icon: Icons.delete_outline_rounded,
+                        label: 'DELETE VEHICLE',
+                      ),
+                    ],
                   ],
                 ),
               ),

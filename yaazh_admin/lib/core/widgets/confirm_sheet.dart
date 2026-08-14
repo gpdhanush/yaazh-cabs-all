@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:yaazh_admin/app/constants.dart';
 import 'package:yaazh_admin/core/widgets/ya_bottom_sheet.dart';
+import 'package:yaazh_admin/core/widgets/ya_danger_button.dart';
 
 Future<bool> showConfirmSheet(
   BuildContext context, {
@@ -41,17 +42,25 @@ Future<bool> showConfirmSheet(
           const SizedBox(height: 24),
           SizedBox(
             width: double.infinity,
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: color,
-                foregroundColor: Colors.white,
-              ),
-              onPressed: () {
-                FocusManager.instance.primaryFocus?.unfocus();
-                Navigator.of(ctx).pop(true);
-              },
-              child: Text(actionLabel),
-            ),
+            child: color == AppColors.salmon
+                ? YaDangerButton(
+                    onPressed: () {
+                      FocusManager.instance.primaryFocus?.unfocus();
+                      Navigator.of(ctx).pop(true);
+                    },
+                    label: actionLabel,
+                  )
+                : ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: color,
+                      foregroundColor: Colors.white,
+                    ),
+                    onPressed: () {
+                      FocusManager.instance.primaryFocus?.unfocus();
+                      Navigator.of(ctx).pop(true);
+                    },
+                    child: Text(actionLabel),
+                  ),
           ),
           const SizedBox(height: 8),
           SizedBox(

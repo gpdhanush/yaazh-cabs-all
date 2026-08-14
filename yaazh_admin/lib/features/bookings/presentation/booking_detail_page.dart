@@ -12,6 +12,7 @@ import 'package:yaazh_admin/core/widgets/confirm_sheet.dart';
 import 'package:yaazh_admin/core/widgets/driver_avatar.dart';
 import 'package:yaazh_admin/core/widgets/keyboard_dismiss.dart';
 import 'package:yaazh_admin/core/widgets/status_chip.dart';
+import 'package:yaazh_admin/core/widgets/ya_danger_button.dart';
 import 'package:yaazh_admin/core/widgets/ya_dropdown.dart';
 import 'package:yaazh_admin/core/widgets/ya_loader.dart';
 import 'package:yaazh_admin/core/widgets/ya_number_field.dart';
@@ -221,13 +222,12 @@ class _BookingDetailPageState extends ConsumerState<BookingDetailPage> {
                 ),
                 if (BookingStatus.canCancel(b.status)) ...[
                   const SizedBox(height: 20),
-                  OutlinedButton(
-                    style: OutlinedButton.styleFrom(foregroundColor: AppColors.salmon),
+                  YaDangerButton(
                     onPressed: () {
                       hideKeyboard();
                       context.push('/bookings/${b.id}/cancel');
                     },
-                    child: const Text('CANCEL BOOKING'),
+                    label: 'CANCEL BOOKING',
                   ),
                 ],
               ],

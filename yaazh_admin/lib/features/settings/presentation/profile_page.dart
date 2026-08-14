@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:yaazh_admin/core/image_encode.dart';
 import 'package:yaazh_admin/core/network/api_exception.dart';
 import 'package:yaazh_admin/core/widgets/admin_avatar.dart';
 import 'package:yaazh_admin/core/widgets/app_toast.dart';
@@ -115,7 +116,8 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     );
     if (file == null) return;
     try {
-      final user = await ref.read(authRepositoryProvider).uploadPhoto(file.path);
+      final encoded = await encodeAvatarPng(file.path);
+      final user = await ref.read(authRepositoryProvider).uploadPhoto(encoded);
       ref.read(authNotifierProvider.notifier).setUser(user);
       if (!mounted) return;
       setState(() {

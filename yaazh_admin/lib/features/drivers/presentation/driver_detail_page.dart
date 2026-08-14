@@ -14,6 +14,7 @@ import 'package:yaazh_admin/core/widgets/driver_avatar.dart';
 import 'package:yaazh_admin/core/widgets/keyboard_dismiss.dart';
 import 'package:yaazh_admin/core/widgets/status_chip.dart';
 import 'package:yaazh_admin/core/widgets/ya_bottom_sheet.dart';
+import 'package:yaazh_admin/core/widgets/ya_danger_button.dart';
 import 'package:yaazh_admin/core/widgets/ya_loader.dart';
 import 'package:yaazh_admin/features/drivers/data/driver_repository.dart';
 import 'package:yaazh_admin/features/drivers/domain/driver.dart';
@@ -250,11 +251,10 @@ class _DriverDetailPageState extends ConsumerState<DriverDetailPage> {
                   ),
                 ),
                 const SizedBox(height: 20),
-                OutlinedButton.icon(
-                  style: OutlinedButton.styleFrom(foregroundColor: AppColors.salmon),
+                YaDangerButton(
                   onPressed: () => _delete(d),
-                  icon: const Icon(Icons.delete_outline_rounded),
-                  label: const Text('Delete driver'),
+                  icon: Icons.delete_outline_rounded,
+                  label: 'DELETE DRIVER',
                 ),
               ],
             ),

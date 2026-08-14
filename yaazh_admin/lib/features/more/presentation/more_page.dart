@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:yaazh_admin/app/constants.dart';
+import 'package:yaazh_admin/core/widgets/admin_avatar.dart';
 import 'package:yaazh_admin/core/widgets/coming_soon.dart';
 import 'package:yaazh_admin/core/widgets/keyboard_dismiss.dart';
 import 'package:yaazh_admin/core/widgets/logout_sheet.dart';
@@ -48,17 +49,7 @@ class MorePage extends ConsumerWidget {
                   padding: const EdgeInsets.all(16),
                   child: Row(
                     children: [
-                      CircleAvatar(
-                        radius: 26,
-                        backgroundColor: theme.colorScheme.primary,
-                        child: Text(
-                          user?.initials ?? 'YA',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
+                      AdminAvatar(user: user, radius: 26),
                       const SizedBox(width: 14),
                       Expanded(
                         child: Column(

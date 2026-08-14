@@ -12,6 +12,15 @@ declare module "fastify" {
 export const requestContextPlugin: FastifyPluginAsync = async (app) => {
   app.addHook("onRequest", async (req) => {
     req.requestId = (req.headers["x-request-id"] as string | undefined) || newRequestId();
+    const method = req.method.toUpperCase();
+    const length = req.headers["content-length"];
+    if (
+      (method === "DELETE" || method === "GET") &&
+      (!length || length === "0") &&
+      String(req.headers["content-type"] ?? "").includes("application/json")
+    ) {
+      delete req.headers["content-type"];
+    }
   });
 
   app.setErrorHandler((err, req, reply) => {

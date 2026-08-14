@@ -9,6 +9,7 @@ import 'package:yaazh_admin/core/widgets/coming_soon.dart';
 import 'package:yaazh_admin/core/widgets/confirm_sheet.dart';
 import 'package:yaazh_admin/core/widgets/keyboard_dismiss.dart';
 import 'package:yaazh_admin/core/widgets/status_chip.dart';
+import 'package:yaazh_admin/core/widgets/ya_danger_button.dart';
 import 'package:yaazh_admin/core/widgets/ya_loader.dart';
 import 'package:yaazh_admin/features/notifications/data/notification_repository.dart';
 import 'package:yaazh_admin/features/notifications/domain/notification_log.dart';
@@ -232,12 +233,10 @@ class _NotificationCard extends ConsumerWidget {
             ),
             const SizedBox(height: 4),
             Text(formatDateTime(n.createdAt), style: theme.textTheme.bodySmall),
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton(
-                onPressed: () => _delete(context, ref),
-                child: const Text('Delete'),
-              ),
+            YaDangerButton(
+              onPressed: () => _delete(context, ref),
+              icon: Icons.delete_outline_rounded,
+              label: 'DELETE',
             ),
           ],
         ),

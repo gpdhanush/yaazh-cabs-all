@@ -16,8 +16,19 @@ class AdminUser {
   });
 
   String get initials {
-    final name = this.name.trim();
-    if (name.isNotEmpty) return name[0].toUpperCase();
+    final parts = name
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((p) => p.isNotEmpty)
+        .toList();
+    if (parts.length >= 2) {
+      return (parts.first[0] + parts.last[0]).toUpperCase();
+    }
+    if (parts.length == 1) {
+      final word = parts.first;
+      if (word.length >= 2) return word.substring(0, 2).toUpperCase();
+      return word[0].toUpperCase();
+    }
     if (email.isNotEmpty) return email[0].toUpperCase();
     return 'A';
   }

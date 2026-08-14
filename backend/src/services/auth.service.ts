@@ -3,6 +3,7 @@ import { loadEnv } from "../config/env.js";
 import { sha256, randomToken, hashPassword, verifyPassword } from "../utils/crypto.js";
 import { signJwt } from "../utils/jwt.js";
 import { normalizePhone, phoneLookupVariants } from "../utils/phone.js";
+import { adminPhotoPublicPath } from "./admin-photo.service.js";
 import {
   AppError,
   ConflictError,
@@ -215,7 +216,7 @@ export const authService = {
         name: admin.name,
         email: admin.email,
         phone: admin.phone,
-        avatar_url: admin.avatar_url,
+        avatar_url: admin.avatar_url ? adminPhotoPublicPath(admin.id) : null,
         role_id: String(admin.role_id),
       },
       ...tokens,

@@ -10,6 +10,11 @@ import { requireAuth, requirePermission, requireUser } from "../../../middleware
 import { bookingService, serializeBooking, serializeDriverParty, getBookingPaymentSummary, recordBookingPayment, setBookingPaymentStatus } from "../../../services/booking.service.js";
 import { saveDriverPhotoBytes } from "../../../services/driver-photo.service.js";
 import {
+  adminPhotoPublicPath,
+  deleteAdminPhoto,
+  saveAdminPhotoBytes,
+} from "../../../services/admin-photo.service.js";
+import {
   resolveCustomerEmail,
   sendBookingInvoiceEmail,
   serializeInvoice,
@@ -515,7 +520,7 @@ function serializeAdminProfile(a: {
     name: a.name,
     email: a.email,
     phone: a.phone,
-    avatar_url: a.avatar_url,
+    avatar_url: a.avatar_url ? adminPhotoPublicPath(a.id) : null,
     role_id: String(a.role_id),
   };
 }
@@ -583,36 +588,27 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
     const existing = await prisma.adminUsers.findUnique({ where: { id: user.id } });
     if (!existing) throw new NotFoundError("Admin not found.");
 
-    const env = loadEnv();
     const file = await req.file();
     if (!file) throw new ValidationError("Image file is required.");
     const mime = file.mimetype || "";
     if (!mime.startsWith("image/")) throw new ValidationError("Only image uploads are allowed.");
 
-    const extFromName = path.extname(file.filename || "").toLowerCase();
-    const ext =
-      extFromName && [".jpg", ".jpeg", ".png", ".webp", ".gif"].includes(extFromName)
-        ? extFromName
-        : mime === "image/png"
-          ? ".png"
-          : mime === "image/webp"
-            ? ".webp"
-            : mime === "image/gif"
-              ? ".gif"
-              : ".jpg";
-
-    const filename = `${user.id}-${Date.now()}-${randomUUID().slice(0, 8)}${ext}`;
-    const dir = path.resolve(env.STORAGE_PATH, "public", "admins");
-    fs.mkdirSync(dir, { recursive: true });
     const bytes = await file.toBuffer();
-    await fs.promises.writeFile(path.join(dir, filename), bytes);
+    let saved: { publicPath: string };
+    try {
+      saved = await saveAdminPhotoBytes(user.id, bytes, mime);
+    } catch (err) {
+      if (err instanceof Error && err.message === "UNSUPPORTED_IMAGE") {
+        throw new ValidationError("Use a JPEG, PNG, WebP, or GIF photo.");
+      }
+      throw err;
+    }
 
-    const relativeUrl = `/storage/public/admins/${filename}`;
     const updated = await prisma.adminUsers.update({
       where: { id: user.id },
-      data: { avatar_url: relativeUrl },
+      data: { avatar_url: saved.publicPath },
     });
-    await audit(user.id, "admin.profile.photo", "admin_users", String(user.id), null, { avatar_url: relativeUrl }, req);
+    await audit(user.id, "admin.profile.photo", "admin_users", String(user.id), null, { avatar_url: saved.publicPath }, req);
     return ok(reply, serializeAdminProfile(updated), "Profile photo updated.");
   });
 
@@ -620,6 +616,7 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
     const user = requireUser(req);
     const existing = await prisma.adminUsers.findUnique({ where: { id: user.id } });
     if (!existing) throw new NotFoundError("Admin not found.");
+    await deleteAdminPhoto(user.id);
     const updated = await prisma.adminUsers.update({
       where: { id: user.id },
       data: { avatar_url: null },

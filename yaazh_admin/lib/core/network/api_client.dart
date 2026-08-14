@@ -28,6 +28,11 @@ final dioProvider = Provider<Dio>((ref) {
   dio.interceptors.add(
     InterceptorsWrapper(
       onRequest: (options, handler) async {
+        final method = options.method.toUpperCase();
+        if (method == 'GET') {
+          options.headers.remove('content-type');
+          options.headers.remove('Content-Type');
+        }
         final token = await storage.getAccessToken();
         if (token != null && token.isNotEmpty) {
           options.headers['Authorization'] = 'Bearer $token';
@@ -232,6 +237,7 @@ class ApiClient {
     try {
       final response = await _dio.delete(
         path,
+        data: const <String, dynamic>{},
         options: _options(silent: silent),
       );
       return _processResponse(response);

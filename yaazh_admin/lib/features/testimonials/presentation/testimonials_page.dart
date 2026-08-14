@@ -9,6 +9,7 @@ import 'package:yaazh_admin/core/widgets/coming_soon.dart';
 import 'package:yaazh_admin/core/widgets/confirm_sheet.dart';
 import 'package:yaazh_admin/core/widgets/keyboard_dismiss.dart';
 import 'package:yaazh_admin/core/widgets/status_chip.dart';
+import 'package:yaazh_admin/core/widgets/ya_danger_button.dart';
 import 'package:yaazh_admin/core/widgets/ya_loader.dart';
 import 'package:yaazh_admin/features/testimonials/data/testimonial_repository.dart';
 import 'package:yaazh_admin/features/testimonials/domain/testimonial.dart';
@@ -291,12 +292,10 @@ class _TestimonialCard extends ConsumerWidget {
                   ],
                 ),
               ],
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton(
-                  onPressed: () => _delete(context, ref),
-                  child: const Text('Delete'),
-                ),
+              YaDangerButton(
+                onPressed: () => _delete(context, ref),
+                icon: Icons.delete_outline_rounded,
+                label: 'DELETE',
               ),
             ],
           ),
