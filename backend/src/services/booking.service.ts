@@ -996,13 +996,17 @@ export const bookingService = {
           estimated_total: Prisma.Decimal | null;
           estimated_distance_km: Prisma.Decimal | null;
           actual_distance_km: Prisma.Decimal | null;
+          payment_status: string;
         }>
-      >`SELECT id, status, assigned_driver_id, estimated_total, estimated_distance_km, actual_distance_km
+      >`SELECT id, status, assigned_driver_id, estimated_total, estimated_distance_km, actual_distance_km, payment_status
         FROM bookings WHERE id = ${bookingId} FOR UPDATE`;
       const booking = rows[0];
       if (!booking) throw new NotFoundError("Booking not found.");
       if (!completable.includes(booking.status)) {
         throw new ConflictError(`Cannot complete booking while status is ${booking.status}.`);
+      }
+      if (booking.payment_status !== "paid") {
+        throw new ConflictError("Record full payment before completing this ride.");
       }
 
       const distance =

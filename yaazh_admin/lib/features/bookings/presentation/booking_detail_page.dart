@@ -95,43 +95,42 @@ class _BookingDetailPageState extends ConsumerState<BookingDetailPage> {
                   ),
                   const SizedBox(height: 12),
                 ],
-                if (BookingStatus.canAssign(b.status)) ...[
+                if (BookingStatus.canAssign(b.status) &&
+                    (b.assignedDriverId == null || b.assignedDriverId!.isEmpty)) ...[
                   ElevatedButton.icon(
                     onPressed: () {
                       hideKeyboard();
                       context.push('/bookings/${b.id}/assign');
                     },
                     icon: const Icon(Icons.assignment_ind_rounded),
-                    label: Text(
-                      b.assignedDriverId != null && b.assignedDriverId!.isNotEmpty
-                          ? 'RE-ASSIGN DRIVER'
-                          : 'ASSIGN DRIVER',
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                ],
-                if (BookingStatus.canComplete(b.status)) ...[
-                  ElevatedButton.icon(
-                    onPressed: () => _completeRide(b),
-                    icon: const Icon(Icons.flag_rounded),
-                    label: const Text('COMPLETE RIDE'),
+                    label: const Text('ASSIGN DRIVER'),
                   ),
                   const SizedBox(height: 12),
                 ],
                 if (BookingStatus.canSendInvoice(b.status)) ...[
-                  ElevatedButton.icon(
-                    onPressed: () {
-                      hideKeyboard();
-                      context.push('/bookings/${b.id}/invoice-email');
-                    },
-                    icon: const Icon(Icons.mail_outline_rounded),
-                    label: const Text('SEND INVOICE EMAIL'),
-                  ),
-                  const SizedBox(height: 8),
-                  OutlinedButton.icon(
-                    onPressed: () => _sendInvoiceWhatsApp(b),
-                    icon: const Icon(Icons.picture_as_pdf_rounded),
-                    label: const Text('SEND INVOICE ON WHATSAPP'),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _BrandActionButton(
+                          icon: Icons.mail_outline_rounded,
+                          label: 'EMAIL INVOICE',
+                          color: const Color(0xFFEA4335),
+                          onPressed: () {
+                            hideKeyboard();
+                            context.push('/bookings/${b.id}/invoice-email');
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _BrandActionButton(
+                          icon: Icons.chat_rounded,
+                          label: 'WHATSAPP INVOICE',
+                          color: const Color(0xFF25D366),
+                          onPressed: () => _sendInvoiceWhatsApp(b),
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 8),
                 ],
@@ -234,6 +233,44 @@ class _BookingDetailPageState extends ConsumerState<BookingDetailPage> {
                   onRecord: () => _recordPayment(b),
                   onMarkPaid: () => _markPaid(b),
                 ),
+                if (BookingStatus.canComplete(b.status) ||
+                    (BookingStatus.canAssign(b.status) &&
+                        b.assignedDriverId != null &&
+                        b.assignedDriverId!.isNotEmpty)) ...[
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      if (BookingStatus.canComplete(b.status))
+                        Expanded(
+                          child: _BrandActionButton(
+                            icon: Icons.flag_rounded,
+                            label: 'COMPLETE',
+                            color: const Color(0xFF166534),
+                            onPressed: () => _completeRide(b),
+                          ),
+                        ),
+                      if (BookingStatus.canComplete(b.status) &&
+                          BookingStatus.canAssign(b.status) &&
+                          b.assignedDriverId != null &&
+                          b.assignedDriverId!.isNotEmpty)
+                        const SizedBox(width: 8),
+                      if (BookingStatus.canAssign(b.status) &&
+                          b.assignedDriverId != null &&
+                          b.assignedDriverId!.isNotEmpty)
+                        Expanded(
+                          child: _BrandActionButton(
+                            icon: Icons.assignment_ind_rounded,
+                            label: 'RE-ASSIGN',
+                            color: const Color(0xFF0369A1),
+                            onPressed: () {
+                              hideKeyboard();
+                              context.push('/bookings/${b.id}/assign');
+                            },
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
                 const SizedBox(height: 12),
                 _Panel(
                   title: 'Timeline',
@@ -262,11 +299,34 @@ class _BookingDetailPageState extends ConsumerState<BookingDetailPage> {
 
   Future<void> _completeRide(Booking b) async {
     hideKeyboard();
+    if (!b.isFullyPaid) {
+      if (!mounted) return;
+      final due = b.payment?.balanceDue;
+      final remaining = due != null && due > 0
+          ? 'Remaining ${formatInr(due)}.\n\n'
+          : '';
+      await showDialog<void>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Payment pending'),
+          content: Text(
+            '${remaining}Please mark as fully paid then click complete.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
     final ok = await showConfirmSheet(
       context,
       title: 'Complete this ride?',
       message:
-          'The trip will be marked complete without odometer km. Estimated fare will be used as the final amount.',
+          'Payment is fully recorded. The trip will be marked complete without odometer km. Estimated fare will be used as the final amount.',
       actionLabel: 'Complete ride',
       icon: Icons.flag_rounded,
       destructive: false,
@@ -409,6 +469,64 @@ class _BookingDetailPageState extends ConsumerState<BookingDetailPage> {
         'Vehicle ${b.vehicle!.name}${b.vehicle!.registration != null ? ' · ${b.vehicle!.registration}' : ''}',
     ].join('\n');
     await Share.share(text, subject: 'Yaazh booking ${b.bookingReference}');
+  }
+}
+
+class _BrandActionButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onPressed;
+
+  const _BrandActionButton({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onPressed,
+  });
+
+  static const _labelStyle = TextStyle(
+    fontSize: 12,
+    fontWeight: FontWeight.w700,
+    letterSpacing: 0.1,
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final label = Text(
+      this.label,
+      maxLines: 2,
+      textAlign: TextAlign.center,
+      overflow: TextOverflow.ellipsis,
+    );
+    if (isDark) {
+      return OutlinedButton.icon(
+        onPressed: onPressed,
+        style: OutlinedButton.styleFrom(
+          foregroundColor: color,
+          side: BorderSide(color: color, width: 1.4),
+          minimumSize: const Size(0, 52),
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          textStyle: _labelStyle,
+        ),
+        icon: Icon(icon, size: 18),
+        label: label,
+      );
+    }
+    return FilledButton.icon(
+      onPressed: onPressed,
+      style: FilledButton.styleFrom(
+        backgroundColor: color,
+        foregroundColor: Colors.white,
+        disabledBackgroundColor: color.withValues(alpha: 0.4),
+        minimumSize: const Size(0, 52),
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        textStyle: _labelStyle,
+      ),
+      icon: Icon(icon, size: 18),
+      label: label,
+    );
   }
 }
 
