@@ -757,11 +757,11 @@ class _PaymentPanel extends StatelessWidget {
             const SizedBox(height: 14),
             YaNumberField(
               controller: discountController,
-              label: 'Discount',
+              label: 'Discount amount',
               hint: '0',
               decimal: true,
               maxLength: 8,
-              prefixIcon: const Icon(Icons.percent_rounded),
+              prefixIcon: const Icon(Icons.currency_rupee_rounded),
               textInputAction: TextInputAction.next,
             ),
             const SizedBox(height: 10),

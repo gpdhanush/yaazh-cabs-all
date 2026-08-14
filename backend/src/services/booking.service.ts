@@ -872,9 +872,10 @@ export const bookingService = {
           status: BookingStatus;
           assigned_driver_id: bigint | null;
           estimated_total: Prisma.Decimal | null;
+          final_total: Prisma.Decimal | null;
           start_odometer_km: Prisma.Decimal | null;
         }>
-      >`SELECT id, status, assigned_driver_id, estimated_total, start_odometer_km
+      >`SELECT id, status, assigned_driver_id, estimated_total, final_total, start_odometer_km
         FROM bookings WHERE id = ${bookingId} FOR UPDATE`;
       const booking = rows[0];
       if (!booking) throw new NotFoundError("Booking not found.");
