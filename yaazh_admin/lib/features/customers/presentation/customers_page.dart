@@ -113,7 +113,8 @@ class _CustomerList extends ConsumerWidget {
                     SizedBox(height: 80),
                     EmptyState(
                       title: 'No customers',
-                      subtitle: 'People who book via the website or app will appear here.',
+                      subtitle:
+                          'People who book via the website or app will appear here.',
                       icon: Icons.groups_outlined,
                     ),
                   ],
@@ -157,7 +158,9 @@ class _CustomerCard extends StatelessWidget {
             children: [
               CircleAvatar(
                 radius: 24,
-                backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.14),
+                backgroundColor: theme.colorScheme.primary.withValues(
+                  alpha: 0.14,
+                ),
                 child: Text(
                   c.name.isNotEmpty ? c.name[0].toUpperCase() : 'C',
                   style: TextStyle(
@@ -188,12 +191,12 @@ class _CustomerCard extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                       ),
                     ],
-                    const SizedBox(height: 8),
-                    StatusChip(
-                      status: c.appStatus,
-                      label: c.appStatusLabel,
-                      tone: CustomerMeta.color(c.appStatus),
-                    ),
+                    // const SizedBox(height: 8),
+                    // StatusChip(
+                    //   status: c.appStatus,
+                    //   label: c.appStatusLabel,
+                    //   tone: CustomerMeta.color(c.appStatus),
+                    // ),
                   ],
                 ),
               ),

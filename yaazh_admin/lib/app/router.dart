@@ -299,14 +299,19 @@ final routerProvider = Provider<GoRouter>((ref) {
         branches: [
           StatefulShellBranch(
             routes: [
-              GoRoute(path: '/home', builder: (context, state) => const HomePage()),
+              GoRoute(
+                path: '/home',
+                builder: (context, state) =>
+                    const AdminTabPopScope(child: HomePage()),
+              ),
             ],
           ),
           StatefulShellBranch(
             routes: [
               GoRoute(
                 path: '/bookings',
-                builder: (context, state) => const BookingsPage(),
+                builder: (context, state) =>
+                    const AdminTabPopScope(child: BookingsPage()),
               ),
             ],
           ),
@@ -314,7 +319,8 @@ final routerProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: '/enquiries',
-                builder: (context, state) => const EnquiriesPage(),
+                builder: (context, state) =>
+                    const AdminTabPopScope(child: EnquiriesPage()),
               ),
             ],
           ),
@@ -322,7 +328,8 @@ final routerProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: '/settings',
-                builder: (context, state) => const AppSettingsPage(),
+                builder: (context, state) =>
+                    const AdminTabPopScope(child: AppSettingsPage()),
               ),
             ],
           ),

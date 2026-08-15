@@ -7,8 +7,7 @@ final webSettingsRepositoryProvider = Provider<WebSettingsRepository>((ref) {
   return WebSettingsRepository(ref.watch(apiClientProvider));
 });
 
-final webSettingsProvider =
-    FutureProvider.autoDispose<List<AppSetting>>((ref) {
+final webSettingsProvider = FutureProvider.autoDispose<List<AppSetting>>((ref) {
   return ref.watch(webSettingsRepositoryProvider).list();
 });
 

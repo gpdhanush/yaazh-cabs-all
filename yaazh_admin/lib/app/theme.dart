@@ -19,62 +19,73 @@ class AppTheme {
   }
 
   static Color onSecondaryOf(Color secondary) {
-    return useLightIconsOn(secondary) ? Colors.white : AppColors.textPrimaryLight;
+    return useLightIconsOn(secondary)
+        ? Colors.white
+        : AppColors.textPrimaryLight;
   }
 
-  static SystemUiOverlayStyle overlayFor(
-    Color header, {
-    Color? navBar,
-  }) {
+  static SystemUiOverlayStyle overlayFor(Color header, {Color? navBar}) {
     final lightStatusIcons = useLightIconsOn(header);
     final nav = navBar ?? header;
     final lightNavIcons = useLightIconsOn(nav);
     return SystemUiOverlayStyle(
       statusBarColor: header,
-      statusBarIconBrightness:
-          lightStatusIcons ? Brightness.light : Brightness.dark,
-      statusBarBrightness:
-          lightStatusIcons ? Brightness.dark : Brightness.light,
+      statusBarIconBrightness: lightStatusIcons
+          ? Brightness.light
+          : Brightness.dark,
+      statusBarBrightness: lightStatusIcons
+          ? Brightness.dark
+          : Brightness.light,
       systemNavigationBarColor: nav,
-      systemNavigationBarIconBrightness:
-          lightNavIcons ? Brightness.light : Brightness.dark,
+      systemNavigationBarIconBrightness: lightNavIcons
+          ? Brightness.light
+          : Brightness.dark,
       systemNavigationBarDividerColor: nav,
     );
   }
 
-  static ThemeData _build(Brightness brightness, Color primary, Color secondary) {
+  static ThemeData _build(
+    Brightness brightness,
+    Color primary,
+    Color secondary,
+  ) {
     final isDark = brightness == Brightness.dark;
     final onPrimary = onPrimaryOf(primary);
     final onSecondary = onSecondaryOf(secondary);
-    final onSurface = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
-    final muted = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
+    final onSurface = isDark
+        ? AppColors.textPrimaryDark
+        : AppColors.textPrimaryLight;
+    final muted = isDark
+        ? AppColors.textSecondaryDark
+        : AppColors.textSecondaryLight;
     final bg = isDark ? AppColors.bgDark : AppColors.bgLight;
     final surface = isDark ? AppColors.cardDark : AppColors.cardLight;
     final border = isDark ? AppColors.borderDark : AppColors.borderLight;
 
-    final scheme = ColorScheme.fromSeed(
-      seedColor: primary,
-      brightness: brightness,
-    ).copyWith(
-      primary: primary,
-      onPrimary: onPrimary,
-      secondary: secondary,
-      onSecondary: onSecondary,
-      tertiary: AppColors.supportPurple,
-      onTertiary: Colors.white,
-      error: AppColors.salmon,
-      onError: Colors.white,
-      surface: surface,
-      onSurface: onSurface,
-      onSurfaceVariant: muted,
-      outline: border,
-      outlineVariant: border,
-      secondaryContainer: Color.alphaBlend(
-        primary.withValues(alpha: isDark ? 0.28 : 0.16),
-        surface,
-      ),
-      onSecondaryContainer: isDark ? AppColors.textPrimaryDark : primary,
-    );
+    final scheme =
+        ColorScheme.fromSeed(
+          seedColor: primary,
+          brightness: brightness,
+        ).copyWith(
+          primary: primary,
+          onPrimary: onPrimary,
+          secondary: secondary,
+          onSecondary: onSecondary,
+          tertiary: AppColors.supportPurple,
+          onTertiary: Colors.white,
+          error: AppColors.salmon,
+          onError: Colors.white,
+          surface: surface,
+          onSurface: onSurface,
+          onSurfaceVariant: muted,
+          outline: border,
+          outlineVariant: border,
+          secondaryContainer: Color.alphaBlend(
+            primary.withValues(alpha: isDark ? 0.28 : 0.16),
+            surface,
+          ),
+          onSecondaryContainer: isDark ? AppColors.textPrimaryDark : primary,
+        );
 
     final baseText = GoogleFonts.arimoTextTheme(
       ThemeData(brightness: brightness).textTheme,
@@ -135,10 +146,7 @@ class AppTheme {
         elevation: 0,
         scrolledUnderElevation: 0,
         centerTitle: true,
-        systemOverlayStyle: overlayFor(
-          primary,
-          navBar: surface,
-        ),
+        systemOverlayStyle: overlayFor(primary, navBar: surface),
         iconTheme: IconThemeData(color: onPrimary),
         actionsIconTheme: IconThemeData(color: onPrimary),
         titleTextStyle: textTheme.titleLarge?.copyWith(
@@ -233,7 +241,10 @@ class AppTheme {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: isDark ? const Color(0xFF161632) : Colors.white,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 14,
+          vertical: 14,
+        ),
         floatingLabelBehavior: FloatingLabelBehavior.never,
         prefixIconColor: muted,
         suffixIconColor: muted,
@@ -266,7 +277,10 @@ class AppTheme {
         backgroundColor: isDark ? AppColors.bgDark : const Color(0xFFF3F4FB),
         selectedColor: primary,
         disabledColor: border,
-        labelStyle: GoogleFonts.arimo(fontWeight: FontWeight.w600, color: onSurface),
+        labelStyle: GoogleFonts.arimo(
+          fontWeight: FontWeight.w600,
+          color: onSurface,
+        ),
         secondaryLabelStyle: GoogleFonts.arimo(
           fontWeight: FontWeight.w700,
           color: onPrimary,
@@ -274,16 +288,20 @@ class AppTheme {
         checkmarkColor: onPrimary,
         deleteIconColor: onSurface,
         side: BorderSide(color: border),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(99),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(99)),
       ),
       bottomNavigationBarTheme: BottomNavigationBarThemeData(
         backgroundColor: surface,
         selectedItemColor: isDark ? AppColors.primaryLight : primary,
         unselectedItemColor: muted,
-        selectedLabelStyle: GoogleFonts.arimo(fontWeight: FontWeight.w700, fontSize: 12),
-        unselectedLabelStyle: GoogleFonts.arimo(fontWeight: FontWeight.w500, fontSize: 12),
+        selectedLabelStyle: GoogleFonts.arimo(
+          fontWeight: FontWeight.w700,
+          fontSize: 12,
+        ),
+        unselectedLabelStyle: GoogleFonts.arimo(
+          fontWeight: FontWeight.w500,
+          fontSize: 12,
+        ),
         type: BottomNavigationBarType.fixed,
         elevation: 0,
       ),
@@ -320,12 +338,20 @@ class AppTheme {
         labelColor: onPrimary,
         unselectedLabelColor: onPrimary.withValues(alpha: 0.72),
         indicatorColor: onPrimary,
-        labelStyle: GoogleFonts.arimo(fontWeight: FontWeight.w700, fontSize: 14),
-        unselectedLabelStyle: GoogleFonts.arimo(fontWeight: FontWeight.w500, fontSize: 14),
+        labelStyle: GoogleFonts.arimo(
+          fontWeight: FontWeight.w700,
+          fontSize: 14,
+        ),
+        unselectedLabelStyle: GoogleFonts.arimo(
+          fontWeight: FontWeight.w500,
+          fontSize: 14,
+        ),
       ),
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.fixed,
-        backgroundColor: isDark ? const Color(0xFF323232) : const Color(0xFF323232),
+        backgroundColor: isDark
+            ? const Color(0xFF323232)
+            : const Color(0xFF323232),
         contentTextStyle: GoogleFonts.arimo(color: Colors.white, fontSize: 14),
         actionTextColor: Colors.white,
       ),

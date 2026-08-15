@@ -40,14 +40,8 @@ class ReportsPage extends ConsumerWidget {
 
     return KeyboardDismiss(
       child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Reports'),
-          actions: [
-            IconButton(
-              tooltip: 'Open bookings',
-              onPressed: () => context.go('/bookings'),
-              icon: const Icon(Icons.local_taxi_rounded),
-            ),
+        appBar: AppBar(title: const Text('Reports'), actions: [
+            
           ],
         ),
         body: RefreshIndicator(
@@ -63,13 +57,13 @@ class ReportsPage extends ConsumerWidget {
             physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
             children: [
-              Text(
-                'Booking trends and live counts.',
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.textTheme.bodySmall?.color,
-                ),
-              ),
-              const SizedBox(height: 12),
+              // Text(
+              //   'Booking trends and live counts.',
+              //   style: theme.textTheme.bodyMedium?.copyWith(
+              //     color: theme.textTheme.bodySmall?.color,
+              //   ),
+              // ),
+              // const SizedBox(height: 12),
               _PeriodTabs(
                 value: period,
                 onChanged: (next) =>
@@ -94,7 +88,10 @@ class ReportsPage extends ConsumerWidget {
                     _Panel(
                       title: _trendTitle(period),
                       subtitle: 'Bookings vs completed',
-                      child: data.series.every((p) => p.bookings == 0 && p.completed == 0)
+                      child:
+                          data.series.every(
+                            (p) => p.bookings == 0 && p.completed == 0,
+                          )
                           ? Text(
                               'No booking activity in this period.',
                               style: theme.textTheme.bodySmall,
@@ -106,7 +103,10 @@ class ReportsPage extends ConsumerWidget {
                       title: 'Status mix',
                       subtitle: 'All-time booking counts',
                       child: data.byStatus.isEmpty
-                          ? Text('No status rows yet.', style: theme.textTheme.bodySmall)
+                          ? Text(
+                              'No status rows yet.',
+                              style: theme.textTheme.bodySmall,
+                            )
                           : _StatusMix(rows: data.byStatus),
                     ),
                     const SizedBox(height: 12),
@@ -139,11 +139,7 @@ class _PeriodTabs extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    const items = [
-      ('day', 'Day'),
-      ('week', 'Week'),
-      ('month', 'Month'),
-    ];
+    const items = [('day', 'Day'), ('week', 'Week'), ('month', 'Month')];
     return Container(
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
@@ -279,10 +275,17 @@ class _KpiCard extends StatelessWidget {
           const SizedBox(height: 10),
           Text(
             label,
-            style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
+            style: theme.textTheme.bodySmall?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
           ),
           const SizedBox(height: 2),
-          Text(value, style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800)),
+          Text(
+            value,
+            style: theme.textTheme.headlineSmall?.copyWith(
+              fontWeight: FontWeight.w800,
+            ),
+          ),
           const SizedBox(height: 2),
           Text(hint, style: theme.textTheme.bodySmall),
         ],
@@ -399,7 +402,10 @@ class _VolumeBars extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 4),
                 child: Column(
                   children: [
-                    Text('${item.$2}', style: Theme.of(context).textTheme.labelSmall),
+                    Text(
+                      '${item.$2}',
+                      style: Theme.of(context).textTheme.labelSmall,
+                    ),
                     const SizedBox(height: 6),
                     Expanded(
                       child: Align(
@@ -474,7 +480,8 @@ class _GroupedBarChart extends StatelessWidget {
                             children: [
                               Expanded(
                                 child: FractionallySizedBox(
-                                  heightFactor: (points[i].bookings / max).clamp(0.04, 1),
+                                  heightFactor: (points[i].bookings / max)
+                                      .clamp(0.04, 1),
                                   alignment: Alignment.bottomCenter,
                                   child: DecoratedBox(
                                     decoration: BoxDecoration(
@@ -487,7 +494,8 @@ class _GroupedBarChart extends StatelessWidget {
                               const SizedBox(width: 2),
                               Expanded(
                                 child: FractionallySizedBox(
-                                  heightFactor: (points[i].completed / max).clamp(0.04, 1),
+                                  heightFactor: (points[i].completed / max)
+                                      .clamp(0.04, 1),
                                   alignment: Alignment.bottomCenter,
                                   child: DecoratedBox(
                                     decoration: BoxDecoration(
@@ -505,7 +513,9 @@ class _GroupedBarChart extends StatelessWidget {
                           i % showEvery == 0 ? points[i].label : '',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.labelSmall?.copyWith(fontSize: 9),
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            fontSize: 9,
+                          ),
                         ),
                       ],
                     ),
@@ -532,7 +542,10 @@ class _LegendDot extends StatelessWidget {
         Container(
           width: 10,
           height: 10,
-          decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(99)),
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(99),
+          ),
         ),
         const SizedBox(width: 6),
         Text(label, style: Theme.of(context).textTheme.bodySmall),

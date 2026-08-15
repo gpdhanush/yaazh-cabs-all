@@ -87,7 +87,8 @@ class AppSettingsPage extends ConsumerWidget {
                         child: _ColorTile(
                           name: swatch.name,
                           color: swatch.color,
-                          selected: themeState.primary.toARGB32() ==
+                          selected:
+                              themeState.primary.toARGB32() ==
                               swatch.color.toARGB32(),
                           onTap: () async {
                             hideKeyboard();
@@ -97,59 +98,8 @@ class AppSettingsPage extends ConsumerWidget {
                             try {
                               await ref
                                   .read(webSettingsRepositoryProvider)
-                                  .update('admin_primary_color', colorToHex(swatch.color));
-                            } catch (e) {
-                              showErrorToast(
-                                e is ApiException ? e.message : e.toString(),
-                              );
-                            }
-                          },
-                        ),
-                      ),
-                  ],
-                );
-              },
-            ),
-            const SizedBox(height: 24),
-            Text('Secondary colour', style: theme.textTheme.titleMedium),
-            const SizedBox(height: 12),
-            LayoutBuilder(
-              builder: (context, constraints) {
-                const spacing = 8.0;
-                final cols = constraints.maxWidth >= 520 ? 4 : 3;
-                final width =
-                    (constraints.maxWidth - spacing * (cols - 1)) / cols;
-                const secondarySwatches = <({String name, Color color})>[
-                  (name: 'Charcoal', color: Color(0xFF1F2933)),
-                  (name: 'Navy', color: Color(0xFF0F172A)),
-                  (name: 'Slate', color: Color(0xFF334155)),
-                  (name: 'Ink', color: Color(0xFF111827)),
-                  (name: 'Graphite', color: Color(0xFF374151)),
-                  (name: 'Deep', color: Color(0xFF1E293B)),
-                ];
-                return Wrap(
-                  spacing: spacing,
-                  runSpacing: spacing,
-                  children: [
-                    for (final swatch in secondarySwatches)
-                      SizedBox(
-                        width: width,
-                        height: 52,
-                        child: _ColorTile(
-                          name: swatch.name,
-                          color: swatch.color,
-                          selected: themeState.secondary.toARGB32() ==
-                              swatch.color.toARGB32(),
-                          onTap: () async {
-                            hideKeyboard();
-                            await ref
-                                .read(appThemeProvider.notifier)
-                                .setSecondary(swatch.color);
-                            try {
-                              await ref
-                                  .read(webSettingsRepositoryProvider)
                                   .update(
-                                    'admin_secondary_color',
+                                    'admin_primary_color',
                                     colorToHex(swatch.color),
                                   );
                             } catch (e) {
@@ -164,12 +114,12 @@ class AppSettingsPage extends ConsumerWidget {
                 );
               },
             ),
-            const SizedBox(height: 48),
-            Text(
-              'Version ${AppConstants.appVersion}',
-              textAlign: TextAlign.center,
-              style: theme.textTheme.bodySmall,
-            ),
+            // const SizedBox(height: 48),
+            // Text(
+            //   'Version ${AppConstants.appVersion}',
+            //   textAlign: TextAlign.center,
+            //   style: theme.textTheme.bodySmall,
+            // ),
           ],
         ),
       ),
@@ -204,7 +154,9 @@ class _ColorTile extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(AppConstants.radiusField),
             border: Border.all(
-              color: selected ? Colors.white : Colors.black.withValues(alpha: 0.08),
+              color: selected
+                  ? Colors.white
+                  : Colors.black.withValues(alpha: 0.08),
               width: selected ? 2 : 1,
             ),
           ),

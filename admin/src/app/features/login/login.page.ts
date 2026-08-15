@@ -84,7 +84,7 @@ import { AuthService } from '../../core/auth/auth.service';
                 <input type="checkbox" formControlName="remember" />
                 <span>Remember me</span>
               </label>
-              <span class="login-forgot">Forgot password via support</span>
+              <!-- <span class="login-forgot">Forgot password via support</span> -->
             </div>
 
             @if (error()) {
@@ -105,9 +105,7 @@ import { AuthService } from '../../core/auth/auth.service';
             </button>
           </form>
 
-          <p class="login-seed">
-            Local seed: admin&#64;yaazh.local / ChangeMe123!
-          </p>
+          
         </div>
       </div>
     </div>

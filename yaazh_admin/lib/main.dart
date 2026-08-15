@@ -17,11 +17,7 @@ Future<void> main() async {
   await initFirebase();
   _configureEasyLoading();
   SystemChrome.setSystemUIOverlayStyle(AppTheme.overlayFor(AppColors.primary));
-  runApp(
-    const ProviderScope(
-      child: YaazhAdminApp(),
-    ),
-  );
+  runApp(const ProviderScope(child: YaazhAdminApp()));
 }
 
 void _configureEasyLoading() {
@@ -53,7 +49,7 @@ class YaazhAdminApp extends ConsumerWidget {
     ref.watch(brandThemeBootstrapProvider);
     final platformDark =
         WidgetsBinding.instance.platformDispatcher.platformBrightness ==
-            Brightness.dark;
+        Brightness.dark;
     final isDark = switch (themeState.mode) {
       ThemeMode.dark => true,
       ThemeMode.light => false,

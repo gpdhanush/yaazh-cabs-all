@@ -81,232 +81,261 @@ class _BookingDetailPageState extends ConsumerState<BookingDetailPage> {
               final existing = b.discountAmount;
               _discountController.text = existing > 0
                   ? (existing == existing.roundToDouble()
-                      ? existing.toStringAsFixed(0)
-                      : existing.toStringAsFixed(2))
+                        ? existing.toStringAsFixed(0)
+                        : existing.toStringAsFixed(2))
                   : '';
             }
             return RefreshIndicator(
-            onRefresh: _reload,
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
-              children: [
-                _HeroCard(booking: b),
-                const SizedBox(height: 12),
-                if (BookingStatus.canConfirm(b.status)) ...[
-                  ElevatedButton(
-                    onPressed: () => _confirm(b),
-                    child: const Text('CONFIRM BOOKING'),
-                  ),
-                  const SizedBox(height: 8),
-                  YaDangerButton(
-                    onPressed: () {
-                      hideKeyboard();
-                      context.push('/bookings/${b.id}/reject');
-                    },
-                    label: 'REJECT',
-                    color: const Color(0xFFE53935),
-                  ),
+              onRefresh: _reload,
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+                children: [
+                  _HeroCard(booking: b),
                   const SizedBox(height: 12),
-                ],
-                if (BookingStatus.canAssign(b.status) &&
-                    (b.assignedDriverId == null || b.assignedDriverId!.isEmpty)) ...[
-                  ElevatedButton.icon(
-                    onPressed: () {
-                      hideKeyboard();
-                      context.push('/bookings/${b.id}/assign');
-                    },
-                    icon: const Icon(Icons.assignment_ind_rounded),
-                    label: const Text('ASSIGN DRIVER'),
-                  ),
-                  const SizedBox(height: 12),
-                ],
-                if (BookingStatus.canSendInvoice(b.status)) ...[
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _BrandActionButton(
-                          icon: Icons.mail_outline_rounded,
-                          label: 'EMAIL INVOICE',
-                          color: const Color(0xFFEA4335),
-                          onPressed: () {
-                            hideKeyboard();
-                            context.push('/bookings/${b.id}/invoice-email');
-                          },
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: _BrandActionButton(
-                          icon: Icons.chat_rounded,
-                          label: 'WHATSAPP INVOICE',
-                          color: const Color(0xFF25D366),
-                          onPressed: () => _sendInvoiceWhatsApp(b),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                ],
-                if (BookingStatus.canSendFeedback(b.status)) ...[
-                  OutlinedButton.icon(
-                    onPressed: () => _sendFeedback(b),
-                    icon: const Icon(Icons.star_rate_rounded),
-                    label: const Text('SEND FEEDBACK'),
-                  ),
-                  const SizedBox(height: 12),
-                ],
-                _Panel(
-                  title: 'Trip',
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _kv('Pickup', b.pickupLocation),
-                      _kv('Drop', b.dropLocation),
-                      _kv('Pickup time', formatDateTime(b.pickupAt)),
-                      _kv('Trip type', b.tripType.replaceAll('_', ' ')),
-                      _kv('Estimated fare', formatInr(b.estimatedTotal)),
-                      _kv('Final fare', b.finalTotal == null ? '—' : formatInr(b.finalTotal)),
-                      _kv(
-                        'Distance',
-                        b.estimatedDistanceKm != null ? '${b.estimatedDistanceKm} km' : '—',
-                      ),
-                      _kv('Actual km', b.tripKm != null ? '${b.tripKm} km' : '—'),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 12),
-                _Panel(
-                  title: 'Customer',
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _kv('Name', b.customerName),
-                      _kv('Phone', b.customerPhone),
-                      _kv('Email', b.customerEmail?.isNotEmpty == true ? b.customerEmail! : 'Not provided'),
-                      if (b.customerPhone.isNotEmpty)
-                        TextButton.icon(
-                          onPressed: () => launchUrl(Uri.parse('tel:${b.customerPhone}')),
-                          icon: const Icon(Icons.phone_rounded),
-                          label: const Text('Call customer'),
-                        ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 12),
-                _Panel(
-                  title: 'Driver',
-                  child: b.driver == null
-                      ? Text('No driver assigned yet.', style: theme.textTheme.bodySmall)
-                      : Row(
-                          children: [
-                            DriverAvatar(driver: b.driver, radius: 24),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(b.driver!.name, style: theme.textTheme.titleMedium),
-                                  Text(b.driver!.phone, style: theme.textTheme.bodySmall),
-                                  if (b.vehicle != null)
-                                    Text(
-                                      '${b.vehicle!.name} · ${b.vehicle!.registration ?? 'No reg.'}',
-                                      style: theme.textTheme.bodySmall,
-                                    ),
-                                ],
-                              ),
-                            ),
-                            IconButton.filled(
-                              onPressed: () => launchUrl(Uri.parse('tel:${b.driver!.phone}')),
-                              style: IconButton.styleFrom(
-                                backgroundColor: theme.colorScheme.primary,
-                                foregroundColor: theme.colorScheme.onPrimary,
-                              ),
-                              icon: const Icon(Icons.phone_rounded),
-                            ),
-                          ],
-                        ),
-                ),
-                const SizedBox(height: 12),
-                _Panel(
-                  title: 'Odometer',
-                  child: Row(
-                    children: [
-                      _odo('Start', b.startOdometerKm),
-                      _odo('End', b.endOdometerKm),
-                      _odo('Diff', b.tripKm),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 12),
-                _PaymentPanel(
-                  booking: b,
-                  amountController: _amountController,
-                  discountController: _discountController,
-                  method: _payMethod,
-                  onMethod: (v) => setState(() => _payMethod = v),
-                  onApplyDiscount: () => _applyDiscount(b),
-                  onRecord: () => _recordPayment(b),
-                  onMarkPaid: () => _markPaid(b),
-                ),
-                if (BookingStatus.canComplete(b.status) ||
-                    (BookingStatus.canAssign(b.status) &&
-                        b.assignedDriverId != null &&
-                        b.assignedDriverId!.isNotEmpty)) ...[
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      if (BookingStatus.canComplete(b.status))
+                  if (BookingStatus.canConfirm(b.status)) ...[
+                    ElevatedButton(
+                      onPressed: () => _confirm(b),
+                      child: const Text('CONFIRM BOOKING'),
+                    ),
+                    const SizedBox(height: 8),
+                    YaDangerButton(
+                      onPressed: () {
+                        hideKeyboard();
+                        context.push('/bookings/${b.id}/reject');
+                      },
+                      label: 'REJECT',
+                      color: const Color(0xFFE53935),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+                  if (BookingStatus.canAssign(b.status) &&
+                      (b.assignedDriverId == null ||
+                          b.assignedDriverId!.isEmpty)) ...[
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        hideKeyboard();
+                        context.push('/bookings/${b.id}/assign');
+                      },
+                      icon: const Icon(Icons.assignment_ind_rounded),
+                      label: const Text('ASSIGN DRIVER'),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+                  if (BookingStatus.canSendInvoice(b.status)) ...[
+                    Row(
+                      children: [
                         Expanded(
                           child: _BrandActionButton(
-                            icon: Icons.flag_rounded,
-                            label: 'COMPLETE',
-                            color: const Color(0xFF166534),
-                            onPressed: () => _completeRide(b),
-                          ),
-                        ),
-                      if (BookingStatus.canComplete(b.status) &&
-                          BookingStatus.canAssign(b.status) &&
-                          b.assignedDriverId != null &&
-                          b.assignedDriverId!.isNotEmpty)
-                        const SizedBox(width: 8),
-                      if (BookingStatus.canAssign(b.status) &&
-                          b.assignedDriverId != null &&
-                          b.assignedDriverId!.isNotEmpty)
-                        Expanded(
-                          child: _BrandActionButton(
-                            icon: Icons.assignment_ind_rounded,
-                            label: 'RE-ASSIGN',
-                            color: const Color(0xFF0369A1),
+                            icon: Icons.mail_outline_rounded,
+                            label: 'EMAIL INVOICE',
+                            color: const Color(0xFFEA4335),
                             onPressed: () {
                               hideKeyboard();
-                              context.push('/bookings/${b.id}/assign');
+                              context.push('/bookings/${b.id}/invoice-email');
                             },
                           ),
                         ),
-                    ],
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: _BrandActionButton(
+                            icon: Icons.chat_rounded,
+                            label: 'WHATSAPP INVOICE',
+                            color: const Color(0xFF25D366),
+                            onPressed: () => _sendInvoiceWhatsApp(b),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                  ],
+                  if (BookingStatus.canSendFeedback(b.status)) ...[
+                    OutlinedButton.icon(
+                      onPressed: () => _sendFeedback(b),
+                      icon: const Icon(Icons.star_rate_rounded),
+                      label: const Text('SEND FEEDBACK'),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+                  _Panel(
+                    title: 'Trip',
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _kv('Pickup', b.pickupLocation),
+                        _kv('Drop', b.dropLocation),
+                        _kv('Pickup time', formatDateTime(b.pickupAt)),
+                        _kv('Trip type', b.tripType.replaceAll('_', ' ')),
+                        _kv('Estimated fare', formatInr(b.estimatedTotal)),
+                        _kv(
+                          'Final fare',
+                          b.finalTotal == null ? '—' : formatInr(b.finalTotal),
+                        ),
+                        _kv(
+                          'Distance',
+                          b.estimatedDistanceKm != null
+                              ? '${b.estimatedDistanceKm} km'
+                              : '—',
+                        ),
+                        _kv(
+                          'Actual km',
+                          b.tripKm != null ? '${b.tripKm} km' : '—',
+                        ),
+                      ],
+                    ),
                   ),
-                ],
-                const SizedBox(height: 12),
-                _Panel(
-                  title: 'Timeline',
-                  child: b.history.isEmpty
-                      ? Text('No history yet.', style: theme.textTheme.bodySmall)
-                      : _StatusTimeline(history: b.history),
-                ),
-                if (BookingStatus.canCancel(b.status)) ...[
-                  const SizedBox(height: 20),
-                  YaDangerButton(
-                    onPressed: () {
-                      hideKeyboard();
-                      context.push('/bookings/${b.id}/cancel');
-                    },
-                    label: 'CANCEL BOOKING',
-                    color: const Color(0xFFE53935),
+                  const SizedBox(height: 12),
+                  _Panel(
+                    title: 'Customer',
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _kv('Name', b.customerName),
+                        _kv('Phone', b.customerPhone),
+                        _kv(
+                          'Email',
+                          b.customerEmail?.isNotEmpty == true
+                              ? b.customerEmail!
+                              : 'Not provided',
+                        ),
+                        if (b.customerPhone.isNotEmpty)
+                          TextButton.icon(
+                            onPressed: () =>
+                                launchUrl(Uri.parse('tel:${b.customerPhone}')),
+                            icon: const Icon(Icons.phone_rounded),
+                            label: const Text('Call customer'),
+                          ),
+                      ],
+                    ),
                   ),
+                  const SizedBox(height: 12),
+                  _Panel(
+                    title: 'Driver',
+                    child: b.driver == null
+                        ? Text(
+                            'No driver assigned yet.',
+                            style: theme.textTheme.bodySmall,
+                          )
+                        : Row(
+                            children: [
+                              DriverAvatar(driver: b.driver, radius: 24),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      b.driver!.name,
+                                      style: theme.textTheme.titleMedium,
+                                    ),
+                                    Text(
+                                      b.driver!.phone,
+                                      style: theme.textTheme.bodySmall,
+                                    ),
+                                    if (b.vehicle != null)
+                                      Text(
+                                        '${b.vehicle!.name} · ${b.vehicle!.registration ?? 'No reg.'}',
+                                        style: theme.textTheme.bodySmall,
+                                      ),
+                                  ],
+                                ),
+                              ),
+                              IconButton.filled(
+                                onPressed: () => launchUrl(
+                                  Uri.parse('tel:${b.driver!.phone}'),
+                                ),
+                                style: IconButton.styleFrom(
+                                  backgroundColor: theme.colorScheme.primary,
+                                  foregroundColor: theme.colorScheme.onPrimary,
+                                ),
+                                icon: const Icon(Icons.phone_rounded),
+                              ),
+                            ],
+                          ),
+                  ),
+                  const SizedBox(height: 12),
+                  _Panel(
+                    title: 'Odometer',
+                    child: Row(
+                      children: [
+                        _odo('Start', b.startOdometerKm),
+                        _odo('End', b.endOdometerKm),
+                        _odo('Diff', b.tripKm),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  _PaymentPanel(
+                    booking: b,
+                    amountController: _amountController,
+                    discountController: _discountController,
+                    method: _payMethod,
+                    onMethod: (v) => setState(() => _payMethod = v),
+                    onApplyDiscount: () => _applyDiscount(b),
+                    onRecord: () => _recordPayment(b),
+                    onMarkPaid: () => _markPaid(b),
+                  ),
+                  if (BookingStatus.canComplete(b.status) ||
+                      (BookingStatus.canAssign(b.status) &&
+                          b.assignedDriverId != null &&
+                          b.assignedDriverId!.isNotEmpty)) ...[
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        if (BookingStatus.canComplete(b.status))
+                          Expanded(
+                            child: _BrandActionButton(
+                              icon: Icons.flag_rounded,
+                              label: 'COMPLETE',
+                              color: const Color(0xFF166534),
+                              onPressed: () => _completeRide(b),
+                            ),
+                          ),
+                        if (BookingStatus.canComplete(b.status) &&
+                            BookingStatus.canAssign(b.status) &&
+                            b.assignedDriverId != null &&
+                            b.assignedDriverId!.isNotEmpty)
+                          const SizedBox(width: 8),
+                        if (BookingStatus.canAssign(b.status) &&
+                            b.assignedDriverId != null &&
+                            b.assignedDriverId!.isNotEmpty)
+                          Expanded(
+                            child: _BrandActionButton(
+                              icon: Icons.assignment_ind_rounded,
+                              label: 'RE-ASSIGN',
+                              color: const Color(0xFF0369A1),
+                              onPressed: () {
+                                hideKeyboard();
+                                context.push('/bookings/${b.id}/assign');
+                              },
+                            ),
+                          ),
+                      ],
+                    ),
+                  ],
+                  const SizedBox(height: 12),
+                  _Panel(
+                    title: 'Timeline',
+                    child: b.history.isEmpty
+                        ? Text(
+                            'No history yet.',
+                            style: theme.textTheme.bodySmall,
+                          )
+                        : _StatusTimeline(history: b.history),
+                  ),
+                  if (BookingStatus.canCancel(b.status)) ...[
+                    const SizedBox(height: 20),
+                    YaDangerButton(
+                      onPressed: () {
+                        hideKeyboard();
+                        context.push('/bookings/${b.id}/cancel');
+                      },
+                      label: 'CANCEL BOOKING',
+                      color: const Color(0xFFE53935),
+                    ),
+                  ],
                 ],
-              ],
-            ),
-          );
+              ),
+            );
           },
         ),
       ),
@@ -386,10 +415,9 @@ class _BookingDetailPageState extends ConsumerState<BookingDetailPage> {
       return;
     }
     try {
-      await ref.read(bookingRepositoryProvider).applyDiscount(
-            bookingId: b.id,
-            discountAmount: discount,
-          );
+      await ref
+          .read(bookingRepositoryProvider)
+          .applyDiscount(bookingId: b.id, discountAmount: discount);
       await _reload();
       showSuccessToast('Discount applied');
     } catch (e) {
@@ -409,11 +437,9 @@ class _BookingDetailPageState extends ConsumerState<BookingDetailPage> {
       return;
     }
     try {
-      await ref.read(bookingRepositoryProvider).recordPayment(
-            bookingId: b.id,
-            amount: amount,
-            method: _payMethod,
-          );
+      await ref
+          .read(bookingRepositoryProvider)
+          .recordPayment(bookingId: b.id, amount: amount, method: _payMethod);
       _amountController.clear();
       await _reload();
       showSuccessToast('Payment recorded');
@@ -456,7 +482,9 @@ class _BookingDetailPageState extends ConsumerState<BookingDetailPage> {
     );
     if (!ok) return;
     try {
-      final share = await ref.read(bookingRepositoryProvider).sendInvoiceWhatsApp(b.id);
+      final share = await ref
+          .read(bookingRepositoryProvider)
+          .sendInvoiceWhatsApp(b.id);
       if (share.whatsappUrl.isEmpty) {
         showErrorToast('Could not build WhatsApp message');
         return;
@@ -481,7 +509,9 @@ class _BookingDetailPageState extends ConsumerState<BookingDetailPage> {
     );
     if (!ok) return;
     try {
-      final share = await ref.read(bookingRepositoryProvider).sendFeedbackLink(b.id);
+      final share = await ref
+          .read(bookingRepositoryProvider)
+          .sendFeedbackLink(b.id);
       if (share.whatsappUrl.isEmpty) {
         showErrorToast('Could not build WhatsApp message');
         return;
@@ -592,7 +622,10 @@ class _HeroCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text('Reference', style: theme.textTheme.bodySmall),
-                Text(booking.bookingReference, style: theme.textTheme.headlineSmall),
+                Text(
+                  booking.bookingReference,
+                  style: theme.textTheme.headlineSmall,
+                ),
                 const SizedBox(height: 4),
                 Text(
                   '${booking.tripType.replaceAll('_', ' ')} · ${formatDateTime(booking.createdAt ?? booking.pickupAt)}',
@@ -651,7 +684,10 @@ Widget _kv(String label, String value) {
       children: [
         SizedBox(
           width: 110,
-          child: Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+          child: Text(
+            label,
+            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+          ),
         ),
         Expanded(child: Text(value)),
       ],
@@ -665,7 +701,10 @@ Widget _money(String label, double amount) {
       children: [
         Text(label, style: const TextStyle(fontSize: 12)),
         const SizedBox(height: 4),
-        Text(formatInr(amount), style: const TextStyle(fontWeight: FontWeight.w700)),
+        Text(
+          formatInr(amount),
+          style: const TextStyle(fontWeight: FontWeight.w700),
+        ),
       ],
     ),
   );
@@ -678,7 +717,9 @@ Widget _odo(String label, double? km) {
         Text(label, style: const TextStyle(fontSize: 12)),
         const SizedBox(height: 4),
         Text(
-          km != null ? '${km.toStringAsFixed(km == km.roundToDouble() ? 0 : 1)} km' : '—',
+          km != null
+              ? '${km.toStringAsFixed(km == km.roundToDouble() ? 0 : 1)} km'
+              : '—',
           style: const TextStyle(fontWeight: FontWeight.w700),
         ),
       ],
@@ -711,7 +752,10 @@ class _PaymentPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     final pay = booking.payment;
     final quoted = double.tryParse(booking.estimatedTotal) ?? 0;
-    final due = pay?.fareDue ?? (double.tryParse(booking.finalTotal ?? booking.estimatedTotal) ?? quoted);
+    final due =
+        pay?.fareDue ??
+        (double.tryParse(booking.finalTotal ?? booking.estimatedTotal) ??
+            quoted);
     final paid = pay?.amountPaid ?? 0;
     final balance = pay?.balanceDue ?? (due - paid);
     final discount = booking.discountAmount;
@@ -720,7 +764,9 @@ class _PaymentPanel extends StatelessWidget {
     return _Panel(
       title: 'Payment',
       trailing: StatusChip(
-        status: booking.isFullyPaid ? 'paid' : (pay?.paymentStatus ?? booking.paymentStatus),
+        status: booking.isFullyPaid
+            ? 'paid'
+            : (pay?.paymentStatus ?? booking.paymentStatus),
         label: booking.isFullyPaid ? 'Customer paid' : null,
         tone: booking.isFullyPaid ? AppColors.success : AppColors.warning,
       ),
@@ -807,7 +853,10 @@ class _PaymentPanel extends StatelessWidget {
                       DropdownMenuItem(value: 'cash', child: Text('Cash')),
                       DropdownMenuItem(value: 'upi', child: Text('UPI')),
                       DropdownMenuItem(value: 'card', child: Text('Card')),
-                      DropdownMenuItem(value: 'bank_transfer', child: Text('Bank')),
+                      DropdownMenuItem(
+                        value: 'bank_transfer',
+                        child: Text('Bank'),
+                      ),
                       DropdownMenuItem(value: 'other', child: Text('Other')),
                     ],
                     onChanged: (v) {
@@ -850,7 +899,9 @@ class _PaymentPanel extends StatelessWidget {
               ListTile(
                 dense: true,
                 contentPadding: EdgeInsets.zero,
-                title: Text('${formatInr(p.amount)} · ${p.method}'),
+                title: Text(
+                  '${formatInr(p.amount)} by ${p.method.toUpperCase()}',
+                ),
                 subtitle: Text(
                   formatDateTime(p.paidAt ?? p.createdAt),
                   style: theme.textTheme.bodySmall,
@@ -943,7 +994,9 @@ class _StatusTimelineRow extends StatelessWidget {
                 children: [
                   Text(
                     BookingStatus.label(item.newStatus),
-                    style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                   const SizedBox(height: 2),
                   Text(

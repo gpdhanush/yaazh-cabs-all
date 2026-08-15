@@ -9,12 +9,7 @@ class AdminAvatar extends StatelessWidget {
   final double radius;
   final int? cacheBust;
 
-  const AdminAvatar({
-    super.key,
-    this.user,
-    this.radius = 20,
-    this.cacheBust,
-  });
+  const AdminAvatar({super.key, this.user, this.radius = 20, this.cacheBust});
 
   @override
   Widget build(BuildContext context) {
@@ -23,28 +18,41 @@ class AdminAvatar extends StatelessWidget {
       url = '$url${url.contains('?') ? '&' : '?'}t=$cacheBust';
     }
     final size = radius * 2;
+    final ringWidth = (radius * 0.14).clamp(2.0, 3.0);
+    final secondary = Theme.of(context).colorScheme.secondary;
 
-    return ClipOval(
-      child: SizedBox(
-        width: size,
-        height: size,
-        child: url == null
-            ? _InitialsBadge(user: user, radius: radius)
-            : CachedNetworkImage(
-                imageUrl: url,
-                width: size,
-                height: size,
-                fit: BoxFit.cover,
-                fadeInDuration: const Duration(milliseconds: 180),
-                memCacheWidth: (size * 3).round(),
-                errorListener: (err) {
-                  if (kDebugMode) {
-                    debugPrint('[PROFILE PHOTO] Image URL validation: decode failed for $url ($err)');
-                  }
-                },
-                placeholder: (_, _) => _InitialsBadge(user: user, radius: radius),
-                errorWidget: (_, _, _) => _InitialsBadge(user: user, radius: radius),
-              ),
+    return Container(
+      padding: EdgeInsets.all(ringWidth),
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: secondary,
+      ),
+      child: ClipOval(
+        child: SizedBox(
+          width: size,
+          height: size,
+          child: url == null
+              ? _InitialsBadge(user: user, radius: radius)
+              : CachedNetworkImage(
+                  imageUrl: url,
+                  width: size,
+                  height: size,
+                  fit: BoxFit.cover,
+                  fadeInDuration: const Duration(milliseconds: 180),
+                  memCacheWidth: (size * 3).round(),
+                  errorListener: (err) {
+                    if (kDebugMode) {
+                      debugPrint(
+                        '[PROFILE PHOTO] Image URL validation: decode failed for $url ($err)',
+                      );
+                    }
+                  },
+                  placeholder: (_, _) =>
+                      _InitialsBadge(user: user, radius: radius),
+                  errorWidget: (_, _, _) =>
+                      _InitialsBadge(user: user, radius: radius),
+                ),
+        ),
       ),
     );
   }
