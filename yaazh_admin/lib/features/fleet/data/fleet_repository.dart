@@ -17,6 +17,11 @@ final vehicleCategoriesProvider =
   return ref.watch(fleetRepositoryProvider).categories();
 });
 
+final vehicleCategoryDetailProvider =
+    FutureProvider.autoDispose.family<VehicleCategory, String>((ref, id) {
+  return ref.watch(fleetRepositoryProvider).getCategory(id);
+});
+
 final vehicleDetailProvider =
     FutureProvider.autoDispose.family<FleetVehicle, String>((ref, id) {
   return ref.watch(fleetRepositoryProvider).getById(id);
@@ -35,6 +40,33 @@ class FleetRepository {
   Future<List<VehicleCategory>> categories() async {
     final data = await _api.get('/admin/vehicle-categories');
     return asMapList(data).map(VehicleCategory.fromJson).toList();
+  }
+
+  Future<VehicleCategory> getCategory(String id) async {
+    final data = await _api.get('/admin/vehicle-categories/$id');
+    return VehicleCategory.fromJson(Map<String, dynamic>.from(data as Map));
+  }
+
+  Future<VehicleCategory> updateCategory(String id, Map<String, dynamic> body) async {
+    final data = await _api.put('/admin/vehicle-categories/$id', data: body);
+    return VehicleCategory.fromJson(Map<String, dynamic>.from(data as Map));
+  }
+
+  Future<String> uploadCategoryImage(String filePath) async {
+    final data = await _api.uploadFile(
+      '/admin/uploads',
+      filePath: filePath,
+      filename: 'fleet.jpg',
+      contentType: 'image/jpeg',
+      silent: true,
+    );
+    if (data is Map) {
+      final path = data['path']?.toString().trim();
+      if (path != null && path.isNotEmpty) return path;
+      final url = data['url']?.toString().trim();
+      if (url != null && url.isNotEmpty) return url;
+    }
+    throw Exception('Upload did not return an image path.');
   }
 
   Future<FleetVehicle> getById(String id) async {
@@ -57,9 +89,10 @@ class FleetRepository {
   }
 }
 
-void invalidateFleetCaches(WidgetRef ref, {String? id}) {
+void invalidateFleetCaches(WidgetRef ref, {String? id, String? categoryId}) {
   ref.invalidate(fleetListProvider);
   ref.invalidate(vehicleCategoriesProvider);
   ref.invalidate(dashboardStatsProvider);
   if (id != null) ref.invalidate(vehicleDetailProvider(id));
+  if (categoryId != null) ref.invalidate(vehicleCategoryDetailProvider(categoryId));
 }

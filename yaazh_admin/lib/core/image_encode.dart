@@ -33,6 +33,9 @@ Future<PreparedUpload?> pickAndPrepareImage({
   required Color toolbarColor,
   ImageCropShape shape = ImageCropShape.circle,
   String title = 'Crop photo',
+  CropAspectRatio aspectRatio = const CropAspectRatio(ratioX: 1, ratioY: 1),
+  int maxWidth = 1080,
+  int maxHeight = 1080,
 }) async {
   final picked = await ImagePicker().pickImage(
     source: source,
@@ -45,13 +48,14 @@ Future<PreparedUpload?> pickAndPrepareImage({
   _log('Original file: ${picked.path}');
   _log('File size: ${await original.length()}');
 
+  final square = aspectRatio.ratioX == aspectRatio.ratioY;
   final cropped = await ImageCropper().cropImage(
     sourcePath: picked.path,
-    aspectRatio: const CropAspectRatio(ratioX: 1, ratioY: 1),
+    aspectRatio: aspectRatio,
     compressFormat: ImageCompressFormat.jpg,
     compressQuality: 90,
-    maxWidth: 1080,
-    maxHeight: 1080,
+    maxWidth: maxWidth,
+    maxHeight: maxHeight,
     uiSettings: [
       AndroidUiSettings(
         toolbarTitle: title,
@@ -62,7 +66,9 @@ Future<PreparedUpload?> pickAndPrepareImage({
         statusBarLight: false,
         navBarLight: false,
         cropStyle: shape == ImageCropShape.circle ? CropStyle.circle : CropStyle.rectangle,
-        initAspectRatio: CropAspectRatioPreset.square,
+        initAspectRatio: square
+            ? CropAspectRatioPreset.square
+            : CropAspectRatioPreset.original,
         lockAspectRatio: true,
         hideBottomControls: false,
       ),
@@ -76,7 +82,7 @@ Future<PreparedUpload?> pickAndPrepareImage({
   if (cropped == null) return null;
 
   _log('Cropped file: ${cropped.path}');
-  return encodeUploadJpeg(cropped.path);
+  return encodeUploadJpeg(cropped.path, maxWidth: maxWidth);
 }
 
 Future<PreparedUpload> encodeUploadJpeg(String path, {int maxWidth = 1080}) async {

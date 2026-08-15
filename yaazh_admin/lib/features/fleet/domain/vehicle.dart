@@ -3,6 +3,7 @@ class VehicleCategory {
   final String name;
   final String slug;
   final int seatingCapacity;
+  final String? imageUrl;
   final bool isActive;
 
   const VehicleCategory({
@@ -10,15 +11,18 @@ class VehicleCategory {
     required this.name,
     required this.slug,
     required this.seatingCapacity,
+    this.imageUrl,
     required this.isActive,
   });
 
   factory VehicleCategory.fromJson(Map<String, dynamic> json) {
+    final image = json['image_url']?.toString().trim();
     return VehicleCategory(
       id: json['id']?.toString() ?? '',
       name: json['name']?.toString() ?? '',
       slug: json['slug']?.toString() ?? '',
       seatingCapacity: int.tryParse(json['seating_capacity']?.toString() ?? '') ?? 0,
+      imageUrl: (image == null || image.isEmpty || image == 'null') ? null : image,
       isActive: json['is_active'] == true,
     );
   }

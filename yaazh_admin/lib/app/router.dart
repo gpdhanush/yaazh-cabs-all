@@ -21,6 +21,7 @@ import 'package:yaazh_admin/features/drivers/presentation/driver_form_page.dart'
 import 'package:yaazh_admin/features/drivers/presentation/drivers_page.dart';
 import 'package:yaazh_admin/features/enquiries/presentation/enquiries_page.dart';
 import 'package:yaazh_admin/features/enquiries/presentation/enquiry_detail_page.dart';
+import 'package:yaazh_admin/features/fleet/presentation/category_photo_page.dart';
 import 'package:yaazh_admin/features/fleet/presentation/fleet_page.dart';
 import 'package:yaazh_admin/features/fleet/presentation/vehicle_form_page.dart';
 import 'package:yaazh_admin/features/gallery/presentation/gallery_page.dart';
@@ -167,6 +168,13 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/fleet/new',
         parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const VehicleFormPage(),
+      ),
+      slideRoute(
+        path: '/fleet/categories/:id',
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => CategoryPhotoPage(
+          categoryId: state.pathParameters['id']!,
+        ),
       ),
       slideRoute(
         path: '/fleet/:id/edit',
