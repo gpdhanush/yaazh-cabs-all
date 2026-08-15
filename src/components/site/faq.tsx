@@ -60,7 +60,7 @@ export function FAQ() {
       <div className="mx-auto max-w-3xl px-5 md:px-8">
         <Reveal>
           <div className="text-center">
-            <p className="text-[10px] uppercase tracking-[0.28em] text-brand sm:text-[11px]">FAQ</p>
+            <p className="section-kicker">FAQ</p>
             <h2 className="mt-3 font-display text-3xl font-bold sm:text-4xl md:text-5xl">
               Good to <span className="text-brand">know</span>
             </h2>

@@ -488,7 +488,7 @@ export function BookingForm() {
         <p className="mt-1 text-sm font-medium text-foreground">
           Estimated fare: ₹{done.estimate.toLocaleString("en-IN")}
         </p>
-        <p className="mt-3 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-xs text-warning">
+        <p className="mt-3 rounded-lg border border-brand/40 bg-primary/12 px-3 py-2 text-xs text-brand">
           {BOOKING_FARE_NOTE}
         </p>
 
@@ -536,12 +536,10 @@ export function BookingForm() {
     >
       <div className="mb-5 flex flex-wrap items-center justify-between gap-2">
         <div>
-          <p className="text-sm font-semibold uppercase tracking-[0.16em] text-foreground">
-            Book your ride
-          </p>
+          <p className="section-kicker">Book your ride</p>
           <p className="mt-1 text-xs text-muted-foreground">Fill details — we confirm shortly</p>
         </div>
-        <span className="rounded-full border border-success/30 bg-success/10 px-3 py-1 text-[10px] font-medium text-success sm:text-[11px]">
+        <span className="rounded-full border border-brand/45 bg-primary/15 px-3 py-1 text-[10px] font-semibold text-brand sm:text-[11px]">
           24×7 · Instant confirmation
         </span>
       </div>
@@ -738,7 +736,7 @@ export function BookingForm() {
         )}
       </button>
 
-      <p className="mt-3 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-center text-[11px] font-medium text-warning">
+      <p className="mt-3 rounded-lg border border-brand/40 bg-primary/12 px-3 py-2 text-center text-[11px] font-medium text-brand">
         {BOOKING_FARE_NOTE}
       </p>
       <p className="mt-2 text-center text-[11px] font-normal text-muted-foreground">

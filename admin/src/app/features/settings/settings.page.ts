@@ -4,6 +4,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { forkJoin } from 'rxjs';
 import { AdminApiService } from '../../core/api/admin-api.service';
 import { ThemeService } from '../../core/theme/theme.service';
 
@@ -37,11 +38,6 @@ const GROUP_META: Record<string, { title: string; hint: string; icon: string }> 
     hint: 'Primary and secondary colours for the public booking site only.',
     icon: 'palette',
   },
-  admin_branding: {
-    title: 'Admin colours',
-    hint: 'Colours for the admin web panel and admin app. Does not change the public site.',
-    icon: 'admin_panel_settings',
-  },
 };
 
 const LABEL_MAP: Record<string, string> = {
@@ -60,8 +56,6 @@ const LABEL_MAP: Record<string, string> = {
   created_by_url: 'Created by website URL',
   primary_color: 'Website primary',
   secondary_color: 'Website secondary',
-  admin_primary_color: 'Admin primary',
-  admin_secondary_color: 'Admin secondary',
 };
 
 @Component({
@@ -109,10 +103,21 @@ const LABEL_MAP: Record<string, string> = {
                 <span class="settings-card__icon" aria-hidden="true">
                   <mat-icon>{{ group.icon }}</mat-icon>
                 </span>
-                <div>
+                <div class="min-w-0 flex-1">
                   <h3>{{ group.title }}</h3>
                   <p>{{ group.hint }}</p>
                 </div>
+                @if (group.id === 'branding') {
+                  <button
+                    mat-stroked-button
+                    class="ya-btn-ghost"
+                    type="button"
+                    (click)="resetWebsiteColours()"
+                    [disabled]="savingAny()"
+                  >
+                    Reset
+                  </button>
+                }
               </div>
 
               <div class="settings-card__grid">
@@ -292,7 +297,13 @@ export class SettingsPage implements OnInit {
           group?: string;
         }>;
         this.rows.set(
-          data.map((r) => {
+          data
+            .filter((r) => {
+              const key = String(r.key ?? '');
+              const group = String(r.group ?? 'other');
+              return group !== 'admin_branding' && !key.startsWith('admin_');
+            })
+            .map((r) => {
             const value = String(r.value ?? '');
             return {
               key: String(r.key ?? ''),
@@ -315,23 +326,34 @@ export class SettingsPage implements OnInit {
     });
   }
 
-  saveOne(key: string): void {
-    const row = this.rows().find((r) => r.key === key);
-    if (!row || !row.dirty) return;
-    this.setSaving(key, true);
-    this.api.update(`/settings/${encodeURIComponent(key)}`, { value: row.draft }).subscribe({
+  resetWebsiteColours(): void {
+    const defaults: Record<string, string> = {
+      primary_color: '#ffc107',
+      secondary_color: '#1f2933',
+    };
+    const keys = Object.keys(defaults);
+    for (const key of keys) this.setSaving(key, true);
+    this.rows.update((list) =>
+      list.map((r) => {
+        const next = defaults[r.key];
+        if (!next) return r;
+        return { ...r, draft: next, dirty: r.value !== next, saving: true };
+      }),
+    );
+    forkJoin(keys.map((key) => this.api.update(`/settings/${encodeURIComponent(key)}`, { value: defaults[key] }))).subscribe({
       next: () => {
         this.rows.update((list) =>
-          list.map((r) =>
-            r.key === key ? { ...r, value: r.draft, dirty: false, saving: false } : r,
-          ),
+          list.map((r) => {
+            const next = defaults[r.key];
+            if (!next) return r;
+            return { ...r, value: next, draft: next, dirty: false, saving: false };
+          }),
         );
-        this.applyBrandIfNeeded(key, row.draft);
+        this.snack.open('Website colours reset', 'OK', { duration: 1800 });
       },
-      error: (err: unknown) => {
-        this.setSaving(key, false);
-        const message = err instanceof Error ? err.message : 'Save failed';
-        this.snack.open(message, 'Close');
+      error: () => {
+        for (const key of keys) this.setSaving(key, false);
+        this.snack.open('Could not reset website colours', 'Close');
       },
     });
   }

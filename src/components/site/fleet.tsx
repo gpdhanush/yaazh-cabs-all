@@ -8,7 +8,7 @@ import suv from "@/assets/car-suv.jpg";
 import tempo from "@/assets/car-tempo.jpg";
 import { vehicles, vehicleDisplayName } from "@/lib/site-data";
 import { getVehicleCategories, isApiConfigured, mediaUrl, type VehicleCategory } from "@/lib/api";
-import { Reveal, StaggerGroup, StaggerItem } from "./motion-primitives";
+import { Reveal } from "./motion-primitives";
 
 function imageFor(slug: string, name: string) {
   const key = `${slug} ${name}`.toLowerCase();
@@ -87,7 +87,7 @@ export function Fleet() {
   }, [active]);
 
   return (
-    <section id="fleet" className="relative overflow-hidden py-16 md:py-28">
+    <section id="fleet" className="relative py-16 md:py-28">
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,color-mix(in_oklab,var(--primary)_16%,transparent),transparent_58%)]"
@@ -97,7 +97,7 @@ export function Fleet() {
         <Reveal>
           <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
             <div>
-              <p className="text-[10px] uppercase tracking-[0.28em] text-brand sm:text-[11px]">The fleet</p>
+              <p className="section-kicker">The fleet</p>
               <h2 className="mt-3 max-w-xl font-display text-3xl font-bold sm:text-4xl md:text-5xl">
                 Sanitised, serviced, <span className="text-brand">showroom clean</span>
               </h2>
@@ -108,10 +108,12 @@ export function Fleet() {
           </div>
         </Reveal>
 
-        <StaggerGroup className="mt-12 grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="mt-12 grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
           {cards.map((v) => (
-            <StaggerItem key={v.id}>
-              <article className="group relative flex h-full flex-col overflow-hidden rounded-[1.35rem] border border-border/70 bg-card shadow-[0_24px_60px_-36px_rgba(15,23,42,0.55)] transition-all duration-500 hover:-translate-y-1.5 hover:border-brand/50 hover:shadow-[0_28px_70px_-32px_rgba(245,158,11,0.28)]">
+            <article
+              key={v.id}
+              className="group relative flex h-full flex-col overflow-hidden rounded-[1.35rem] border border-border/70 bg-card shadow-[0_24px_60px_-36px_rgba(15,23,42,0.55)] transition-all duration-500 hover:-translate-y-1.5 hover:border-brand/50 hover:shadow-[0_28px_70px_-32px_color-mix(in_oklab,var(--primary)_40%,transparent)]"
+            >
                 <button
                   type="button"
                   onClick={() => setActiveId(v.id)}
@@ -130,7 +132,7 @@ export function Fleet() {
                     height={800}
                     className="absolute inset-0 size-full object-contain p-4 transition-transform duration-700 group-hover:scale-[1.06] sm:p-6"
                   />
-                  <span className="absolute left-4 top-4 rounded-full bg-primary px-3 py-1 font-data text-xs font-semibold text-primary-foreground shadow-[0_8px_20px_-8px_rgba(245,158,11,0.85)]">
+                  <span className="absolute left-4 top-4 rounded-full bg-primary px-3 py-1 font-data text-xs font-semibold text-primary-foreground shadow-[0_8px_20px_-8px_color-mix(in_oklab,var(--primary)_85%,transparent)]">
                     ₹{v.perKm}/km
                   </span>
                   <span className="absolute right-4 top-4 grid size-9 place-items-center rounded-full border border-white/15 bg-background/40 text-foreground backdrop-blur-md transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
@@ -150,9 +152,8 @@ export function Fleet() {
                   </div>
                 </div>
               </article>
-            </StaggerItem>
           ))}
-        </StaggerGroup>
+        </div>
       </div>
 
       {active && (
@@ -172,7 +173,7 @@ export function Fleet() {
             <X className="size-5" />
           </button>
           <figure
-            className="relative w-full max-w-5xl overflow-hidden rounded-[1.5rem] border border-white/12 bg-[radial-gradient(ellipse_at_50%_80%,rgba(255,193,7,0.18),transparent_55%),linear-gradient(180deg,#f8fafc,#ffffff)] shadow-2xl"
+            className="relative w-full max-w-5xl overflow-hidden rounded-[1.5rem] border border-white/12 bg-[radial-gradient(ellipse_at_50%_80%,color-mix(in_oklab,var(--primary)_18%,transparent),transparent_55%),linear-gradient(180deg,#f8fafc,#ffffff)] shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             <img

@@ -127,7 +127,7 @@ function StatusPage() {
       </header>
 
       <div className="mx-auto max-w-3xl px-5 py-10 md:px-8 md:py-16">
-        <p className="text-[11px] uppercase tracking-[0.3em] text-brand">Booking status</p>
+        <p className="section-kicker">Booking status</p>
         <h1 className="mt-3 font-display text-3xl font-bold md:text-4xl">
           Track your <span className="text-brand">pickup &amp; driver</span>
         </h1>
@@ -269,7 +269,7 @@ function StatusCard({
           />
           <Row label="Payment" value={booking.payment_status.replace(/_/g, " ")} />
         </dl>
-        <p className="mt-4 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-xs font-medium text-warning">
+        <p className="mt-4 rounded-lg border border-brand/40 bg-primary/12 px-3 py-2 text-xs font-medium text-brand">
           {BOOKING_FARE_NOTE}
         </p>
       </div>

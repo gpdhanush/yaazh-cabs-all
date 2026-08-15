@@ -48,7 +48,7 @@ export function Services() {
     <section id="services" className="py-16 md:py-28">
       <div className="mx-auto max-w-7xl px-5 md:px-8">
         <Reveal>
-          <p className="text-[10px] uppercase tracking-[0.28em] text-brand sm:text-[11px]">Our services</p>
+          <p className="section-kicker">Our services</p>
           <h2 className="mt-3 max-w-2xl font-display text-3xl font-bold sm:text-4xl md:text-5xl">
             Every kind of journey, <span className="text-brand">one standard</span>
           </h2>

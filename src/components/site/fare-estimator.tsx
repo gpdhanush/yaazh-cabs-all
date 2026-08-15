@@ -102,9 +102,7 @@ export function FareEstimator() {
       <div className="mx-auto max-w-7xl px-5 md:px-8">
         <div className="grid gap-8 rounded-2xl border border-border bg-card p-6 shadow-sm md:p-10 lg:grid-cols-2">
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-brand sm:text-[11px]">
-              Fare estimator
-            </p>
+            <p className="section-kicker">Fare estimator</p>
             <h2 className="mt-3 font-display text-3xl font-bold text-foreground sm:text-4xl">
               Know the price <span className="text-brand">before you book</span>
             </h2>
@@ -198,7 +196,7 @@ export function FareEstimator() {
                 </li>
               ) : null}
             </ul>
-            <p className="mt-5 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-xs font-medium text-warning">
+            <p className="mt-5 rounded-lg border border-brand/40 bg-primary/12 px-3 py-2 text-xs font-medium text-brand">
               {fareNote}
             </p>
             <a

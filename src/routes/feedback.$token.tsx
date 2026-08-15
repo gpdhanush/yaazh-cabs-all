@@ -100,7 +100,7 @@ function FeedbackPage() {
       </header>
 
       <div className="mx-auto max-w-lg px-5 py-8 md:py-12">
-        <p className="text-[11px] uppercase tracking-[0.3em] text-brand">Trip feedback</p>
+        <p className="section-kicker">Trip feedback</p>
         <h1 className="mt-2 font-display text-3xl font-bold">How was your ride?</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           Tap a star, pick a quick comment, and send. It takes under a minute.

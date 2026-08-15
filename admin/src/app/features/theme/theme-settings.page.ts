@@ -4,8 +4,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSliderModule } from '@angular/material/slider';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { forkJoin } from 'rxjs';
-import { ThemeService, normalizeHex } from '../../core/theme/theme.service';
+import { ThemeService } from '../../core/theme/theme.service';
 import { THEME_COLOR_SWATCHES } from '../../core/theme/theme.types';
 import { AdminApiService } from '../../core/api/admin-api.service';
 
@@ -22,26 +21,16 @@ import { AdminApiService } from '../../core/api/admin-api.service';
           </span>
           <div>
             <h2 class="page-title">Appearance</h2>
-            <p class="page-subtitle">Admin panel colours. Public website colours are under Settings.</p>
+            <p class="page-subtitle">Customize how the admin dashboard looks</p>
           </div>
         </div>
         <div class="flex flex-wrap gap-2">
           <button mat-stroked-button class="ya-btn-ghost" type="button" (click)="theme.reset()">Reset</button>
-          <button mat-flat-button class="ya-btn-primary" type="button" (click)="saveBrand()">Save colours</button>
+          <button mat-flat-button class="ya-btn-primary" type="button" (click)="save()">Save</button>
         </div>
       </div>
 
       <section class="settings-card appear-simple">
-        <div class="appear-preview" aria-hidden="true">
-          <div class="appear-preview__site" [style.background]="theme.theme().secondary">
-            <span class="appear-preview__brand" [style.color]="theme.theme().primary">Yaazh Cabs</span>
-            <span
-              class="appear-preview__cta"
-              [style.background]="theme.theme().primary"
-            >Book now</span>
-          </div>
-          <p class="appear-preview__caption">Admin preview</p>
-        </div>
         <div class="appear-simple__row">
           <div>
             <h3>Theme Mode</h3>
@@ -60,7 +49,7 @@ import { AdminApiService } from '../../core/api/admin-api.service';
         <div class="appear-simple__block">
           <div class="mb-3">
             <h3>Theme Color</h3>
-            <p>Primary colour for the admin web panel</p>
+            <p>Select a primary color for your dashboard</p>
           </div>
           <div class="appear-swatch-grid">
             @for (swatch of swatches; track swatch.id) {
@@ -78,43 +67,6 @@ import { AdminApiService } from '../../core/api/admin-api.service';
                 }
               </button>
             }
-          </div>
-          <div class="settings-row__color mt-3">
-            <input
-              class="settings-row__swatch"
-              type="color"
-              [ngModel]="theme.theme().primary"
-              (ngModelChange)="setPrimary($event)"
-              aria-label="Custom primary colour"
-            />
-            <input
-              class="ya-field__control"
-              [ngModel]="theme.theme().primary"
-              (ngModelChange)="setPrimary($event)"
-              spellcheck="false"
-            />
-          </div>
-        </div>
-
-        <div class="appear-simple__block">
-          <div class="mb-3">
-            <h3>Secondary colour</h3>
-            <p>Used for dark admin surfaces such as the sidebar</p>
-          </div>
-          <div class="settings-row__color">
-            <input
-              class="settings-row__swatch"
-              type="color"
-              [ngModel]="theme.theme().secondary"
-              (ngModelChange)="setSecondary($event)"
-              aria-label="Secondary colour"
-            />
-            <input
-              class="ya-field__control"
-              [ngModel]="theme.theme().secondary"
-              (ngModelChange)="setSecondary($event)"
-              spellcheck="false"
-            />
           </div>
         </div>
 
@@ -162,22 +114,7 @@ export class ThemeSettingsPage {
   applySwatch(id: string): void {
     const swatch = this.swatches.find((s) => s.id === id);
     if (!swatch) return;
-    this.setPrimary(swatch.primary);
-    this.api.update('/settings/admin_primary_color', { value: swatch.primary }).subscribe({
-      error: () => this.snack.open('Could not save colour', 'Close'),
-    });
-  }
-
-  setPrimary(value: string): void {
-    const hex = normalizeHex(value);
-    if (!hex) return;
-    this.theme.patch({ primary: hex });
-  }
-
-  setSecondary(value: string): void {
-    const hex = normalizeHex(value);
-    if (!hex) return;
-    this.theme.patch({ secondary: hex });
+    this.theme.patch({ primary: swatch.primary });
   }
 
   setRadius(value: number | string): void {
@@ -185,14 +122,10 @@ export class ThemeSettingsPage {
     this.theme.patch({ radius });
   }
 
-  saveBrand(): void {
-    const { primary, secondary } = this.theme.theme();
-    forkJoin([
-      this.api.update('/settings/admin_primary_color', { value: primary }),
-      this.api.update('/settings/admin_secondary_color', { value: secondary }),
-    ]).subscribe({
-      next: () => this.snack.open('Admin colours saved', 'OK', { duration: 2200 }),
-      error: () => this.snack.open('Could not save admin colours', 'Close'),
+  save(): void {
+    this.api.update('/settings/admin_primary_color', { value: this.theme.theme().primary }).subscribe({
+      next: () => this.snack.open('Appearance saved', 'OK', { duration: 2200 }),
+      error: () => this.snack.open('Could not save appearance', 'Close'),
     });
   }
 }

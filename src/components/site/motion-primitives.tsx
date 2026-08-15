@@ -28,7 +28,7 @@ export function Reveal({
       className={className}
       initial={{ opacity: 0, y: 22 }}
       whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, amount: 0.2 }}
+      viewport={{ once: true, amount: "some" }}
       transition={{ duration: 0.55, delay, ease }}
     >
       {children}
@@ -48,9 +48,9 @@ export function StaggerGroup({
   return (
     <motion.div
       className={className}
-      initial="hidden"
+      initial="show"
       whileInView="show"
-      viewport={{ once: true, amount: 0.12 }}
+      viewport={{ once: true, amount: "some" }}
       variants={{
         hidden: {},
         show: { transition: { staggerChildren: 0.07 } },
@@ -74,8 +74,8 @@ export function StaggerItem({
     <motion.div
       className={className}
       variants={{
-        hidden: { opacity: 0, y: 20 },
-        show: { opacity: 1, y: 0, transition: { duration: 0.5, ease } },
+        hidden: { opacity: 1, y: 12 },
+        show: { opacity: 1, y: 0, transition: { duration: 0.45, ease } },
       }}
     >
       {children}

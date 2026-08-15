@@ -164,8 +164,12 @@ export function SiteFooter() {
                 </a>
               </li>
               <li>
-                <Link to="/status" search={{ ref: "" }} className="text-primary hover:underline">
-                  Track your booking →
+                <Link
+                  to="/status"
+                  search={{ ref: "" }}
+                  className="inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.12em] text-primary-foreground hover:bg-primary-dark"
+                >
+                  Track your booking
                 </Link>
               </li>
             </ul>

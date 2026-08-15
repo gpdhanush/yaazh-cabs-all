@@ -88,7 +88,7 @@
   --background: #fafaf7;
   --foreground: #111827;
   --body: #374151;
-  --brand: #a16207;
+  --brand: var(--primary);
 
   --surface: #ffffff;
   --surface-2: #f3f4f6;
@@ -170,7 +170,7 @@
   --background: #0b1220;
   --foreground: #f8fafc;
   --body: #e2e8f0;
-  --brand: #fbbf24;
+  --brand: var(--primary);
 
   --surface: #1e293b;
   --surface-2: #273549;
@@ -290,10 +290,18 @@
   box-shadow: var(--shadow-lift);
 }
 
-@utility glass-soft {
-  background: color-mix(in oklab, var(--surface) 80%, transparent);
-  backdrop-filter: blur(12px) saturate(130%);
-  border: 1px solid var(--border);
+@utility section-kicker {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  border: 1px solid color-mix(in oklab, var(--primary) 40%, transparent);
+  background: color-mix(in oklab, var(--primary) 12%, transparent);
+  padding: 0.3rem 0.8rem;
+  font-size: 0.6875rem;
+  font-weight: 650;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--brand);
 }
 
 @utility gold-ring {

@@ -51,12 +51,16 @@ export function applyBrandColors(primaryRaw?: string | null, secondaryRaw?: stri
   if (primary) {
     const dark = mix(primary, 0, 0.12);
     const soft = mix(primary, 255, 0.28);
+    const [r, g, b] = rgb(primary) ?? [255, 193, 7];
+    const [dr, dg, db] = rgb(dark) ?? [224, 168, 0];
     root.style.setProperty("--primary", primary);
     root.style.setProperty("--primary-dark", dark);
     root.style.setProperty("--color-primary", primary);
     root.style.setProperty("--color-primary-dark", dark);
     root.style.setProperty("--gold", primary);
     root.style.setProperty("--gold-soft", soft);
+    root.style.setProperty("--brand", primary);
+    root.style.setProperty("--color-brand", primary);
     root.style.setProperty("--ring", primary);
     root.style.setProperty("--sidebar-primary", primary);
     root.style.setProperty("--sidebar-ring", primary);
@@ -64,6 +68,10 @@ export function applyBrandColors(primaryRaw?: string | null, secondaryRaw?: stri
     root.style.setProperty("--primary-foreground", contrastOn(primary));
     root.style.setProperty("--sidebar-primary-foreground", contrastOn(primary));
     root.style.setProperty("--gradient-gold", `linear-gradient(135deg, ${soft} 0%, ${primary} 50%, ${dark} 100%)`);
+    root.style.setProperty(
+      "--shadow-glow",
+      `0 0 0 1px rgb(${r} ${g} ${b} / 35%), 0 12px 28px -16px rgb(${dr} ${dg} ${db} / 45%)`,
+    );
   }
   if (secondary) {
     root.style.setProperty("--secondary", secondary);

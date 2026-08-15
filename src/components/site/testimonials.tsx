@@ -106,9 +106,7 @@ export function Testimonials() {
         <Reveal>
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-brand sm:text-[11px]">
-              Reviews
-            </p>
+            <p className="section-kicker">Reviews</p>
             <h2 className="mt-3 font-display text-3xl font-bold text-foreground sm:text-4xl md:text-5xl">
               What our <span className="text-brand">riders say</span>
             </h2>

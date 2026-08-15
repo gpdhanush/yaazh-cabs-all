@@ -102,7 +102,7 @@ export function PopularRoutes() {
   return (
     <section id="routes" className="py-16 md:py-28">
       <div className="mx-auto max-w-7xl px-5 md:px-8">
-        <p className="text-[10px] uppercase tracking-[0.28em] text-brand sm:text-[11px]">Popular routes</p>
+        <p className="section-kicker">Popular routes</p>
         <h2 className="mt-3 font-display text-3xl font-bold text-foreground sm:text-4xl md:text-5xl">
           One-way special fares from <span className="text-brand">Udumalpet</span>
         </h2>
@@ -110,13 +110,16 @@ export function PopularRoutes() {
           Fixed one-way rates to Palani, Coimbatore, Madurai, Munnar, Tiruppur and more. Swift, Dzire &amp;
           Traveller available.
         </p>
-        <p className="mt-2 inline-flex items-center gap-1.5 rounded-md border border-warning/30 bg-warning/10 px-3 py-1.5 text-xs font-medium text-warning">
+        <p className="mt-2 inline-flex items-center gap-1.5 rounded-md border border-brand/40 bg-primary/12 px-3 py-1.5 text-xs font-medium text-brand">
           {fareNote}
         </p>
 
         <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {routes.map((r, i) => (
-            <article key={r.id} className="group relative isolate overflow-hidden rounded-[1.35rem]">
+            <article
+              key={r.id}
+              className="group overflow-hidden rounded-2xl border border-border bg-card shadow-[0_16px_40px_-28px_rgba(17,24,39,0.35)] transition-all duration-300 hover:-translate-y-1 hover:border-brand/50"
+            >
               <div className="relative aspect-[16/10] overflow-hidden">
                 <img
                   src={r.imageUrl || routeImages[i % routeImages.length]}
@@ -124,36 +127,35 @@ export function PopularRoutes() {
                   loading="lazy"
                   className="size-full object-cover transition duration-500 group-hover:scale-[1.04]"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-secondary/95 via-secondary/45 to-transparent" />
                 {r.tag ? (
-                  <span className="absolute left-3 top-3 bg-primary px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-primary-foreground">
+                  <span className="absolute left-3 top-3 rounded-full border border-primary/50 bg-primary/90 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-primary-foreground">
                     {r.tag}
                   </span>
                 ) : null}
-                <div className="absolute inset-x-0 bottom-0 p-4 sm:p-5">
-                  <h3 className="font-display text-xl font-bold leading-tight text-white sm:text-[1.35rem]">
-                    {r.from}
-                    <span className="mx-1.5 text-primary">→</span>
-                    {r.to}
-                  </h3>
-                  {(r.km || r.mins) && (
-                    <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-white/75">
-                      {r.km ? (
-                        <span className="inline-flex items-center gap-1.5">
-                          <Route className="size-3.5 text-primary" /> {r.km} km
-                        </span>
-                      ) : null}
-                      {r.mins ? (
-                        <span className="inline-flex items-center gap-1.5">
-                          <Clock className="size-3.5 text-primary" /> {r.mins}
-                        </span>
-                      ) : null}
-                    </div>
-                  )}
-                  <p className="mt-3 inline-block bg-primary px-2.5 py-1 font-data text-base font-semibold text-primary-foreground sm:text-lg">
-                    {r.price > 0 ? `₹${r.price.toLocaleString("en-IN")}` : "On request"}
-                  </p>
-                </div>
+              </div>
+              <div className="p-4 sm:p-5">
+                <h3 className="font-display text-lg font-bold leading-tight text-foreground sm:text-xl">
+                  {r.from}
+                  <span className="mx-1.5 text-brand">→</span>
+                  {r.to}
+                </h3>
+                {(r.km || r.mins) && (
+                  <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                    {r.km ? (
+                      <span className="inline-flex items-center gap-1.5">
+                        <Route className="size-3.5 text-brand" /> {r.km} km
+                      </span>
+                    ) : null}
+                    {r.mins ? (
+                      <span className="inline-flex items-center gap-1.5">
+                        <Clock className="size-3.5 text-brand" /> {r.mins}
+                      </span>
+                    ) : null}
+                  </div>
+                )}
+                <p className="mt-3 inline-flex rounded-md border border-brand/40 bg-primary/15 px-2.5 py-1 font-data text-base font-semibold text-brand sm:text-lg">
+                  {r.price > 0 ? `₹${r.price.toLocaleString("en-IN")}` : "On request"}
+                </p>
               </div>
             </article>
           ))}

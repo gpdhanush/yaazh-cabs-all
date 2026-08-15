@@ -185,7 +185,7 @@ export function Contact() {
       />
       <div className="relative mx-auto max-w-7xl px-5 md:px-8">
         <Reveal>
-          <p className="text-[10px] uppercase tracking-[0.28em] text-brand sm:text-[11px]">Contact</p>
+          <p className="section-kicker">Contact</p>
           <h2 className="mt-3 max-w-2xl font-display text-3xl font-bold sm:text-4xl md:text-5xl">
             Reach us in <span className="text-brand">Udumalpet</span>
           </h2>

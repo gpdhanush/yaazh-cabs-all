@@ -115,9 +115,7 @@ export function Gallery() {
         <Reveal>
           <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
           <div>
-            <p className="text-[10px] uppercase tracking-[0.28em] text-brand sm:text-[11px]">
-              Gallery
-            </p>
+            <p className="section-kicker">Gallery</p>
             <h2 className="mt-3 max-w-xl font-display text-3xl font-bold sm:text-4xl md:text-5xl">
               Cars inside, outside &amp; the <span className="text-brand">roads we drive</span>
             </h2>
@@ -136,7 +134,7 @@ export function Gallery() {
               <button
                 type="button"
                 onClick={() => openAlbum(g.id)}
-                className="group w-full overflow-hidden rounded-2xl border border-border/80 bg-card text-left shadow-[0_18px_50px_-28px_rgba(17,24,39,0.4)] outline-none transition-transform hover:-translate-y-1 hover:border-brand/40 focus-visible:ring-2 focus-visible:ring-primary"
+                className="group w-full overflow-hidden rounded-2xl border border-brand/25 bg-card text-left shadow-[0_18px_50px_-28px_rgba(17,24,39,0.4)] outline-none transition-transform hover:-translate-y-1 hover:border-brand/70 focus-visible:ring-2 focus-visible:ring-primary"
               >
                 <div className="relative aspect-[16/10] bg-[linear-gradient(180deg,#f4f6fb,#ffffff)]">
                   {cover && (
@@ -151,9 +149,11 @@ export function Gallery() {
                   <span className="absolute right-3 top-3 inline-flex items-center gap-1.5 rounded-full bg-white/90 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#111827]">
                     <Images className="size-3" /> {g.photos.length} photo{g.photos.length === 1 ? "" : "s"}
                   </span>
-                  <div className="absolute inset-x-0 bottom-0 p-4">
+                  <div className="absolute inset-x-0 bottom-0 p-4 sm:p-5">
                     <p className="font-display text-lg font-bold text-white sm:text-xl">{g.title}</p>
-                    <p className="mt-0.5 text-[10px] uppercase tracking-[0.18em] text-primary">View album</p>
+                    <span className="mt-2 inline-flex rounded-full border border-primary/70 bg-primary/20 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-primary">
+                      View album
+                    </span>
                   </div>
                 </div>
               </button>
@@ -170,7 +170,7 @@ export function Gallery() {
             role="dialog"
             aria-modal="true"
             aria-label={album.title}
-            className="fixed inset-0 z-[60] flex items-center justify-center bg-secondary/85 p-3 backdrop-blur-sm sm:p-6"
+            className="fixed inset-0 z-[60] flex items-center justify-center bg-secondary/80 p-4 backdrop-blur-md sm:p-8"
             onClick={() => setOpenId(null)}
             initial={reduceMotion ? false : { opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -187,14 +187,14 @@ export function Gallery() {
           </button>
 
           <motion.div
-            className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-white/15 bg-[#0b1220] shadow-2xl"
+            className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-primary/35 bg-secondary shadow-2xl"
             onClick={(e) => e.stopPropagation()}
             initial={reduceMotion ? false : { opacity: 0, scale: 0.96 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={reduceMotion ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.96 }}
             transition={{ duration: reduceMotion ? 0 : 0.28, ease: [0.22, 1, 0.36, 1] }}
           >
-            <div className="flex items-center justify-between gap-3 border-b border-white/10 px-4 py-3 sm:px-5">
+            <div className="flex items-center justify-between gap-3 border-b border-primary/20 px-5 py-4 sm:px-6">
               <div>
                 <p className="font-display text-base font-bold text-white sm:text-lg">{album.title}</p>
                 <p className="text-[11px] uppercase tracking-[0.16em] text-white/60">
@@ -235,14 +235,16 @@ export function Gallery() {
             </div>
 
             {photos.length > 1 && (
-              <div className="flex gap-2 overflow-x-auto border-t border-white/10 p-3">
+              <div className="flex gap-2 overflow-x-auto border-t border-primary/20 p-4">
                 {photos.map((img, i) => (
                   <button
                     key={img.id}
                     type="button"
                     onClick={() => setPhotoIndex(i)}
                     className={`relative h-16 w-24 shrink-0 overflow-hidden rounded-lg border-2 ${
-                      i === photoIndex ? "border-primary" : "border-transparent opacity-70 hover:opacity-100"
+                      i === photoIndex
+                        ? "border-primary opacity-100"
+                        : "border-white/20 opacity-55 hover:opacity-100"
                     }`}
                   >
                     <img src={img.src} alt="" className="size-full object-cover" />

@@ -194,7 +194,7 @@ export function BookingProcess() {
     <section ref={sectionRef} className="py-16 md:py-28">
       <div className="mx-auto max-w-7xl px-5 md:px-8">
         <Reveal>
-          <p className="text-[10px] uppercase tracking-[0.28em] text-brand sm:text-[11px]">How it works</p>
+          <p className="section-kicker">How it works</p>
           <h2 className="mt-3 font-display text-3xl font-bold sm:text-4xl md:text-5xl">
             Booked in <span className="text-brand">four simple steps</span>
           </h2>

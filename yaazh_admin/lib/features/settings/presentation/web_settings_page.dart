@@ -36,6 +36,9 @@ class _WebSettingsPageState extends ConsumerState<WebSettingsPage> {
   void _hydrate(List<AppSetting> rows) {
     if (_hydrated) return;
     for (final row in rows) {
+      if (row.group == 'admin_branding' || row.key.startsWith('admin_')) {
+        continue;
+      }
       _original[row.key] = row.value;
       _controllers[row.key] = TextEditingController(text: row.value)
         ..addListener(() => setState(() {}));
@@ -105,6 +108,9 @@ class _WebSettingsPageState extends ConsumerState<WebSettingsPage> {
             _hydrate(rows);
             final groups = <String, List<AppSetting>>{};
             for (final row in rows) {
+              if (row.group == 'admin_branding' || row.key.startsWith('admin_')) {
+                continue;
+              }
               groups.putIfAbsent(row.group, () => []).add(row);
             }
 
