@@ -5,6 +5,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { AdminApiService } from '../../core/api/admin-api.service';
+import { ThemeService } from '../../core/theme/theme.service';
 
 type SettingRow = {
   key: string;
@@ -31,6 +32,16 @@ const GROUP_META: Record<string, { title: string; hint: string; icon: string }> 
     hint: 'Footer “Created by” line on the public site. The name opens the URL in a new tab.',
     icon: 'code',
   },
+  branding: {
+    title: 'Website colours',
+    hint: 'Primary and secondary colours for the public booking site only.',
+    icon: 'palette',
+  },
+  admin_branding: {
+    title: 'Admin colours',
+    hint: 'Colours for the admin web panel and admin app. Does not change the public site.',
+    icon: 'admin_panel_settings',
+  },
 };
 
 const LABEL_MAP: Record<string, string> = {
@@ -47,6 +58,10 @@ const LABEL_MAP: Record<string, string> = {
   map_lng: 'Map longitude',
   created_by_name: 'Created by name',
   created_by_url: 'Created by website URL',
+  primary_color: 'Website primary',
+  secondary_color: 'Website secondary',
+  admin_primary_color: 'Admin primary',
+  admin_secondary_color: 'Admin secondary',
 };
 
 @Component({
@@ -105,10 +120,32 @@ const LABEL_MAP: Record<string, string> = {
                   <div
                     class="settings-row"
                     [class.is-dirty]="row.dirty"
-                    [class.is-toggle]="isBoolean(row.draft) || isBoolean(row.value)"
+                    [class.is-toggle]="!isColor(row.key) && (isBoolean(row.draft) || isBoolean(row.value))"
                     [class.is-full]="isMultiline(row.key)"
+                    [class.is-color]="isColor(row.key)"
                   >
-                    @if (isBoolean(row.draft) || isBoolean(row.value)) {
+                    @if (isColor(row.key)) {
+                      <label class="settings-row__label" [attr.for]="'setting-' + row.key">
+                        {{ labelFor(row.key) }}
+                      </label>
+                      <div class="settings-row__color">
+                        <input
+                          class="settings-row__swatch"
+                          type="color"
+                          [id]="'setting-swatch-' + row.key"
+                          [ngModel]="colorInputValue(row.draft)"
+                          (ngModelChange)="onDraft(row.key, $event)"
+                          [disabled]="row.saving"
+                        />
+                        <input
+                          class="ya-field__control"
+                          [id]="'setting-' + row.key"
+                          [ngModel]="row.draft"
+                          (ngModelChange)="onDraft(row.key, $event)"
+                          spellcheck="false"
+                        />
+                      </div>
+                    } @else if (isBoolean(row.draft) || isBoolean(row.value)) {
                       <div class="settings-row__toggle">
                         <div>
                           <p class="settings-row__label">{{ labelFor(row.key) }}</p>
@@ -154,6 +191,7 @@ const LABEL_MAP: Record<string, string> = {
 export class SettingsPage implements OnInit {
   private readonly api = inject(AdminApiService);
   private readonly snack = inject(MatSnackBar);
+  private readonly theme = inject(ThemeService);
 
   readonly rows = signal<SettingRow[]>([]);
   readonly loading = signal(false);
@@ -190,6 +228,19 @@ export class SettingsPage implements OnInit {
 
   isMultiline(key: string): boolean {
     return key.includes('note') || key.includes('address') || key.includes('message');
+  }
+
+  isColor(key: string): boolean {
+    return key.endsWith('_color');
+  }
+
+  colorInputValue(value: string): string {
+    const t = value.trim();
+    if (/^#[0-9a-fA-F]{6}$/.test(t)) return t;
+    if (/^#[0-9a-fA-F]{3}$/.test(t)) {
+      return `#${t[1]}${t[1]}${t[2]}${t[2]}${t[3]}${t[3]}`;
+    }
+    return '#ffc107';
   }
 
   isBoolean(value: string): boolean {
@@ -275,6 +326,7 @@ export class SettingsPage implements OnInit {
             r.key === key ? { ...r, value: r.draft, dirty: false, saving: false } : r,
           ),
         );
+        this.applyBrandIfNeeded(key, row.draft);
       },
       error: (err: unknown) => {
         this.setSaving(key, false);
@@ -300,6 +352,7 @@ export class SettingsPage implements OnInit {
               r.key === row.key ? { ...r, value: r.draft, dirty: false, saving: false } : r,
             ),
           );
+          this.applyBrandIfNeeded(row.key, row.draft);
           left -= 1;
           if (left === 0) this.snack.open('Settings saved', 'OK', { duration: 1800 });
         },
@@ -310,6 +363,11 @@ export class SettingsPage implements OnInit {
         },
       });
     }
+  }
+
+  private applyBrandIfNeeded(key: string, value: string): void {
+    if (key === 'admin_primary_color') this.theme.applyBrand(value, null);
+    if (key === 'admin_secondary_color') this.theme.applyBrand(null, value);
   }
 
   private setSaving(key: string, saving: boolean): void {

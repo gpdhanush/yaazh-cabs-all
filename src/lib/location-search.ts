@@ -84,6 +84,8 @@ declare global {
                 input: string;
                 componentRestrictions?: { country: string | string[] };
                 types?: string[];
+                location?: { lat: number; lng: number };
+                radius?: number;
               },
               cb: (predictions: GooglePrediction[] | null, status: string) => void,
             ) => void;
@@ -132,6 +134,8 @@ async function searchGoogle(query: string): Promise<LocationSuggestion[]> {
       {
         input: query,
         componentRestrictions: { country: "in" },
+        location: { lat: 10.5847, lng: 77.2514 },
+        radius: 850000,
       },
       (predictions, status) => {
         if (status !== "OK" || !predictions?.length) {
@@ -162,6 +166,7 @@ async function searchNominatim(query: string): Promise<LocationSuggestion[]> {
   url.searchParams.set("lang", "en");
   url.searchParams.set("lat", "10.5847");
   url.searchParams.set("lon", "77.2514");
+  url.searchParams.set("bbox", "74.05,8.0,84.8,19.92");
 
   const res = await fetch(url.toString());
   if (!res.ok) return [];

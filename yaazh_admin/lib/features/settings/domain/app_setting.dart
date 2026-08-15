@@ -32,6 +32,12 @@ class AppSetting {
       'maps_share_url': 'Maps share URL',
       'map_lat': 'Map latitude',
       'map_lng': 'Map longitude',
+      'created_by_name': 'Created by name',
+      'created_by_url': 'Created by website URL',
+      'primary_color': 'Website primary',
+      'secondary_color': 'Website secondary',
+      'admin_primary_color': 'Admin primary',
+      'admin_secondary_color': 'Admin secondary',
     };
     return map[key] ?? key.replaceAll('_', ' ');
   }
@@ -40,6 +46,9 @@ class AppSetting {
     const map = {
       'company': 'Company & contact',
       'fare': 'Fare notes',
+      'website': 'Website credit',
+      'branding': 'Website colours',
+      'admin_branding': 'Admin colours',
     };
     if (map.containsKey(group)) return map[group]!;
     if (group.isEmpty) return 'Other';
@@ -50,6 +59,9 @@ class AppSetting {
     const map = {
       'company': 'Public website and booking contact details',
       'fare': 'Customer-facing fare disclaimers',
+      'website': 'Footer Created by line on the public site',
+      'branding': 'Primary and secondary colours for the public booking site only',
+      'admin_branding': 'Colours for the admin web panel and this app',
     };
     return map[group] ?? 'Application settings';
   }
@@ -58,8 +70,15 @@ class AppSetting {
     return switch (group) {
       'company' => Icons.business_rounded,
       'fare' => Icons.payments_rounded,
+      'website' => Icons.code_rounded,
+      'branding' => Icons.palette_rounded,
+      'admin_branding' => Icons.admin_panel_settings_rounded,
       _ => Icons.tune_rounded,
     };
+  }
+
+  static bool isColor(String key) {
+    return key.endsWith('_color');
   }
 
   static bool isMultiline(String key) {

@@ -50,6 +50,7 @@ class YaazhAdminApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(routerProvider);
     final themeState = ref.watch(appThemeProvider);
+    ref.watch(brandThemeBootstrapProvider);
     final platformDark =
         WidgetsBinding.instance.platformDispatcher.platformBrightness ==
             Brightness.dark;
@@ -79,8 +80,8 @@ class YaazhAdminApp extends ConsumerWidget {
         title: AppConstants.appName,
         debugShowCheckedModeBanner: false,
         scaffoldMessengerKey: rootMessengerKey,
-        theme: AppTheme.light(themeState.primary),
-        darkTheme: AppTheme.dark(themeState.primary),
+        theme: AppTheme.light(themeState.primary, themeState.secondary),
+        darkTheme: AppTheme.dark(themeState.primary, themeState.secondary),
         themeMode: themeState.mode,
         routerConfig: router,
         builder: EasyLoading.init(

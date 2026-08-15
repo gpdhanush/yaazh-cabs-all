@@ -38,6 +38,7 @@ class AppConstants {
   static const String profileCacheKey = 'admin_profile_cache';
   static const String themeModeKey = 'admin_theme_mode';
   static const String themePrimaryKey = 'admin_theme_primary';
+  static const String themeSecondaryKey = 'admin_theme_secondary';
 
   static const String fallbackSupportPhone = '04252222222';
 

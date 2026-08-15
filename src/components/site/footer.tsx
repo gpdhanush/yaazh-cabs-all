@@ -88,7 +88,7 @@ export function SiteFooter() {
   const toTop = () => window.scrollTo({ top: 0, behavior: "smooth" });
 
   return (
-    <footer className="relative overflow-hidden bg-[#1F2933] pt-16 text-white">
+    <footer className="relative overflow-hidden bg-secondary pt-16 text-secondary-foreground">
       <div className="mx-auto max-w-7xl px-5 md:px-8">
         <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-[1.3fr_1fr_1fr_1.1fr]">
           <div>

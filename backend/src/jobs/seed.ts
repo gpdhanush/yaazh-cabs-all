@@ -103,25 +103,33 @@ async function ensureCity(name: string, slug: string, state = "Tamil Nadu") {
 
 async function seedWebsiteCatalog() {
   // Public company settings for the website
-  const settings: Array<{ key: string; value: string; group: string }> = [
-    { key: "company_name", value: "Yaazh Cabs", group: "company" },
-    { key: "support_phone", value: "9360055761", group: "company" },
-    { key: "support_phone_secondary", value: "6369022364", group: "company" },
-    { key: "support_email", value: "hello@yaazhcabs.in", group: "company" },
-    { key: "whatsapp_number", value: "917845456609", group: "company" },
-    { key: "business_address", value: "Udumalpet, Tiruppur District, Tamil Nadu 642126", group: "company" },
-    { key: "business_hours", value: "Open 24×7", group: "company" },
-    { key: "booking_fare_note", value: "Note: Toll, parking & permit charges are extra and billed at actuals.", group: "fare" },
-    { key: "maps_share_url", value: "https://maps.app.goo.gl/EUCRv1piSHwJybDD7?g_st=aw", group: "company" },
-    { key: "map_lat", value: "10.551642", group: "company" },
-    { key: "map_lng", value: "77.306707", group: "company" },
-    { key: "created_by_name", value: "G.K. Tech", group: "website" },
-    { key: "created_by_url", value: "https://gpdhanush.github.io/portfolio/", group: "website" },
-    { key: "primary_color", value: "#ffc107", group: "branding" },
-    { key: "secondary_color", value: "#1f2933", group: "branding" },
+  const settings: Array<{ key: string; value: string; group: string; isPublic: boolean }> = [
+    { key: "company_name", value: "Yaazh Cabs", group: "company", isPublic: true },
+    { key: "support_phone", value: "9360055761", group: "company", isPublic: true },
+    { key: "support_phone_secondary", value: "6369022364", group: "company", isPublic: true },
+    { key: "support_email", value: "hello@yaazhcabs.in", group: "company", isPublic: true },
+    { key: "whatsapp_number", value: "917845456609", group: "company", isPublic: true },
+    { key: "business_address", value: "Udumalpet, Tiruppur District, Tamil Nadu 642126", group: "company", isPublic: true },
+    { key: "business_hours", value: "Open 24×7", group: "company", isPublic: true },
+    { key: "booking_fare_note", value: "Note: Toll, parking & permit charges are extra and billed at actuals.", group: "fare", isPublic: true },
+    { key: "maps_share_url", value: "https://maps.app.goo.gl/EUCRv1piSHwJybDD7?g_st=aw", group: "company", isPublic: true },
+    { key: "map_lat", value: "10.551642", group: "company", isPublic: true },
+    { key: "map_lng", value: "77.306707", group: "company", isPublic: true },
+    { key: "created_by_name", value: "G.K. Tech", group: "website", isPublic: true },
+    { key: "created_by_url", value: "https://gpdhanush.github.io/portfolio/", group: "website", isPublic: true },
+    { key: "primary_color", value: "#ffc107", group: "branding", isPublic: true },
+    { key: "secondary_color", value: "#1f2933", group: "branding", isPublic: true },
+    { key: "admin_primary_color", value: "#7C3AED", group: "admin_branding", isPublic: false },
+    { key: "admin_secondary_color", value: "#111827", group: "admin_branding", isPublic: false },
   ];
   for (const s of settings) {
-    const preserveValue = s.key === "created_by_name" || s.key === "created_by_url";
+    const preserveValue =
+      s.key === "created_by_name" ||
+      s.key === "created_by_url" ||
+      s.key === "primary_color" ||
+      s.key === "secondary_color" ||
+      s.key === "admin_primary_color" ||
+      s.key === "admin_secondary_color";
     await prisma.appSettings.upsert({
       where: { setting_key: s.key },
       create: {
@@ -129,11 +137,11 @@ async function seedWebsiteCatalog() {
         setting_value: s.value,
         value_type: "string",
         group_name: s.group,
-        is_public: true,
+        is_public: s.isPublic,
       },
       update: {
         ...(preserveValue ? {} : { setting_value: s.value }),
-        is_public: true,
+        is_public: s.isPublic,
         group_name: s.group,
       },
     });

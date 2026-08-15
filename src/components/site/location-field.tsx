@@ -8,6 +8,7 @@ import { coordsForPlace, searchLocations, type LocationSuggestion } from "@/lib/
 
 export type LocationValue = {
   label: string;
+  secondary?: string;
   latitude?: number;
   longitude?: number;
 };
@@ -16,7 +17,7 @@ type Props = {
   label: string;
   value: string;
   onChange: (value: string, meta?: LocationValue) => void;
-  error?: string | undefined;
+  error?: React.ReactNode;
   icon?: React.ReactNode;
   /** When set, only these options can be chosen (same dropdown UI as drop). */
   fixedOptions?: string[];
@@ -90,6 +91,7 @@ export function LocationField({
   const pick = (item: LocationSuggestion) => {
     const meta: LocationValue = {
       label: item.label,
+      ...(item.secondary ? { secondary: item.secondary } : {}),
       ...(item.latitude != null ? { latitude: item.latitude } : {}),
       ...(item.longitude != null ? { longitude: item.longitude } : {}),
     };

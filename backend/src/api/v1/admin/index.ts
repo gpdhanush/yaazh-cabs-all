@@ -3470,8 +3470,12 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
 
   app.get("/settings", { preHandler: [requirePermission("settings.manage")] }, async (_req, reply) => {
     for (const s of [
-      { key: "created_by_name", value: "G.K. Tech", group: "website" },
-      { key: "created_by_url", value: "", group: "website" },
+      { key: "created_by_name", value: "G.K. Tech", group: "website", isPublic: true },
+      { key: "created_by_url", value: "", group: "website", isPublic: true },
+      { key: "primary_color", value: "#ffc107", group: "branding", isPublic: true },
+      { key: "secondary_color", value: "#1f2933", group: "branding", isPublic: true },
+      { key: "admin_primary_color", value: "#7C3AED", group: "admin_branding", isPublic: false },
+      { key: "admin_secondary_color", value: "#111827", group: "admin_branding", isPublic: false },
     ]) {
       await prisma.appSettings.upsert({
         where: { setting_key: s.key },
@@ -3480,9 +3484,9 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
           setting_value: s.value,
           value_type: "string",
           group_name: s.group,
-          is_public: true,
+          is_public: s.isPublic,
         },
-        update: { is_public: true, group_name: s.group },
+        update: { is_public: s.isPublic, group_name: s.group },
       });
     }
     const rows = await prisma.appSettings.findMany();
@@ -3495,9 +3499,30 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
     const schema = z.object({ value: z.string() });
     const parsed = schema.safeParse(req.body);
     if (!parsed.success) throw new ValidationError("Validation failed.", parsed.error.flatten());
-    await prisma.appSettings.update({
+    const isAdminColor = key === "admin_primary_color" || key === "admin_secondary_color";
+    const isSiteColor = key === "primary_color" || key === "secondary_color";
+    const knownMeta = isAdminColor || isSiteColor || key.startsWith("created_by_");
+    const groupName = isAdminColor
+      ? "admin_branding"
+      : isSiteColor
+        ? "branding"
+        : key.startsWith("created_by_")
+          ? "website"
+          : "general";
+    const isPublic = isSiteColor || key.startsWith("created_by_");
+    await prisma.appSettings.upsert({
       where: { setting_key: key },
-      data: { setting_value: parsed.data.value },
+      create: {
+        setting_key: key,
+        setting_value: parsed.data.value,
+        value_type: "string",
+        group_name: groupName,
+        is_public: isPublic,
+      },
+      update: {
+        setting_value: parsed.data.value,
+        ...(knownMeta ? { group_name: groupName, is_public: isPublic } : {}),
+      },
     });
     await audit(user.id, "settings.update", "app_settings", key, null, parsed.data, req);
     return ok(reply, { key, value: parsed.data.value }, "Setting updated.");

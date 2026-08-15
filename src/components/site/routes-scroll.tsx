@@ -124,7 +124,7 @@ export function PopularRoutes() {
                   loading="lazy"
                   className="size-full object-cover transition duration-500 group-hover:scale-[1.04]"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#1F2933]/95 via-[#1F2933]/45 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-secondary/95 via-secondary/45 to-transparent" />
                 {r.tag ? (
                   <span className="absolute left-3 top-3 bg-primary px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-primary-foreground">
                     {r.tag}

@@ -4,9 +4,11 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:yaazh_admin/app/constants.dart';
 
 class AppTheme {
-  static ThemeData light(Color primary) => _build(Brightness.light, primary);
+  static ThemeData light(Color primary, [Color? secondary]) =>
+      _build(Brightness.light, primary, secondary ?? AppColors.supportBlue);
 
-  static ThemeData dark(Color primary) => _build(Brightness.dark, primary);
+  static ThemeData dark(Color primary, [Color? secondary]) =>
+      _build(Brightness.dark, primary, secondary ?? AppColors.supportBlue);
 
   static bool useLightIconsOn(Color color) {
     return ThemeData.estimateBrightnessForColor(color) == Brightness.dark;
@@ -14,6 +16,10 @@ class AppTheme {
 
   static Color onPrimaryOf(Color primary) {
     return useLightIconsOn(primary) ? Colors.white : AppColors.textPrimaryLight;
+  }
+
+  static Color onSecondaryOf(Color secondary) {
+    return useLightIconsOn(secondary) ? Colors.white : AppColors.textPrimaryLight;
   }
 
   static SystemUiOverlayStyle overlayFor(
@@ -36,9 +42,10 @@ class AppTheme {
     );
   }
 
-  static ThemeData _build(Brightness brightness, Color primary) {
+  static ThemeData _build(Brightness brightness, Color primary, Color secondary) {
     final isDark = brightness == Brightness.dark;
     final onPrimary = onPrimaryOf(primary);
+    final onSecondary = onSecondaryOf(secondary);
     final onSurface = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
     final muted = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
     final bg = isDark ? AppColors.bgDark : AppColors.bgLight;
@@ -51,8 +58,8 @@ class AppTheme {
     ).copyWith(
       primary: primary,
       onPrimary: onPrimary,
-      secondary: AppColors.supportBlue,
-      onSecondary: Colors.white,
+      secondary: secondary,
+      onSecondary: onSecondary,
       tertiary: AppColors.supportPurple,
       onTertiary: Colors.white,
       error: AppColors.salmon,

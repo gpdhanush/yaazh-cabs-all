@@ -7,6 +7,8 @@ import 'package:yaazh_admin/core/widgets/coming_soon.dart';
 import 'package:yaazh_admin/core/widgets/keyboard_dismiss.dart';
 import 'package:yaazh_admin/core/widgets/ya_field.dart';
 import 'package:yaazh_admin/core/widgets/ya_loader.dart';
+import 'package:yaazh_admin/core/theme/brand_colors.dart';
+import 'package:yaazh_admin/core/theme/theme_controller.dart';
 import 'package:yaazh_admin/features/settings/data/web_settings_repository.dart';
 import 'package:yaazh_admin/features/settings/domain/app_setting.dart';
 
@@ -61,6 +63,18 @@ class _WebSettingsPageState extends ConsumerState<WebSettingsPage> {
       for (final key in dirty) {
         await repo.update(key, _controllers[key]!.text);
         _original[key] = _controllers[key]!.text;
+        if (key == 'admin_primary_color') {
+          final color = parseHexColor(_controllers[key]!.text);
+          if (color != null) {
+            await ref.read(appThemeProvider.notifier).setPrimary(color);
+          }
+        }
+        if (key == 'admin_secondary_color') {
+          final color = parseHexColor(_controllers[key]!.text);
+          if (color != null) {
+            await ref.read(appThemeProvider.notifier).setSecondary(color);
+          }
+        }
       }
       invalidateWebSettings(ref);
       showSuccessToast('Settings saved');
@@ -169,15 +183,36 @@ class _GroupCard extends StatelessWidget {
             final controller = controllers[row.key];
             if (controller == null) return const SizedBox.shrink();
             final multiline = AppSetting.isMultiline(row.key);
+            final isColor = AppSetting.isColor(row.key);
+            final parsed = isColor ? parseHexColor(controller.text) : null;
             return Padding(
               padding: const EdgeInsets.only(bottom: 14),
-              child: YaTextField(
-                label: AppSetting.labelFor(row.key),
-                controller: controller,
-                minLines: multiline ? 2 : 1,
-                maxLines: multiline ? 4 : 1,
-                textInputAction:
-                    multiline ? TextInputAction.newline : TextInputAction.next,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  if (isColor) ...[
+                    Container(
+                      width: 44,
+                      height: 44,
+                      margin: const EdgeInsets.only(right: 10, bottom: 2),
+                      decoration: BoxDecoration(
+                        color: parsed ?? theme.dividerColor,
+                        borderRadius: BorderRadius.circular(AppConstants.radiusField),
+                        border: Border.all(color: theme.dividerColor),
+                      ),
+                    ),
+                  ],
+                  Expanded(
+                    child: YaTextField(
+                      label: AppSetting.labelFor(row.key),
+                      controller: controller,
+                      minLines: multiline ? 2 : 1,
+                      maxLines: multiline ? 4 : 1,
+                      textInputAction:
+                          multiline ? TextInputAction.newline : TextInputAction.next,
+                    ),
+                  ),
+                ],
               ),
             );
           }),

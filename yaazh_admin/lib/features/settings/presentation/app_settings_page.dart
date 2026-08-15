@@ -2,8 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:yaazh_admin/app/constants.dart';
 import 'package:yaazh_admin/app/theme.dart';
+import 'package:yaazh_admin/core/network/api_exception.dart';
+import 'package:yaazh_admin/core/theme/brand_colors.dart';
 import 'package:yaazh_admin/core/theme/theme_controller.dart';
+import 'package:yaazh_admin/core/widgets/app_toast.dart';
 import 'package:yaazh_admin/core/widgets/keyboard_dismiss.dart';
+import 'package:yaazh_admin/features/settings/data/web_settings_repository.dart';
 import 'package:yaazh_admin/features/shell/admin_shell.dart';
 
 class AppSettingsPage extends ConsumerWidget {
@@ -64,7 +68,7 @@ class AppSettingsPage extends ConsumerWidget {
               ],
             ),
             const SizedBox(height: 24),
-            Text('App colours', style: theme.textTheme.titleMedium),
+            Text('Admin colours', style: theme.textTheme.titleMedium),
             const SizedBox(height: 12),
             LayoutBuilder(
               builder: (context, constraints) {
@@ -85,11 +89,74 @@ class AppSettingsPage extends ConsumerWidget {
                           color: swatch.color,
                           selected: themeState.primary.toARGB32() ==
                               swatch.color.toARGB32(),
-                          onTap: () {
+                          onTap: () async {
                             hideKeyboard();
-                            ref
+                            await ref
                                 .read(appThemeProvider.notifier)
                                 .setPrimary(swatch.color);
+                            try {
+                              await ref
+                                  .read(webSettingsRepositoryProvider)
+                                  .update('admin_primary_color', colorToHex(swatch.color));
+                            } catch (e) {
+                              showErrorToast(
+                                e is ApiException ? e.message : e.toString(),
+                              );
+                            }
+                          },
+                        ),
+                      ),
+                  ],
+                );
+              },
+            ),
+            const SizedBox(height: 24),
+            Text('Secondary colour', style: theme.textTheme.titleMedium),
+            const SizedBox(height: 12),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                const spacing = 8.0;
+                final cols = constraints.maxWidth >= 520 ? 4 : 3;
+                final width =
+                    (constraints.maxWidth - spacing * (cols - 1)) / cols;
+                const secondarySwatches = <({String name, Color color})>[
+                  (name: 'Charcoal', color: Color(0xFF1F2933)),
+                  (name: 'Navy', color: Color(0xFF0F172A)),
+                  (name: 'Slate', color: Color(0xFF334155)),
+                  (name: 'Ink', color: Color(0xFF111827)),
+                  (name: 'Graphite', color: Color(0xFF374151)),
+                  (name: 'Deep', color: Color(0xFF1E293B)),
+                ];
+                return Wrap(
+                  spacing: spacing,
+                  runSpacing: spacing,
+                  children: [
+                    for (final swatch in secondarySwatches)
+                      SizedBox(
+                        width: width,
+                        height: 52,
+                        child: _ColorTile(
+                          name: swatch.name,
+                          color: swatch.color,
+                          selected: themeState.secondary.toARGB32() ==
+                              swatch.color.toARGB32(),
+                          onTap: () async {
+                            hideKeyboard();
+                            await ref
+                                .read(appThemeProvider.notifier)
+                                .setSecondary(swatch.color);
+                            try {
+                              await ref
+                                  .read(webSettingsRepositoryProvider)
+                                  .update(
+                                    'admin_secondary_color',
+                                    colorToHex(swatch.color),
+                                  );
+                            } catch (e) {
+                              showErrorToast(
+                                e is ApiException ? e.message : e.toString(),
+                              );
+                            }
                           },
                         ),
                       ),

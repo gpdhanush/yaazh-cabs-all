@@ -32,6 +32,7 @@ import { LocationField, type LocationValue } from "@/components/site/location-fi
 import { cn } from "@/lib/utils";
 import { trackEvent } from "@/lib/analytics";
 import {
+  PHONE_PRIMARY,
   tripTypes,
   vehicles,
   pickupPlaces,
@@ -45,12 +46,14 @@ import { cacheBooking } from "@/lib/bookings";
 import {
   ApiError,
   createBooking,
+  getAppConfig,
   getVehicleCategories,
   isApiConfigured,
   toApiTripType,
   type VehicleCategory,
 } from "@/lib/api";
 import { coordsForPlace } from "@/lib/location-search";
+import { isSouthIndiaLocation, unserviceableDropMessage } from "@/lib/south-india";
 
 const times = Array.from({ length: 48 }, (_, i) => {
   const h = Math.floor(i / 2);
@@ -243,6 +246,28 @@ type DoneBooking = {
   estimate: number;
 };
 
+function digitsOnly(v: string) {
+  return v.replace(/\D/g, "");
+}
+
+function formatPhone(raw: string) {
+  const d = digitsOnly(raw).slice(-10);
+  if (d.length !== 10) return raw;
+  return `${d.slice(0, 5)} ${d.slice(5)}`;
+}
+
+function dropServiceError(phone: string) {
+  const tel = digitsOnly(phone).slice(-10);
+  return (
+    <>
+      Not serviceable. Please contact us{" "}
+      <a href={`tel:+91${tel}`} className="font-semibold underline underline-offset-2">
+        {phone}
+      </a>
+    </>
+  );
+}
+
 function parsePickupAt(date: Date, timeLabel: string): Date {
   const match = timeLabel.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
   if (!match) return date;
@@ -288,6 +313,7 @@ export function BookingForm() {
   const [dateOpen, setDateOpen] = useState(false);
   const [done, setDone] = useState<DoneBooking | null>(null);
   const [categories, setCategories] = useState<VehicleCategory[]>([]);
+  const [supportPhone, setSupportPhone] = useState(PHONE_PRIMARY);
 
   const today = useMemo(() => {
     const d = new Date();
@@ -304,6 +330,14 @@ export function BookingForm() {
       })
       .catch(() => {
         /* static fallback */
+      });
+    getAppConfig()
+      .then((cfg) => {
+        const phone = cfg.settings?.["support_phone"];
+        if (phone) setSupportPhone(formatPhone(phone));
+      })
+      .catch(() => {
+        /* keep default */
       });
   }, []);
 
@@ -353,7 +387,17 @@ export function BookingForm() {
     }
     if (!pickup.trim()) next.pickup = "Pickup location is required";
     if (!drop.trim()) next.drop = "Drop location is required";
-    if (pickup && drop && pickup.trim() === drop.trim()) next.drop = "Drop must differ from pickup";
+    else if (pickup && drop && pickup.trim() === drop.trim()) next.drop = "Drop must differ from pickup";
+    else if (
+      !isSouthIndiaLocation({
+        label: drop,
+        secondary: dropMeta?.secondary,
+        latitude: dropMeta?.latitude ?? coordsForPlace(drop)?.latitude,
+        longitude: dropMeta?.longitude ?? coordsForPlace(drop)?.longitude,
+      })
+    ) {
+      next.drop = unserviceableDropMessage(supportPhone);
+    }
     if (!date) next.date = "Choose a pickup date";
     if (!time) next.time = "Pickup time is mandatory";
     if (!selectedVehicle) next.vehicle = "Select a vehicle";
@@ -563,18 +607,39 @@ export function BookingForm() {
           fixedOptions={pickupPlaces}
           placeholder="Select pickup point"
         />
-        <LocationField
-          label="Drop location"
-          value={drop}
-          onChange={(v, meta) => {
-            setDrop(v);
-            setDropMeta(meta ?? (v ? { label: v, ...(coordsForPlace(v) ?? {}) } : null));
-            if (v.trim()) clearError("drop");
-          }}
-          error={errors.drop}
-          icon={<Navigation />}
-          placeholder="Search city, airport or area"
-        />
+        <div>
+          <LocationField
+            label="Drop location"
+            value={drop}
+            onChange={(v, meta) => {
+              const resolved = meta ?? (v ? { label: v, ...(coordsForPlace(v) ?? {}) } : null);
+              setDrop(v);
+              setDropMeta(resolved);
+              if (!v.trim()) {
+                clearError("drop");
+                return;
+              }
+              if (
+                !isSouthIndiaLocation({
+                  label: v,
+                  secondary: resolved?.secondary,
+                  latitude: resolved?.latitude,
+                  longitude: resolved?.longitude,
+                })
+              ) {
+                setErrors((prev) => ({ ...prev, drop: unserviceableDropMessage(supportPhone) }));
+                return;
+              }
+              clearError("drop");
+            }}
+            error={
+              errors.drop?.startsWith("Not serviceable") ? dropServiceError(supportPhone) : errors.drop
+            }
+            icon={<Navigation />}
+            placeholder="Search South India city, airport or area"
+          />
+          <p className="mt-1 text-[11px] text-muted-foreground">Drops within South India only</p>
+        </div>
 
         <Field label="Pickup date" error={errors.date} icon={<CalendarDays />}>
           <Popover open={dateOpen} onOpenChange={setDateOpen}>

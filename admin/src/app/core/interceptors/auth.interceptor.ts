@@ -8,6 +8,7 @@ let refreshing = false;
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const auth = inject(AuthService);
   const token = auth.accessToken();
+  const isPublicApi = req.url.includes('/api/v1/public/');
   const isAuthRoute = req.url.includes('/api/v1/auth/admin/');
 
   const authReq =
@@ -17,7 +18,7 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
 
   return next(authReq).pipe(
     catchError((err: unknown) => {
-      if (!(err instanceof HttpErrorResponse) || err.status !== 401 || isAuthRoute) {
+      if (!(err instanceof HttpErrorResponse) || err.status !== 401 || isAuthRoute || isPublicApi) {
         return throwError(() => err);
       }
       if (refreshing) {

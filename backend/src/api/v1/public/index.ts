@@ -348,6 +348,23 @@ export const publicRoutes: FastifyPluginAsync = async (app) => {
     const appType = q.app?.trim() || "all";
     const platform = q.platform?.trim() || "all";
 
+    for (const s of [
+      { key: "primary_color", value: "#ffc107", group: "branding" },
+      { key: "secondary_color", value: "#1f2933", group: "branding" },
+    ]) {
+      await prisma.appSettings.upsert({
+        where: { setting_key: s.key },
+        create: {
+          setting_key: s.key,
+          setting_value: s.value,
+          value_type: "string",
+          group_name: s.group,
+          is_public: true,
+        },
+        update: { is_public: true, group_name: s.group },
+      });
+    }
+
     const [settings, remote] = await Promise.all([
       prisma.appSettings.findMany({ where: { is_public: true } }),
       prisma.remoteConfigValues.findMany({ where: { is_active: true } }),

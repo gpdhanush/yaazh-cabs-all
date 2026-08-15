@@ -11,6 +11,9 @@ import {
   type ReactNode,
 } from "react";
 
+import { applyBrandColors } from "@/lib/brand-colors";
+import { getAppConfig, isApiConfigured } from "@/lib/api";
+
 export type Theme = "light" | "dark" | "system";
 export type ResolvedTheme = "light" | "dark";
 
@@ -64,6 +67,23 @@ export function ThemeProvider({
     setResolvedTheme(resolved);
     applyThemeClass(resolved);
   }, [theme]);
+
+  useEffect(() => {
+    if (!isApiConfigured()) return;
+    let cancelled = false;
+    getAppConfig()
+      .then((cfg) => {
+        if (cancelled) return;
+        const s = cfg.settings ?? {};
+        applyBrandColors(s["primary_color"], s["secondary_color"]);
+      })
+      .catch(() => {
+        /* keep CSS defaults */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (theme !== "system") return;

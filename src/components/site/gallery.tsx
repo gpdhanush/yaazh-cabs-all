@@ -147,7 +147,7 @@ export function Gallery() {
                       className="absolute inset-0 size-full object-cover transition-transform duration-700 group-hover:scale-[1.03]"
                     />
                   )}
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#1F2933]/90 via-[#1F2933]/20 to-transparent" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-secondary/90 via-secondary/20 to-transparent" />
                   <span className="absolute right-3 top-3 inline-flex items-center gap-1.5 rounded-full bg-white/90 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#111827]">
                     <Images className="size-3" /> {g.photos.length} photo{g.photos.length === 1 ? "" : "s"}
                   </span>
@@ -170,7 +170,7 @@ export function Gallery() {
             role="dialog"
             aria-modal="true"
             aria-label={album.title}
-            className="fixed inset-0 z-[60] flex items-center justify-center bg-[#1F2933]/85 p-3 backdrop-blur-sm sm:p-6"
+            className="fixed inset-0 z-[60] flex items-center justify-center bg-secondary/85 p-3 backdrop-blur-sm sm:p-6"
             onClick={() => setOpenId(null)}
             initial={reduceMotion ? false : { opacity: 0 }}
             animate={{ opacity: 1 }}

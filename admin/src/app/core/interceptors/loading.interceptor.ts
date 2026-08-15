@@ -3,7 +3,7 @@ import { inject } from '@angular/core';
 import { finalize } from 'rxjs';
 import { LoadingService } from '../loading/loading.service';
 
-const SKIP = [/\/live-tracking(?:\?|$)/, /\/auth\/admin\/refresh(?:\?|$)/];
+const SKIP = [/\/live-tracking(?:\?|$)/, /\/auth\/admin\/refresh(?:\?|$)/, /\/public\/app-config/];
 
 export const loadingInterceptor: HttpInterceptorFn = (req, next) => {
   if (SKIP.some((re) => re.test(req.url))) return next(req);

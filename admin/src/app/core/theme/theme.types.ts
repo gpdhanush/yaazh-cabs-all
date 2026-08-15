@@ -3,6 +3,7 @@ export type ThemeMode = 'light' | 'dark';
 export type AdminTheme = {
   mode: ThemeMode;
   primary: string;
+  secondary: string;
   sidebar: string;
   header: string;
   background: string;
@@ -16,6 +17,7 @@ export type AdminTheme = {
 export const DEFAULT_THEME: AdminTheme = {
   mode: 'light',
   primary: '#7C3AED',
+  secondary: '#111827',
   sidebar: '#F3F4F6',
   header: 'rgba(255,255,255,0.86)',
   background: '#F8FAFC',
@@ -28,9 +30,10 @@ export const DEFAULT_THEME: AdminTheme = {
 
 /** Primary colour swatches for Appearance. */
 export const THEME_COLOR_SWATCHES: Array<{ id: string; label: string; primary: string }> = [
+  { id: 'purple', label: 'Purple', primary: '#7C3AED' },
   { id: 'blue', label: 'Blue', primary: '#2563EB' },
   { id: 'green', label: 'Green', primary: '#16A34A' },
-  { id: 'purple', label: 'Purple', primary: '#7C3AED' },
+  { id: 'yaazh', label: 'Yaazh gold', primary: '#ffc107' },
   { id: 'orange', label: 'Orange', primary: '#EA580C' },
   { id: 'pink', label: 'Pink', primary: '#DB2777' },
   { id: 'red', label: 'Red', primary: '#DC2626' },
