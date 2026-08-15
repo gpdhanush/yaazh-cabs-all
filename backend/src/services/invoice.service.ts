@@ -8,6 +8,30 @@ import { loadEnv } from "../config/env.js";
 import { NotFoundError, ValidationError } from "../errors/app-error.js";
 import { sendMail } from "./mail.service.js";
 import { publicInvoiceApiPath } from "../utils/public-url.js";
+import { pngBlackToTransparent } from "../utils/png-black-to-transparent.js";
+
+const INVOICE_TZ = "Asia/Kolkata";
+
+function formatInvoiceDateTime(value: Date | null | undefined): string {
+  if (!value) return "—";
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat("en-US", {
+      timeZone: INVOICE_TZ,
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: true,
+    })
+      .formatToParts(value)
+      .map((p) => [p.type, p.value]),
+  ) as Record<string, string>;
+  const hour = (parts.hour ?? "").padStart(2, "0");
+  const ampm = (parts.dayPeriod ?? "").replace(/\./g, "").toUpperCase();
+  return `${parts.day}-${parts.month}-${parts.year} ${hour}:${parts.minute}:${parts.second} ${ampm}`;
+}
 
 function roundMoney(n: number): number {
   return Math.round(n * 100) / 100;
@@ -109,12 +133,32 @@ async function companyProfile() {
 function invoiceLogoPath(): string | null {
   const here = path.dirname(fileURLToPath(import.meta.url));
   const candidates = [
+    path.resolve(process.cwd(), "assets/admin-invoice.png"),
+    path.resolve(process.cwd(), "backend/assets/admin-invoice.png"),
+    path.resolve(here, "../../assets/admin-invoice.png"),
+    path.resolve(here, "../assets/admin-invoice.png"),
     path.resolve(process.cwd(), "assets/invoice-logo.png"),
-    path.resolve(process.cwd(), "backend/assets/invoice-logo.png"),
     path.resolve(here, "../../assets/invoice-logo.png"),
-    path.resolve(here, "../assets/invoice-logo.png"),
   ];
   return candidates.find((p) => fs.existsSync(p)) ?? null;
+}
+
+let cachedInvoiceLogo: Buffer | null | undefined;
+
+function invoiceLogoImage(): Buffer | null {
+  if (cachedInvoiceLogo !== undefined) return cachedInvoiceLogo;
+  const logoPath = invoiceLogoPath();
+  if (!logoPath) {
+    cachedInvoiceLogo = null;
+    return null;
+  }
+  const raw = fs.readFileSync(logoPath);
+  try {
+    cachedInvoiceLogo = pngBlackToTransparent(raw);
+  } catch {
+    cachedInvoiceLogo = raw;
+  }
+  return cachedInvoiceLogo;
 }
 
 function invoicePdfPath(invoiceNumber: string) {
@@ -138,6 +182,7 @@ async function buildInvoicePdf(params: {
     pickup_location: string;
     drop_location: string;
     pickup_at: Date;
+    completed_at: Date | null;
     trip_type: string;
     estimated_distance_km: { toString(): string } | null;
     actual_distance_km: { toString(): string } | null;
@@ -178,52 +223,52 @@ async function buildInvoicePdf(params: {
         ? Number(params.booking.estimated_distance_km)
         : null;
   const contact = [company.phone, company.email].filter(Boolean).join("  |  ");
-  const invoiceDate = params.invoiceDate.toISOString().slice(0, 10);
-  const pickup = params.booking.pickup_at.toLocaleString("en-IN", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
+  const invoiceDate = formatInvoiceDateTime(params.invoiceDate);
+  const pickup = formatInvoiceDateTime(params.booking.pickup_at);
+  const completed = formatInvoiceDateTime(params.booking.completed_at);
 
-  doc.rect(0, 0, pageW, 128).fill(primary);
-  doc.rect(0, 128, pageW, 8).fill("#98BDFF");
+  const logoBuf = invoiceLogoImage();
+  const logoSize = 180;
+  const headerH = logoBuf ? logoSize + 24 : 128;
+  doc.rect(0, 0, pageW, headerH).fill(primary);
+  doc.rect(0, headerH, pageW, 8).fill("#98BDFF");
 
-  const logoPath = invoiceLogoPath();
-  if (logoPath) {
-    doc.save();
-    doc.roundedRect(18, 28, 72, 72, 10).fill("#FFFFFF");
-    doc.restore();
-    doc.image(logoPath, 24, 34, { fit: [60, 60] });
+  if (logoBuf) {
+    doc.image(logoBuf, 12, 12, { fit: [logoSize, logoSize] });
   } else {
     doc.circle(56, 58, 22).fill("#FFFFFF");
     doc.fillColor(primary).font("Helvetica-Bold").fontSize(13).text("YZ", 34, 51, { width: 44, align: "center" });
   }
 
-  doc.fillColor("#FFFFFF").font("Helvetica-Bold").fontSize(20).text(company.name, 102, 32, { width: 250 });
+  const metaX = logoBuf ? 200 : 102;
+  const metaW = pageW - metaX - 24;
+  doc.fillColor("#FFFFFF").font("Helvetica-Bold").fontSize(11).text("INVOICE", metaX, 18, {
+    width: metaW,
+    align: "right",
+  });
   doc.font("Helvetica").fontSize(9).fillColor("#E0E7FF");
-  if (company.address) doc.text(company.address, 102, 58, { width: 250 });
-  if (contact) doc.text(contact, 102, 86, { width: 250 });
-
-  doc.fillColor("#FFFFFF").font("Helvetica-Bold").fontSize(11).text("INVOICE", 360, 30, { width: 190, align: "right" });
-  doc.font("Helvetica").fontSize(9).fillColor("#E0E7FF");
-  doc.text(params.invoiceNumber, 360, 48, { width: 190, align: "right" });
-  doc.text(`Date ${invoiceDate}`, 360, 62, { width: 190, align: "right" });
-  doc.text(`Booking ${params.booking.booking_reference}`, 360, 76, { width: 190, align: "right" });
+  doc.text(params.invoiceNumber, metaX, 36, { width: metaW, align: "right" });
+  doc.text(`Date ${invoiceDate}`, metaX, 50, { width: metaW, align: "right" });
+  doc.text(`Booking ${params.booking.booking_reference}`, metaX, 64, { width: metaW, align: "right" });
+  doc.text(`Completed ${completed}`, metaX, 78, { width: metaW, align: "right" });
+  if (company.address) doc.text(company.address, metaX, 96, { width: metaW, align: "right" });
+  if (contact) doc.text(contact, metaX, 110, { width: metaW, align: "right" });
 
   const pill = paid ? "PAID" : params.amounts.paid > 0 ? "PARTIAL" : "DUE";
   const pillColor = paid ? "#22C55E" : params.amounts.paid > 0 ? "#F59E0B" : "#F3797E";
-  doc.roundedRect(pageW - 86, 94, 50, 16, 8).fill(pillColor);
-  doc.fillColor("#FFFFFF").font("Helvetica-Bold").fontSize(8).text(pill, pageW - 86, 98, { width: 50, align: "center" });
+  doc.roundedRect(pageW - 74, headerH - 30, 50, 16, 8).fill(pillColor);
+  doc.fillColor("#FFFFFF").font("Helvetica-Bold").fontSize(8).text(pill, pageW - 74, headerH - 26, {
+    width: 50,
+    align: "center",
+  });
 
   const left = 40;
   const colW = 247;
   const gap = 16;
-  let y = 156;
+  let y = headerH + 28;
 
-  doc.roundedRect(left, y, colW, 118, 8).fill(card);
-  doc.roundedRect(left + colW + gap, y, colW, 118, 8).fill(card);
+  doc.roundedRect(left, y, colW, 136, 8).fill(card);
+  doc.roundedRect(left + colW + gap, y, colW, 136, 8).fill(card);
 
   doc.fillColor(primary).font("Helvetica-Bold").fontSize(8).text("BILL TO", left + 16, y + 14);
   doc.fillColor(text).font("Helvetica-Bold").fontSize(12).text(params.booking.customer_name, left + 16, y + 32, {
@@ -243,11 +288,13 @@ async function buildInvoicePdf(params: {
     y + 32,
     { width: colW - 32 },
   );
-  doc.font("Helvetica").fontSize(10).fillColor(muted);
-  doc.text(`${tripLabel}  |  Pickup ${pickup}`, tripX + 16, y + 72, { width: colW - 32 });
-  if (km != null) doc.text(`Distance ${km} km`, tripX + 16, y + 90, { width: colW - 32 });
+  doc.font("Helvetica").fontSize(9).fillColor(muted);
+  doc.text(`${tripLabel}`, tripX + 16, y + 68, { width: colW - 32 });
+  doc.text(`Pickup ${pickup}`, tripX + 16, y + 84, { width: colW - 32 });
+  doc.text(`Drop completed ${completed}`, tripX + 16, y + 100, { width: colW - 32 });
+  if (km != null) doc.text(`Distance ${km} km`, tripX + 16, y + 116, { width: colW - 32 });
 
-  y += 140;
+  y += 158;
   doc.fillColor(text).font("Helvetica-Bold").fontSize(13).text("Fare summary", left, y);
   y += 22;
 
@@ -324,6 +371,7 @@ export async function upsertBookingInvoice(bookingId: bigint) {
       pickup_location: booking.pickup_location,
       drop_location: booking.drop_location,
       pickup_at: booking.pickup_at,
+      completed_at: booking.completed_at,
       trip_type: booking.trip_type,
       estimated_distance_km: booking.estimated_distance_km,
       actual_distance_km: booking.actual_distance_km,

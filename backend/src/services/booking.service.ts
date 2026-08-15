@@ -1757,21 +1757,14 @@ export async function applyBookingDiscount(params: {
         },
       });
 
-      await tx.tripEvents.create({
+      await tx.bookingStatusHistory.create({
         data: {
           booking_id: params.bookingId,
-          driver_id: booking.assigned_driver_id,
-          event_type: "fare_adjusted",
-          event_note: note,
-          event_payload: {
-            quoted,
-            discount_amount: discount,
-            final_total: finalTotal,
-            amount_paid: alreadyPaid,
-            balance_due: balanceDue,
-          } as Prisma.InputJsonValue,
-          created_by_type: "admin",
-          created_by_admin_id: params.adminId,
+          old_status: booking.status,
+          new_status: booking.status,
+          note,
+          changed_by_type: "admin",
+          changed_by_admin_id: params.adminId,
         },
       });
 
@@ -1794,6 +1787,28 @@ export async function applyBookingDiscount(params: {
   } catch (err) {
     const message = err instanceof Error ? err.message : "Could not apply discount.";
     throw new ValidationError(message);
+  }
+
+  try {
+    await prisma.tripEvents.create({
+      data: {
+        booking_id: params.bookingId,
+        driver_id: booking.assigned_driver_id,
+        event_type: "fare_adjusted",
+        event_note: note,
+        event_payload: {
+          quoted,
+          discount_amount: discount,
+          final_total: finalTotal,
+          amount_paid: alreadyPaid,
+          balance_due: balanceDue,
+        } as Prisma.InputJsonValue,
+        created_by_type: "admin",
+        created_by_admin_id: params.adminId,
+      },
+    });
+  } catch {
+    // trip_events.event_type ENUM may not include fare_adjusted until migration 006.
   }
 
   return getBookingPaymentSummary(params.bookingId);

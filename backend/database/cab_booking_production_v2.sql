@@ -783,7 +783,8 @@ CREATE TABLE trip_events (
     'trip_completed',
     'trip_cancelled',
     'payment_collected',
-    'customer_rated'
+    'customer_rated',
+    'fare_adjusted'
   ) NOT NULL,
   event_note TEXT NULL,
   latitude DECIMAL(10,7) NULL,
