@@ -239,6 +239,13 @@ class _AdminDrawer extends ConsumerWidget {
                   ),
                   _item(
                     context,
+                    icon: Icons.photo_library_rounded,
+                    label: 'Gallery',
+                    selected: location.startsWith('/gallery'),
+                    onTap: () => _open('/gallery'),
+                  ),
+                  _item(
+                    context,
                     icon: Icons.insights_rounded,
                     label: 'Reports',
                     selected: location.startsWith('/reports'),

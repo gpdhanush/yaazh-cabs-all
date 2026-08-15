@@ -23,6 +23,7 @@ import 'package:yaazh_admin/features/enquiries/presentation/enquiries_page.dart'
 import 'package:yaazh_admin/features/enquiries/presentation/enquiry_detail_page.dart';
 import 'package:yaazh_admin/features/fleet/presentation/fleet_page.dart';
 import 'package:yaazh_admin/features/fleet/presentation/vehicle_form_page.dart';
+import 'package:yaazh_admin/features/gallery/presentation/gallery_page.dart';
 import 'package:yaazh_admin/features/home/presentation/home_page.dart';
 import 'package:yaazh_admin/features/notifications/presentation/notification_compose_page.dart';
 import 'package:yaazh_admin/features/notifications/presentation/notifications_page.dart';
@@ -239,6 +240,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/testimonials',
         parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const TestimonialsPage(),
+      ),
+      slideRoute(
+        path: '/gallery',
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const GalleryPage(),
       ),
       slideRoute(
         path: '/reports',

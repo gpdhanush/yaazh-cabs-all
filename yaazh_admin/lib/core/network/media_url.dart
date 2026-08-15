@@ -60,7 +60,10 @@ String? resolveMediaUrl(String? raw) {
 
   final uri = Uri.tryParse(value);
   if (uri != null && uri.hasScheme && (uri.isScheme('http') || uri.isScheme('https'))) {
+    final vercelStorage = uri.host.endsWith('vercel.app') &&
+        uri.path.contains('/storage/');
     if (_isLoopback(uri.host) ||
+        vercelStorage ||
         uri.path.contains('/storage/public/invoices/') ||
         uri.path.contains('/api/v1/public/invoices/')) {
       final path = uri.path.contains('/storage/public/invoices/')

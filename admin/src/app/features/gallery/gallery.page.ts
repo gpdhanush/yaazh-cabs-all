@@ -118,7 +118,7 @@ const GROUP_TYPES = [
           </div>
           <div class="ya-page-card__body space-y-5">
             <div
-              class="ya-upload"
+              class="ya-upload ya-upload--stack"
               [class.ya-upload--filled]="dragOver() || uploading()"
               (dragover)="onDragOver($event)"
               (dragleave)="onDragLeave($event)"
@@ -180,8 +180,16 @@ const GROUP_TYPES = [
                   >
                     <mat-icon class="!text-[18px]">delete_outline</mat-icon>
                   </button>
-                  <figcaption class="truncate px-3 py-2 text-xs text-slate-600">
-                    {{ img.caption || 'No caption' }}
+                  <figcaption class="flex items-center gap-1 px-2 py-1.5 text-xs text-slate-600">
+                    <span class="min-w-0 flex-1 truncate">{{ img.caption || 'No caption' }}</span>
+                    <button
+                      type="button"
+                      class="grid size-7 shrink-0 place-items-center rounded-full text-slate-500 hover:bg-white hover:text-[var(--ya-primary)]"
+                      (click)="askEditCaption(img)"
+                      aria-label="Edit caption"
+                    >
+                      <mat-icon class="!text-[16px]">edit</mat-icon>
+                    </button>
                   </figcaption>
                 </figure>
               }
@@ -227,6 +235,52 @@ const GROUP_TYPES = [
                 [disabled]="deleting()"
               >
                 {{ deleting() ? 'Deleting…' : 'Delete photo' }}
+              </button>
+            </div>
+          </div>
+        </div>
+      }
+
+      @if (editingImage(); as img) {
+        <div class="ya-modal-overlay" yaModalPortal (click)="cancelEdit()" role="presentation">
+          <div
+            class="ya-confirm"
+            (click)="$event.stopPropagation()"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="ya-edit-caption-title"
+          >
+            <div class="ya-confirm__icon" aria-hidden="true">
+              <mat-icon>edit</mat-icon>
+            </div>
+            <h3 id="ya-edit-caption-title" class="ya-confirm__title">Edit caption</h3>
+            <img
+              [src]="src(img.image_url)"
+              [alt]="img.caption || 'Photo'"
+              class="mx-auto mt-1 max-h-36 w-full rounded-xl object-cover"
+            />
+            <div class="ya-field ya-field--stacked mt-3 text-left">
+              <label class="ya-label" for="edit_caption">Caption</label>
+              <input
+                id="edit_caption"
+                class="ya-input"
+                [(ngModel)]="editCaption"
+                maxlength="180"
+                placeholder="e.g. Outside front · Inside dashboard"
+              />
+            </div>
+            <div class="ya-confirm__footer">
+              <button mat-stroked-button class="ya-btn-ghost" type="button" (click)="cancelEdit()" [disabled]="savingCaption()">
+                Cancel
+              </button>
+              <button
+                mat-flat-button
+                class="ya-btn-primary"
+                type="button"
+                (click)="saveCaption()"
+                [disabled]="savingCaption()"
+              >
+                {{ savingCaption() ? 'Saving…' : 'Save caption' }}
               </button>
             </div>
           </div>
@@ -285,12 +339,15 @@ export class GalleryPage implements OnInit {
   readonly error = signal<string | null>(null);
   readonly pendingImage = signal<GalleryImage | null>(null);
   readonly pendingGroup = signal<GalleryGroup | null>(null);
+  readonly editingImage = signal<GalleryImage | null>(null);
   readonly deleting = signal(false);
+  readonly savingCaption = signal(false);
   readonly dragOver = signal(false);
 
   newGroupTitle = '';
   newGroupType = 'cars_outside';
   caption = '';
+  editCaption = '';
 
   ngOnInit(): void {
     this.reload();
@@ -358,12 +415,56 @@ export class GalleryPage implements OnInit {
 
   askDeleteGroup(group: GalleryGroup): void {
     this.pendingImage.set(null);
+    this.editingImage.set(null);
     this.pendingGroup.set(group);
   }
 
   askDeleteImage(img: GalleryImage): void {
     this.pendingGroup.set(null);
+    this.editingImage.set(null);
     this.pendingImage.set(img);
+  }
+
+  askEditCaption(img: GalleryImage): void {
+    this.pendingGroup.set(null);
+    this.pendingImage.set(null);
+    this.editCaption = img.caption ?? '';
+    this.editingImage.set(img);
+  }
+
+  cancelEdit(): void {
+    if (this.savingCaption()) return;
+    this.editingImage.set(null);
+  }
+
+  saveCaption(): void {
+    const img = this.editingImage();
+    if (!img) return;
+    this.savingCaption.set(true);
+    this.error.set(null);
+    const caption = this.editCaption.trim() || null;
+    this.api.update(`/gallery/images/${img.id}`, { caption }).subscribe({
+      next: (res) => {
+        this.savingCaption.set(false);
+        this.editingImage.set(null);
+        const updated = res.data as GalleryImage;
+        this.groups.set(
+          this.groups().map((g) =>
+            g.id === img.group_id
+              ? {
+                  ...g,
+                  images: g.images.map((i) => (i.id === img.id ? { ...i, ...updated } : i)),
+                }
+              : g,
+          ),
+        );
+        this.snack.open('Caption saved', 'OK', { duration: 2000 });
+      },
+      error: (err: unknown) => {
+        this.savingCaption.set(false);
+        this.error.set(err instanceof Error ? err.message : 'Could not save caption');
+      },
+    });
   }
 
   cancelDelete(): void {

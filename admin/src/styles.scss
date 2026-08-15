@@ -3895,6 +3895,22 @@ html[data-theme='dark'] .ya-field__icon:focus-within {
   background: color-mix(in srgb, var(--ya-primary) 4%, #fff);
 }
 
+/* Extra fields (caption) need a stacked layout so the preview does not overlap. */
+.ya-upload.ya-upload--stack {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 1rem;
+}
+
+.ya-upload.ya-upload--stack .ya-upload__preview {
+  aspect-ratio: auto;
+  width: 100%;
+  height: 7.5rem;
+  flex: none;
+  align-self: stretch;
+}
+
 .ya-upload__body {
   display: flex;
   flex-direction: column;

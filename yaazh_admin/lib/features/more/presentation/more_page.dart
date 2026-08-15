@@ -21,6 +21,7 @@ class MorePage extends ConsumerWidget {
       _MoreItem(Icons.explore_rounded, 'Live tracking', '/tracking', () => context.push('/tracking')),
       _MoreItem(Icons.insights_rounded, 'Reports', null, () => showComingSoon('Reports')),
       _MoreItem(Icons.star_rounded, 'Testimonials', '/testimonials', () => context.push('/testimonials')),
+      _MoreItem(Icons.photo_library_rounded, 'Gallery', '/gallery', () => context.push('/gallery')),
       _MoreItem(Icons.mail_rounded, 'Enquiries', '/enquiries', () => context.go('/enquiries')),
       _MoreItem(Icons.notifications_rounded, 'Push alerts', '/notifications', () => context.push('/notifications')),
       _MoreItem(Icons.language_rounded, 'Web settings', '/web-settings', () => context.push('/web-settings')),
