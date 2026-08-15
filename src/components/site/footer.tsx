@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { ArrowUp, Facebook, Instagram, Mail, MapPin, MessageCircle, Phone } from "lucide-react";
+import { ArrowUp, Mail, MapPin, MessageCircle, Phone } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { BrandLogo } from "@/components/site/brand-logo";
 import {
@@ -84,7 +84,7 @@ export function SiteFooter() {
               Udumalpet&apos;s trusted travel partner since 2015. Comfortable rides, reliable service,
               best prices — every single time.
             </p>
-            <div className="mt-6 flex gap-3">
+            <div className="mt-6">
               <a
                 href={`https://wa.me/${digits(whatsapp)}`}
                 target="_blank"
@@ -94,16 +94,6 @@ export function SiteFooter() {
               >
                 <MessageCircle className="size-4" />
               </a>
-              {[Facebook, Instagram].map((Icon, i) => (
-                <a
-                  key={i}
-                  href="#top"
-                  aria-label="Yaazh Cabs social profile"
-                  className="grid size-10 place-items-center rounded-full border border-white/15 text-white/70 hover:border-primary hover:text-primary"
-                >
-                  <Icon className="size-4" />
-                </a>
-              ))}
             </div>
           </div>
 
