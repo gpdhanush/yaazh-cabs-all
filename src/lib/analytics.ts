@@ -1,19 +1,24 @@
 export const SITE_ORIGIN =
   (import.meta.env["VITE_SITE_URL"] as string | undefined)?.replace(/\/$/, "") || "https://yaazhcabs.in";
 
-export const OG_IMAGE = `${SITE_ORIGIN}/og-cover.png`;
+export const OG_IMAGE = `${SITE_ORIGIN}/og-cover.jpg`;
 
 export const GA_MEASUREMENT_ID = (import.meta.env["VITE_GA_MEASUREMENT_ID"] as string | undefined)?.trim() || "";
 
 export const GOOGLE_SITE_VERIFICATION =
   (import.meta.env["VITE_GOOGLE_SITE_VERIFICATION"] as string | undefined)?.trim() || "";
 
+/** WhatsApp/Facebook: JPEG 1200×630, under ~300KB, absolute HTTPS URL in the static HTML shell. */
 export const defaultOgMeta = [
   { property: "og:image", content: OG_IMAGE },
-  { property: "og:image:width", content: "1536" },
-  { property: "og:image:height", content: "1024" },
+  { property: "og:image:url", content: OG_IMAGE },
+  { property: "og:image:secure_url", content: OG_IMAGE },
+  { property: "og:image:type", content: "image/jpeg" },
+  { property: "og:image:width", content: "1200" },
+  { property: "og:image:height", content: "630" },
   { property: "og:image:alt", content: "Yaazh Cabs — taxi in Udumalpet" },
   { name: "twitter:image", content: OG_IMAGE },
+  { name: "twitter:image:alt", content: "Yaazh Cabs — taxi in Udumalpet" },
 ];
 
 declare global {

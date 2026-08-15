@@ -14,7 +14,7 @@ import { ThemeProvider, themeInitScript } from "../components/theme-provider";
 import { ClearStaleServiceWorkers } from "../components/site/clear-stale-sw";
 import { SiteCursor } from "../components/site/site-cursor";
 import { GoogleAnalytics } from "../components/site/google-analytics";
-import { defaultOgMeta, GA_MEASUREMENT_ID, GOOGLE_SITE_VERIFICATION } from "../lib/analytics";
+import { defaultOgMeta, GA_MEASUREMENT_ID, GOOGLE_SITE_VERIFICATION, OG_IMAGE, SITE_ORIGIN } from "../lib/analytics";
 
 function NotFoundComponent() {
   return (
@@ -91,6 +91,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         content: "Comfortable rides, reliable service, best prices. Book a cab 24×7.",
       },
       { property: "og:type", content: "website" },
+      { property: "og:url", content: `${SITE_ORIGIN}/` },
+      { property: "og:site_name", content: "Yaazh Cabs" },
       { name: "twitter:card", content: "summary_large_image" },
       ...defaultOgMeta,
       ...(GOOGLE_SITE_VERIFICATION
@@ -112,6 +114,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "icon", href: "/app-logo.png", type: "image/png", sizes: "32x32" },
       { rel: "apple-touch-icon", href: "/app-logo.png", sizes: "180x180" },
       { rel: "manifest", href: "/manifest.webmanifest" },
+      { rel: "image_src", href: OG_IMAGE },
     ],
   }),
 
@@ -126,6 +129,20 @@ function RootShell({ children }: { children: ReactNode }) {
     <html lang="en" suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+        {/* Static so WhatsApp/Facebook see tags without running JS (SPA shell). */}
+        <meta property="og:title" content="Yaazh Cabs | Premium Taxi Service in Udumalpet" />
+        <meta property="og:description" content="Comfortable rides, reliable service, best prices. Book a cab 24×7." />
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content={`${SITE_ORIGIN}/`} />
+        <meta property="og:site_name" content="Yaazh Cabs" />
+        <meta property="og:image" content={OG_IMAGE} />
+        <meta property="og:image:secure_url" content={OG_IMAGE} />
+        <meta property="og:image:type" content="image/jpeg" />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:image" content={OG_IMAGE} />
+        <link rel="image_src" href={OG_IMAGE} />
         <HeadContent />
         {GA_MEASUREMENT_ID ? (
           <>

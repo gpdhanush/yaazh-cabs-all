@@ -9,7 +9,7 @@ This note is an audit of the current public site plus a step-by-step plan (Searc
 
 - GA4 loader when `VITE_GA_MEASUREMENT_ID` is set ([`src/lib/analytics.ts`](../src/lib/analytics.ts), [`src/routes/__root.tsx`](../src/routes/__root.tsx)). Events: `generate_lead` (booking + enquiry), `click_to_call`, `whatsapp_click`.
 - Search Console meta when `VITE_GOOGLE_SITE_VERIFICATION` is set.
-- Share image: [`public/og-cover.png`](../public/og-cover.png) (`og:image` / `twitter:image`).
+- Share image: [`public/og-cover.jpg`](../public/og-cover.jpg) (`og:image` / `twitter:image`, 1200×630 JPEG).
 - Static sitemap: [`public/sitemap.xml`](../public/sitemap.xml) (works on cPanel SPA). Env: see [`.env.example`](../.env.example). Rebuild after setting `VITE_*`.
 
 ---

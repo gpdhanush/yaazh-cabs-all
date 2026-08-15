@@ -14,6 +14,9 @@ RewriteRule ^api/v1/public/invoices/(.+)$ https://luxe-motion-ride-1.onrender.co
 # RewriteCond %{HTTPS} !=on
 # RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 
+# Old share-image URL (WhatsApp/Facebook may have cached .png)
+RewriteRule ^og-cover\.png$ /og-cover.jpg [L,R=301]
+
 # Serve real files / directories first (assets, favicon, robots, shell)
 RewriteCond %{REQUEST_FILENAME} -f [OR]
 RewriteCond %{REQUEST_FILENAME} -d
