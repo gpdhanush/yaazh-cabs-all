@@ -9,6 +9,7 @@ import { getPublicFeedback, submitPublicFeedback } from "../../../services/feedb
 import { loadDriverPhotoBytes } from "../../../services/driver-photo.service.js";
 import { loadAdminPhotoBytes } from "../../../services/admin-photo.service.js";
 import { loadPublicInvoicePdf } from "../../../services/invoice.service.js";
+import { loadPublicFile } from "../../../services/stored-media.service.js";
 import { mapService } from "../../../services/map.service.js";
 import { absolutePublicUrl } from "../../../utils/public-url.js";
 import type { TripType } from "@prisma/client";
@@ -56,6 +57,19 @@ export const publicRoutes: FastifyPluginAsync = async (app) => {
       .header("Content-Disposition", `inline; filename="${invoice.invoice_number}.pdf"`)
       .header("Content-Length", String(pdfBuffer.length))
       .send(pdfBuffer);
+  });
+
+  app.get("/media/*", async (req, reply) => {
+    const rel = String((req.params as { "*": string })["*"] ?? "");
+    const file = await loadPublicFile(rel);
+    if (!file) {
+      return reply.code(404).type("text/plain").send("Not found");
+    }
+    return reply
+      .header("Cache-Control", "public, max-age=86400")
+      .header("Content-Type", file.mimeType)
+      .header("Content-Length", String(file.bytes.length))
+      .send(file.bytes);
   });
 
   app.get("/cities", async (req, reply) => {

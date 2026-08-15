@@ -10,6 +10,7 @@ import { requireAuth, requireUser } from "../../../middleware/auth.js";
 import { bookingService, serializeBooking, serializeDriverParty, getBookingPaymentSummary, collectBookingPayment } from "../../../services/booking.service.js";
 import { deliverBookingNotification, notifyAdmins } from "../../../services/fcm.service.js";
 import { saveDriverPhotoFromStoredUrl } from "../../../services/driver-photo.service.js";
+import { persistPublicFile } from "../../../services/stored-media.service.js";
 import { NotFoundError, ValidationError, ConflictError } from "../../../errors/app-error.js";
 import { Prisma } from "@prisma/client";
 
@@ -500,9 +501,11 @@ export const driverRoutes: FastifyPluginAsync = async (app) => {
     const dir = path.resolve(env.STORAGE_PATH, "public", "documents");
     fs.mkdirSync(dir, { recursive: true });
     const fullPath = path.join(dir, filename);
-    await fs.promises.writeFile(fullPath, await file.toBuffer());
+    const bytes = await file.toBuffer();
+    await fs.promises.writeFile(fullPath, bytes);
 
     const relativeUrl = `/storage/public/documents/${filename}`;
+    await persistPublicFile(relativeUrl, bytes, mime);
     return ok(reply, { url: relativeUrl, path: relativeUrl }, "File uploaded.", 201);
   });
 

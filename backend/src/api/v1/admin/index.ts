@@ -30,6 +30,7 @@ import {
 import type { TripType } from "@prisma/client";
 import { hashPassword } from "../../../utils/crypto.js";
 import { absolutePublicUrl, publicInvoiceApiPath, toStoredMediaPath } from "../../../utils/public-url.js";
+import { persistPublicFile } from "../../../services/stored-media.service.js";
 
 function haversineKm(
   a: { lat: number; lng: number },
@@ -2183,9 +2184,11 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
     const dir = path.resolve(env.STORAGE_PATH, "public", "routes");
     fs.mkdirSync(dir, { recursive: true });
     const fullPath = path.join(dir, filename);
-    await fs.promises.writeFile(fullPath, await file.toBuffer());
+    const bytes = await file.toBuffer();
+    await fs.promises.writeFile(fullPath, bytes);
 
     const relativeUrl = `/storage/public/routes/${filename}`;
+    await persistPublicFile(relativeUrl, bytes, mime);
     return ok(reply, { url: absolutePublicUrl(relativeUrl, req), path: relativeUrl }, "Image uploaded.", 201);
   });
 

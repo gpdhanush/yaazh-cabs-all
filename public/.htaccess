@@ -6,7 +6,8 @@ DirectoryIndex index.html _shell.html
 RewriteEngine On
 
 # Uploaded images and invoice PDFs live on the API, not this static site
-RewriteRule ^storage/public/(.+)$ https://luxe-motion-ride-1.onrender.com/storage/public/$1 [L,R=302]
+RewriteRule ^storage/public/invoices/(.+)$ https://luxe-motion-ride-1.onrender.com/api/v1/public/invoices/$1 [L,R=302]
+RewriteRule ^storage/public/(.+)$ https://luxe-motion-ride-1.onrender.com/api/v1/public/media/$1 [L,R=302]
 RewriteRule ^api/v1/public/invoices/(.+)$ https://luxe-motion-ride-1.onrender.com/api/v1/public/invoices/$1 [L,R=302]
 
 # Force HTTPS (uncomment after AutoSSL is active)

@@ -11,7 +11,7 @@
     },
     {
       "source": "/storage/public/:path*",
-      "destination": "https://luxe-motion-ride-1.onrender.com/storage/public/:path*"
+      "destination": "https://luxe-motion-ride-1.onrender.com/api/v1/public/media/:path*"
     },
     {
       "source": "/api/v1/public/invoices/:file",

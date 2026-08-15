@@ -3,7 +3,6 @@ import cors from "@fastify/cors";
 import helmet from "@fastify/helmet";
 import rateLimit from "@fastify/rate-limit";
 import multipart from "@fastify/multipart";
-import fastifyStatic from "@fastify/static";
 import swagger from "@fastify/swagger";
 import swaggerUi from "@fastify/swagger-ui";
 import path from "node:path";
@@ -18,6 +17,7 @@ import { driverRoutes } from "./api/v1/driver/index.js";
 import { adminRoutes } from "./api/v1/admin/index.js";
 import { ok } from "./utils/api-response.js";
 import { loadPublicInvoicePdf } from "./services/invoice.service.js";
+import { loadPublicFile } from "./services/stored-media.service.js";
 
 export async function buildApp() {
   const env = loadEnv();
@@ -68,10 +68,17 @@ export async function buildApp() {
       .send(pdfBuffer);
   });
 
-  await app.register(fastifyStatic, {
-    root: publicDir,
-    prefix: "/storage/public/",
-    decorateReply: false,
+  app.get("/storage/public/*", async (req, reply) => {
+    const rel = String((req.params as { "*": string })["*"] ?? "");
+    const file = await loadPublicFile(rel);
+    if (!file) {
+      return reply.code(404).type("text/plain").send("Not found");
+    }
+    return reply
+      .header("Cache-Control", "public, max-age=86400")
+      .header("Content-Type", file.mimeType)
+      .header("Content-Length", String(file.bytes.length))
+      .send(file.bytes);
   });
 
   await app.register(swagger, {

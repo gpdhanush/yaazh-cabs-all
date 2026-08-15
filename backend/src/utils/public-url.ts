@@ -85,6 +85,15 @@ function rewriteInvoicePath(raw: string): string {
   return publicInvoiceApiPath(decodeURIComponent(match[1]));
 }
 
+/** Durable API path — Render disk is ephemeral, files are served from stored_media. */
+function rewriteStorageMediaPath(raw: string): string {
+  const invoiced = rewriteInvoicePath(raw);
+  if (invoiced !== raw) return invoiced;
+  const match = raw.match(/\/storage\/public\/(.+)/i);
+  if (!match?.[1] || match[1].toLowerCase().startsWith("invoices/")) return raw;
+  return `/api/v1/public/media/${match[1]}`;
+}
+
 export function absolutePublicUrl(pathOrUrl: string | null | undefined, req?: FastifyRequest): string {
   const origin = publicApiOrigin(req);
   let raw = (pathOrUrl ?? "").trim();
@@ -92,7 +101,7 @@ export function absolutePublicUrl(pathOrUrl: string | null | undefined, req?: Fa
   if (/^https?:\/\//i.test(raw)) {
     try {
       const url = new URL(raw);
-      const path = rewriteInvoicePath(url.pathname);
+      const path = rewriteStorageMediaPath(url.pathname);
       if (isLoopbackHost(url.hostname) || isFrontendHost(url.hostname) || path !== url.pathname) {
         return `${origin}${path}${url.search}`;
       }
@@ -101,6 +110,6 @@ export function absolutePublicUrl(pathOrUrl: string | null | undefined, req?: Fa
       return raw;
     }
   }
-  raw = rewriteInvoicePath(raw);
+  raw = rewriteStorageMediaPath(raw);
   return `${origin}${raw.startsWith("/") ? raw : `/${raw}`}`;
 }

@@ -1,11 +1,35 @@
 const API_BASE = (import.meta.env["VITE_API_URL"] as string | undefined)?.replace(/\/$/, "") || "";
 
+function durableMediaUrl(value: string, apiOrigin: string): string | null {
+  if (!apiOrigin) return null;
+  let pathname = value;
+  let search = "";
+  try {
+    const u = new URL(value);
+    pathname = u.pathname;
+    search = u.search;
+  } catch {
+    const q = value.indexOf("?");
+    if (q >= 0) {
+      pathname = value.slice(0, q);
+      search = value.slice(q);
+    }
+  }
+  const invoice = pathname.match(/\/(?:storage\/public\/invoices|api\/v1\/public\/invoices)\/([^/]+)/i);
+  if (invoice) return `${apiOrigin}/api/v1/public/invoices/${invoice[1]}${search}`;
+  const stored = pathname.match(/\/storage\/public\/(.+)/i);
+  if (stored) return `${apiOrigin}/api/v1/public/media/${stored[1]}${search}`;
+  return null;
+}
+
 export function mediaUrl(raw?: string | null): string | null {
   if (!raw) return null;
   const value = raw.trim();
   if (!value || value === "null") return null;
 
   const apiOrigin = API_BASE.replace(/\/api\/v1\/?$/i, "").replace(/\/$/, "");
+  const durable = durableMediaUrl(value, apiOrigin);
+  if (durable) return durable;
 
   if (/^https?:\/\//i.test(value)) {
     try {

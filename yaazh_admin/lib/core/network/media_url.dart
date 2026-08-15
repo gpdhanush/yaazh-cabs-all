@@ -58,18 +58,47 @@ String? resolveMediaUrl(String? raw) {
   final value = raw.trim();
   if (value.isEmpty || value == 'null') return null;
 
-  final uri = Uri.tryParse(value);
-  if (uri != null && uri.hasScheme && (uri.isScheme('http') || uri.isScheme('https'))) {
-    final vercelStorage = uri.host.endsWith('vercel.app') &&
-        uri.path.contains('/storage/');
-    if (_isLoopback(uri.host) ||
-        vercelStorage ||
-        uri.path.contains('/storage/public/invoices/') ||
-        uri.path.contains('/api/v1/public/invoices/')) {
-      final path = uri.path.contains('/storage/public/invoices/')
-          ? uri.path.replaceFirst('/storage/public/invoices/', '/api/v1/public/invoices/')
-          : uri.path;
-      return '$backendOrigin$path${uri.hasQuery ? '?${uri.query}' : ''}';
+  final absolute = Uri.tryParse(value);
+  final path = () {
+    if (absolute != null &&
+        absolute.hasScheme &&
+        (absolute.isScheme('http') || absolute.isScheme('https'))) {
+      return absolute.path;
+    }
+    if (value.startsWith('/')) return value.split('?').first;
+    return '/$value';
+  }();
+  final query = () {
+    if (absolute != null &&
+        absolute.hasScheme &&
+        (absolute.isScheme('http') || absolute.isScheme('https')) &&
+        absolute.hasQuery) {
+      return '?${absolute.query}';
+    }
+    final q = value.indexOf('?');
+    if (q >= 0 && (absolute == null || !absolute.hasScheme)) {
+      return value.substring(q);
+    }
+    return '';
+  }();
+
+  final invoice = RegExp(
+    r'/(?:storage/public/invoices|api/v1/public/invoices)/([^/?#]+)',
+    caseSensitive: false,
+  ).firstMatch(path);
+  if (invoice != null) {
+    return '$backendOrigin/api/v1/public/invoices/${invoice.group(1)}$query';
+  }
+  final stored = RegExp(r'/storage/public/(.+)', caseSensitive: false).firstMatch(path);
+  if (stored != null) {
+    return '$backendOrigin/api/v1/public/media/${stored.group(1)}$query';
+  }
+
+  if (absolute != null &&
+      absolute.hasScheme &&
+      (absolute.isScheme('http') || absolute.isScheme('https'))) {
+    if (_isLoopback(absolute.host) || absolute.host.endsWith('vercel.app')) {
+      return '$backendOrigin${absolute.path}${absolute.hasQuery ? '?${absolute.query}' : ''}';
     }
     return value;
   }
