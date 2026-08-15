@@ -93,11 +93,12 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             YaTextField(
               label: 'Email',
               required: true,
-              hint: 'admin@yaazh.local',
+              hint: 'Enter your email',
               controller: _emailController,
               keyboardType: TextInputType.emailAddress,
               autofillHints: const [AutofillHints.email],
               prefixIcon: const Icon(Icons.mail_outline_rounded),
+              autovalidateMode: AutovalidateMode.onUserInteraction,
               validator: (value) {
                 final email = value?.trim() ?? '';
                 if (email.isEmpty) return 'Enter your email';
@@ -111,26 +112,18 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             YaPasswordField(
               label: 'Password',
               required: true,
+              hint: 'Enter your password',
               controller: _passwordController,
               textInputAction: TextInputAction.done,
               autofillHints: const [AutofillHints.password],
               onFieldSubmitted: (_) => _onLoginSubmitted(),
+              autovalidateMode: AutovalidateMode.onUserInteraction,
               validator: (value) {
                 if (value == null || value.isEmpty) return 'Enter your password';
                 return null;
               },
             ),
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton(
-                onPressed: () {
-                  hideKeyboard();
-                  context.push('/forgot-password');
-                },
-                child: const Text('Forgot password?'),
-              ),
-            ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 20),
             ElevatedButton(
               onPressed: isLoading ? null : _onLoginSubmitted,
                     child: Text(isLoading ? 'SIGNING IN…' : 'SIGN IN'),

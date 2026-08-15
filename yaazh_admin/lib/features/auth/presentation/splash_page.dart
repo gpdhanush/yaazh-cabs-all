@@ -17,7 +17,7 @@ class SplashPage extends ConsumerStatefulWidget {
 
 class _SplashPageState extends ConsumerState<SplashPage> {
   String _version = AppConstants.appVersion;
-
+  String _build = '1';
   @override
   void initState() {
     super.initState();
@@ -27,7 +27,12 @@ class _SplashPageState extends ConsumerState<SplashPage> {
   Future<void> _boot() async {
     try {
       final info = await PackageInfo.fromPlatform();
-      if (mounted) setState(() => _version = info.version);
+      if (mounted) {
+        setState(() {
+          _version = info.version;
+          _build = info.buildNumber;
+        });
+      }
     } catch (_) {}
 
     await Future<void>.delayed(const Duration(milliseconds: 800));
@@ -73,7 +78,7 @@ class _SplashPageState extends ConsumerState<SplashPage> {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  'Operations console',
+                  'Admin Console',
                   style: TextStyle(
                     color: onHeader.withValues(alpha: 0.7),
                     fontSize: 15,
@@ -91,7 +96,7 @@ class _SplashPageState extends ConsumerState<SplashPage> {
                 ),
                 const Spacer(flex: 4),
                 Text(
-                  'Version $_version',
+                  'Version $_version+$_build',
                   style: TextStyle(
                     color: onHeader.withValues(alpha: 0.55),
                     fontSize: 12,

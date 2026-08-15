@@ -23,7 +23,7 @@ class FleetPage extends ConsumerWidget {
       child: KeyboardDismiss(
         child: Scaffold(
           appBar: AppBar(
-            title: const Text('Fleet'),
+            title: const Text('Vehicles'),
             bottom: const TabBar(
               tabs: [
                 Tab(text: 'Vehicles'),

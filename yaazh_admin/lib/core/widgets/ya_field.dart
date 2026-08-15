@@ -65,6 +65,7 @@ class YaTextField extends StatelessWidget {
   final Iterable<String>? autofillHints;
   final ValueChanged<String>? onChanged;
   final ValueChanged<String>? onFieldSubmitted;
+  final AutovalidateMode autovalidateMode;
 
   const YaTextField({
     super.key,
@@ -86,6 +87,7 @@ class YaTextField extends StatelessWidget {
     this.autofillHints,
     this.onChanged,
     this.onFieldSubmitted,
+    this.autovalidateMode = AutovalidateMode.disabled,
   });
 
   @override
@@ -107,6 +109,7 @@ class YaTextField extends StatelessWidget {
         autofillHints: autofillHints,
         onChanged: onChanged,
         onFieldSubmitted: onFieldSubmitted,
+        autovalidateMode: autovalidateMode,
         decoration: InputDecoration(
           hintText: hint,
           prefixIcon: prefixIcon,
@@ -127,6 +130,7 @@ class YaPasswordField extends StatefulWidget {
   final TextInputAction? textInputAction;
   final Iterable<String>? autofillHints;
   final ValueChanged<String>? onFieldSubmitted;
+  final AutovalidateMode autovalidateMode;
 
   const YaPasswordField({
     super.key,
@@ -138,6 +142,7 @@ class YaPasswordField extends StatefulWidget {
     this.textInputAction,
     this.autofillHints,
     this.onFieldSubmitted,
+    this.autovalidateMode = AutovalidateMode.disabled,
   });
 
   @override
@@ -158,6 +163,7 @@ class _YaPasswordFieldState extends State<YaPasswordField> {
       textInputAction: widget.textInputAction,
       autofillHints: widget.autofillHints,
       onFieldSubmitted: widget.onFieldSubmitted,
+      autovalidateMode: widget.autovalidateMode,
       obscureText: _obscure,
       prefixIcon: const Icon(Icons.lock_outline_rounded),
       suffixIcon: IconButton(

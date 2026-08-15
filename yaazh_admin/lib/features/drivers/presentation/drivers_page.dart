@@ -210,23 +210,28 @@ class _DriverCard extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                       ),
                     ],
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 6,
-                      runSpacing: 6,
-                      children: [
-                        StatusChip(
-                          status: d.availabilityStatus,
-                          label: DriverMeta.availabilityLabel(d.availabilityStatus),
-                          tone: DriverMeta.availabilityColor(d.availabilityStatus),
-                        ),
-                        StatusChip(
-                          status: d.verificationStatus,
-                          label: DriverMeta.verificationLabel(d.verificationStatus),
-                          tone: DriverMeta.verificationColor(d.verificationStatus),
-                        ),
-                      ],
-                    ),
+                    if (d.availabilityStatus != 'available' ||
+                        d.verificationStatus != 'approved') ...[
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: [
+                          if (d.availabilityStatus != 'available')
+                            StatusChip(
+                              status: d.availabilityStatus,
+                              label: DriverMeta.availabilityLabel(d.availabilityStatus),
+                              tone: DriverMeta.availabilityColor(d.availabilityStatus),
+                            ),
+                          if (d.verificationStatus != 'approved')
+                            StatusChip(
+                              status: d.verificationStatus,
+                              label: DriverMeta.verificationLabel(d.verificationStatus),
+                              tone: DriverMeta.verificationColor(d.verificationStatus),
+                            ),
+                        ],
+                      ),
+                    ],
                   ],
                 ),
               ),

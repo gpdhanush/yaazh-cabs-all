@@ -199,7 +199,7 @@ class _AdminDrawer extends ConsumerWidget {
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
                 children: [
-                  _sectionLabel(context, 'Fleet'),
+                  _sectionLabel(context, 'Operations'),
                   _item(
                     context,
                     icon: Icons.badge_rounded,
@@ -217,7 +217,7 @@ class _AdminDrawer extends ConsumerWidget {
                   _item(
                     context,
                     icon: Icons.directions_car_rounded,
-                    label: 'Fleet',
+                    label: 'Vehicles',
                     selected: location.startsWith('/fleet'),
                     onTap: () => _open('/fleet'),
                   ),
@@ -250,13 +250,6 @@ class _AdminDrawer extends ConsumerWidget {
                     label: 'Reports',
                     selected: location.startsWith('/reports'),
                     onTap: () => _open('/reports'),
-                  ),
-                  _item(
-                    context,
-                    icon: Icons.notifications_rounded,
-                    label: 'Push alerts',
-                    selected: location.startsWith('/notifications'),
-                    onTap: () => _open('/notifications'),
                   ),
                 ],
               ),
