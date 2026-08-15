@@ -26,6 +26,11 @@ const GROUP_META: Record<string, { title: string; hint: string; icon: string }> 
     hint: 'Customer-facing fare disclaimers',
     icon: 'payments',
   },
+  website: {
+    title: 'Website credit',
+    hint: 'Footer “Created by” line on the public site. The name opens the URL in a new tab.',
+    icon: 'code',
+  },
 };
 
 const LABEL_MAP: Record<string, string> = {
@@ -40,6 +45,8 @@ const LABEL_MAP: Record<string, string> = {
   maps_share_url: 'Maps share URL',
   map_lat: 'Map latitude',
   map_lng: 'Map longitude',
+  created_by_name: 'Created by name',
+  created_by_url: 'Created by website URL',
 };
 
 @Component({

@@ -8,6 +8,8 @@ import {
   ADMIN_EMAIL,
   ADMIN_WHATSAPP,
   BUSINESS_ADDRESS,
+  CREATED_BY_NAME,
+  CREATED_BY_URL,
   MAPS_SHARE_URL,
   PHONE_PRIMARY,
   PHONE_SECONDARY,
@@ -25,6 +27,13 @@ function formatPhone(raw: string) {
   return `${d.slice(0, 5)} ${d.slice(5)}`;
 }
 
+function websiteUrl(raw: string) {
+  const t = raw.trim();
+  if (!t) return "";
+  if (/^https?:\/\//i.test(t)) return t;
+  return `https://${t}`;
+}
+
 export function SiteFooter() {
   const [routeLinks, setRouteLinks] = useState(
     popularOneWayRoutes.slice(0, 4).map((r) => `${r.from} → ${r.to}`),
@@ -35,6 +44,8 @@ export function SiteFooter() {
   const [email, setEmail] = useState(ADMIN_EMAIL);
   const [address, setAddress] = useState(BUSINESS_ADDRESS);
   const [mapsShare, setMapsShare] = useState(MAPS_SHARE_URL);
+  const [createdByName, setCreatedByName] = useState(CREATED_BY_NAME);
+  const [createdByUrl, setCreatedByUrl] = useState(websiteUrl(CREATED_BY_URL));
 
   useEffect(() => {
     if (!isApiConfigured()) return;
@@ -52,6 +63,8 @@ export function SiteFooter() {
         if (s["support_email"]) setEmail(s["support_email"]);
         if (s["business_address"]) setAddress(s["business_address"]);
         if (s["maps_share_url"]) setMapsShare(s["maps_share_url"]);
+        if (s["created_by_name"]?.trim()) setCreatedByName(s["created_by_name"].trim());
+        if (s["created_by_url"] != null) setCreatedByUrl(websiteUrl(s["created_by_url"]));
       })
       .catch(() => {
         /* keep fallbacks */
@@ -82,9 +95,9 @@ export function SiteFooter() {
             <BrandLogo variant="footer" />
             <p className="mt-5 max-w-xs text-sm leading-relaxed text-white/65">
               Udumalpet&apos;s trusted travel partner since 2015. Comfortable rides, reliable service,
-              best prices — every single time.
+              best prices for every single time.
             </p>
-            <div className="mt-6">
+            {/* <div className="mt-6">
               <a
                 href={`https://wa.me/${digits(whatsapp)}`}
                 target="_blank"
@@ -94,7 +107,7 @@ export function SiteFooter() {
               >
                 <MessageCircle className="size-4" />
               </a>
-            </div>
+            </div> */}
           </div>
 
           {columns.map((c) => (
@@ -161,6 +174,23 @@ export function SiteFooter() {
 
         <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-white/10 py-6 text-xs text-white/50 sm:flex-row">
           <p>© {new Date().getFullYear()} Yaazh Cabs. Travel safe, reach happy.</p>
+          {createdByName ? (
+            <p>
+              Created by{" "}
+              {createdByUrl ? (
+                <a
+                  href={createdByUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-medium text-white/70 hover:text-primary"
+                >
+                  {createdByName}
+                </a>
+              ) : (
+                <span className="font-medium text-white/70">{createdByName}</span>
+              )}
+            </p>
+          ) : null}
           <button
             type="button"
             onClick={toTop}

@@ -174,6 +174,9 @@ export const MAP_LAT = 10.551642;
 export const MAP_LNG = 77.306707;
 export const MAP_EMBED_URL = `https://www.google.com/maps?q=${MAP_LAT},${MAP_LNG}&z=16&output=embed`;
 
+export const CREATED_BY_NAME = "G.K. Tech";
+export const CREATED_BY_URL = "https://gpdhanush.github.io/portfolio/";
+
 export const drivers = [
   { name: "Saravanan M.", phone: "93600 55761", car: "TN 39 BM 4412" },
   { name: "Karthik R.", phone: "63690 22364", car: "TN 39 CQ 7781" },

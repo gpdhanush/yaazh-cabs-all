@@ -115,8 +115,13 @@ async function seedWebsiteCatalog() {
     { key: "maps_share_url", value: "https://maps.app.goo.gl/EUCRv1piSHwJybDD7?g_st=aw", group: "company" },
     { key: "map_lat", value: "10.551642", group: "company" },
     { key: "map_lng", value: "77.306707", group: "company" },
+    { key: "created_by_name", value: "G.K. Tech", group: "website" },
+    { key: "created_by_url", value: "https://gpdhanush.github.io/portfolio/", group: "website" },
+    { key: "primary_color", value: "#ffc107", group: "branding" },
+    { key: "secondary_color", value: "#1f2933", group: "branding" },
   ];
   for (const s of settings) {
+    const preserveValue = s.key === "created_by_name" || s.key === "created_by_url";
     await prisma.appSettings.upsert({
       where: { setting_key: s.key },
       create: {
@@ -127,7 +132,7 @@ async function seedWebsiteCatalog() {
         is_public: true,
       },
       update: {
-        setting_value: s.value,
+        ...(preserveValue ? {} : { setting_value: s.value }),
         is_public: true,
         group_name: s.group,
       },

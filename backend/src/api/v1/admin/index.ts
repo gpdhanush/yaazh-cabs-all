@@ -3469,6 +3469,22 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
   });
 
   app.get("/settings", { preHandler: [requirePermission("settings.manage")] }, async (_req, reply) => {
+    for (const s of [
+      { key: "created_by_name", value: "G.K. Tech", group: "website" },
+      { key: "created_by_url", value: "", group: "website" },
+    ]) {
+      await prisma.appSettings.upsert({
+        where: { setting_key: s.key },
+        create: {
+          setting_key: s.key,
+          setting_value: s.value,
+          value_type: "string",
+          group_name: s.group,
+          is_public: true,
+        },
+        update: { is_public: true, group_name: s.group },
+      });
+    }
     const rows = await prisma.appSettings.findMany();
     return ok(reply, rows.map((s) => ({ key: s.setting_key, value: s.setting_value, group: s.group_name })));
   });
