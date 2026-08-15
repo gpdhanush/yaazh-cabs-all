@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, type MouseEvent } from "react";
 import { Menu, Phone, X } from "lucide-react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { BrandLogo } from "@/components/site/brand-logo";
@@ -18,6 +18,8 @@ const links = [
   { label: "FAQ", href: "#faq", id: "faq" },
 ];
 
+const HEADER_OFFSET = 88;
+
 function navLinkClass(active: boolean) {
   return cn(
     "relative text-sm font-medium transition-colors",
@@ -27,55 +29,80 @@ function navLinkClass(active: boolean) {
   );
 }
 
+function sectionFromScroll(): string {
+  const line = HEADER_OFFSET + 12;
+  let current = "";
+  for (const l of links) {
+    const el = document.getElementById(l.id);
+    if (!el) continue;
+    if (el.getBoundingClientRect().top <= line) current = l.id;
+  }
+  const doc = document.documentElement;
+  if (window.innerHeight + window.scrollY >= doc.scrollHeight - 48) {
+    current = links[links.length - 1]?.id ?? current;
+  }
+  return current;
+}
+
+function scrollToId(id: string) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const top = el.getBoundingClientRect().top + window.scrollY - HEADER_OFFSET;
+  window.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
+}
+
 export function SiteNav() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [solid, setSolid] = useState(false);
   const [open, setOpen] = useState(false);
   const [activeHash, setActiveHash] = useState("");
+  const clicking = useRef(false);
   const onHome = pathname === "/";
   const onStatus = pathname.startsWith("/status");
 
   useEffect(() => {
-    const onScroll = () => setSolid(window.scrollY > 40);
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
-
-  useEffect(() => {
     if (!onHome) {
       setActiveHash("");
+      setSolid(window.scrollY > 40);
       return;
     }
 
-    const syncFromHash = () => {
-      const hash = window.location.hash.replace("#", "");
-      if (hash && links.some((l) => l.id === hash)) setActiveHash(hash);
+    const apply = () => {
+      setSolid(window.scrollY > 40);
+      if (clicking.current) return;
+      const next = sectionFromScroll();
+      if (next) setActiveHash(next);
     };
-    syncFromHash();
 
-    const sections = links
-      .map((l) => document.getElementById(l.id))
-      .filter((el): el is HTMLElement => Boolean(el));
+    apply();
+    const hash = window.location.hash.replace("#", "");
+    if (hash && links.some((l) => l.id === hash)) {
+      setActiveHash(hash);
+      requestAnimationFrame(() => scrollToId(hash));
+    }
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const visible = entries
-          .filter((e) => e.isIntersecting)
-          .sort((a, b) => b.intersectionRatio - a.intersectionRatio);
-        const top = visible[0];
-        if (top?.target?.id) setActiveHash(top.target.id);
-      },
-      { rootMargin: "-30% 0px -55% 0px", threshold: [0.1, 0.25, 0.5] },
-    );
-
-    sections.forEach((el) => observer.observe(el));
-    window.addEventListener("hashchange", syncFromHash);
+    window.addEventListener("scroll", apply, { passive: true });
+    window.addEventListener("resize", apply);
+    window.addEventListener("hashchange", apply);
     return () => {
-      observer.disconnect();
-      window.removeEventListener("hashchange", syncFromHash);
+      window.removeEventListener("scroll", apply);
+      window.removeEventListener("resize", apply);
+      window.removeEventListener("hashchange", apply);
     };
   }, [onHome]);
+
+  const goToSection = (id: string, event: MouseEvent<HTMLAnchorElement>) => {
+    if (!onHome) return;
+    event.preventDefault();
+    clicking.current = true;
+    setActiveHash(id);
+    setOpen(false);
+    scrollToId(id);
+    history.replaceState(null, "", `#${id}`);
+    window.setTimeout(() => {
+      clicking.current = false;
+    }, 700);
+  };
 
   return (
     <header
@@ -99,7 +126,7 @@ export function SiteNav() {
                 <a
                   href={onHome ? l.href : `/${l.href}`}
                   aria-current={active ? "page" : undefined}
-                  onClick={() => setActiveHash(l.id)}
+                  onClick={(event) => goToSection(l.id, event)}
                   className={navLinkClass(active)}
                 >
                   {l.label}
@@ -155,10 +182,7 @@ export function SiteNav() {
                 <a
                   href={onHome ? l.href : `/${l.href}`}
                   aria-current={active ? "page" : undefined}
-                  onClick={() => {
-                    setActiveHash(l.id);
-                    setOpen(false);
-                  }}
+                  onClick={(event) => goToSection(l.id, event)}
                   className={cn(
                     "block py-3 text-sm font-medium",
                     active ? "text-brand" : "text-body",

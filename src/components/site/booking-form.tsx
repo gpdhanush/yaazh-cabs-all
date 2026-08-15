@@ -50,6 +50,29 @@ const times = Array.from({ length: 48 }, (_, i) => {
   return `${String(hh).padStart(2, "0")}:${m} ${ampm}`;
 });
 
+const fieldBox = (error?: string) =>
+  cn(
+    "flex h-11 items-center gap-2.5 rounded-lg border px-3 transition-colors",
+    error
+      ? "border-error bg-error/5"
+      : "border-border/80 bg-muted/35 hover:border-brand/40 focus-within:border-brand focus-within:bg-background focus-within:ring-2 focus-within:ring-brand/15",
+  );
+
+const fieldLabel = "mb-1.5 block text-[13px] font-medium text-foreground";
+
+const fieldControl =
+  "w-full bg-transparent text-sm font-normal text-foreground outline-none placeholder:text-[13px] placeholder:font-normal placeholder:tracking-wide placeholder:text-muted-foreground/55";
+
+const noAutoComplete = {
+  autoComplete: "off" as const,
+  autoCorrect: "off" as const,
+  autoCapitalize: "none" as const,
+  spellCheck: false as const,
+  "data-lpignore": "true",
+  "data-1p-ignore": "true",
+  "data-form-type": "other",
+};
+
 function Field({
   label,
   error,
@@ -63,19 +86,10 @@ function Field({
 }) {
   return (
     <div className="w-full">
-      <div
-        className={cn(
-          "rounded-xl border bg-background px-3.5 py-2.5 transition-colors",
-          error ? "border-error" : "border-border focus-within:border-brand focus-within:ring-2 focus-within:ring-brand/20",
-        )}
-      >
-        <label className="block text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
-          {label}
-        </label>
-        <div className="mt-1 flex items-center gap-2">
-          {icon ? <span className="shrink-0 text-brand [&_svg]:size-4">{icon}</span> : null}
-          <div className="min-w-0 flex-1">{children}</div>
-        </div>
+      <label className={fieldLabel}>{label}</label>
+      <div className={fieldBox(error)}>
+        {icon ? <span className="shrink-0 text-muted-foreground [&_svg]:size-4">{icon}</span> : null}
+        <div className="min-w-0 flex-1">{children}</div>
       </div>
       {error ? <p className="mt-1 text-xs text-error">{error}</p> : null}
     </div>
@@ -91,6 +105,8 @@ function TextField({
   type = "text",
   inputMode,
   maxLength,
+  placeholder,
+  name,
 }: {
   label: string;
   value: string;
@@ -98,18 +114,23 @@ function TextField({
   error?: string | undefined;
   icon?: React.ReactNode;
   type?: string;
-  inputMode?: "text" | "tel" | "numeric";
+  inputMode?: "text" | "tel" | "numeric" | "email";
   maxLength?: number;
+  placeholder?: string;
+  name?: string;
 }) {
   return (
     <Field label={label} error={error} icon={icon}>
       <input
+        {...noAutoComplete}
+        name={name}
         type={type}
         inputMode={inputMode ?? "text"}
         maxLength={maxLength ?? 80}
         value={value}
+        placeholder={placeholder}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full bg-transparent text-sm font-medium text-foreground outline-none placeholder:text-muted-foreground"
+        className={fieldControl}
         aria-label={label}
       />
     </Field>
@@ -124,6 +145,7 @@ function SelectField({
   icon,
   error,
   searchable = true,
+  placeholder = "Select",
 }: {
   label: string;
   value: string;
@@ -132,6 +154,7 @@ function SelectField({
   icon?: React.ReactNode;
   error?: string | undefined;
   searchable?: boolean;
+  placeholder?: string;
 }) {
   const [open, setOpen] = useState(false);
   return (
@@ -140,12 +163,12 @@ function SelectField({
         <PopoverTrigger asChild>
           <button
             type="button"
-            className="flex w-full items-center justify-between gap-2 text-left text-sm font-medium text-foreground outline-none"
+            className="flex w-full items-center justify-between gap-2 text-left outline-none"
           >
-            <span className={cn("truncate", !value && "font-normal text-muted-foreground")}>
-              {value || "Select"}
+            <span className={cn("truncate text-sm", value ? "text-foreground" : "text-[13px] tracking-wide text-muted-foreground/55")}>
+              {value || placeholder}
             </span>
-            <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
+            <ChevronDown className="size-4 shrink-0 text-muted-foreground/70" />
           </button>
         </PopoverTrigger>
         <PopoverContent
@@ -153,7 +176,13 @@ function SelectField({
           align="start"
         >
           <Command>
-            {searchable && <CommandInput placeholder={`Search ${label.toLowerCase()}...`} />}
+            {searchable && (
+              <CommandInput
+                placeholder={`Search ${label.toLowerCase()}…`}
+                autoComplete="off"
+                className="placeholder:text-[13px] placeholder:font-normal placeholder:text-muted-foreground/55"
+              />
+            )}
             <CommandList>
               <CommandEmpty>No match found.</CommandEmpty>
               <CommandGroup>
@@ -303,6 +332,15 @@ export function BookingForm() {
 
   const selectedVehicle = vehicleOptions.find((v) => v.id === vehicleId) ?? vehicleOptions[0];
 
+  const clearError = (key: keyof FormErrors) => {
+    setErrors((prev) => {
+      if (!prev[key]) return prev;
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+  };
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     const next: FormErrors = {};
@@ -448,6 +486,7 @@ export function BookingForm() {
   return (
     <form
       onSubmit={submit}
+      autoComplete="off"
       className="w-full rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-5 md:p-6"
     >
       <div className="mb-5 flex flex-wrap items-center justify-between gap-2">
@@ -481,16 +520,33 @@ export function BookingForm() {
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2">
-        <TextField label="Your name" value={name} onChange={setName} error={errors.name} icon={<User />} />
+        <TextField
+          label="Your name"
+          name="yc_rider_name"
+          value={name}
+          onChange={(v) => {
+            setName(v);
+            if (v.trim()) clearError("name");
+          }}
+          error={errors.name}
+          icon={<User />}
+          placeholder="Enter your full name"
+        />
         <TextField
           label="Mobile number"
+          name="yc_rider_mobile"
           value={mobile}
-          onChange={(v) => setMobile(v.replace(/[^\d\s]/g, ""))}
+          onChange={(v) => {
+            const digits = v.replace(/\D/g, "").slice(0, 10);
+            setMobile(digits);
+            if (digits.length > 0) clearError("mobile");
+          }}
           error={errors.mobile}
           type="tel"
-          inputMode="tel"
-          maxLength={12}
+          inputMode="numeric"
+          maxLength={10}
           icon={<Phone />}
+          placeholder="10-digit mobile number"
         />
 
         <LocationField
@@ -499,6 +555,7 @@ export function BookingForm() {
           onChange={(v, meta) => {
             setPickup(v);
             setPickupMeta(meta ?? (v ? { label: v, ...(coordsForPlace(v) ?? {}) } : null));
+            if (v.trim()) clearError("pickup");
           }}
           error={errors.pickup}
           icon={<MapPin />}
@@ -511,9 +568,11 @@ export function BookingForm() {
           onChange={(v, meta) => {
             setDrop(v);
             setDropMeta(meta ?? (v ? { label: v, ...(coordsForPlace(v) ?? {}) } : null));
+            if (v.trim()) clearError("drop");
           }}
           error={errors.drop}
           icon={<Navigation />}
+          placeholder="Search city, airport or area"
         />
 
         <Field label="Pickup date" error={errors.date} icon={<CalendarDays />}>
@@ -521,12 +580,12 @@ export function BookingForm() {
             <PopoverTrigger asChild>
               <button
                 type="button"
-                className="flex w-full items-center justify-between gap-2 text-left text-sm font-medium outline-none"
+                className="flex w-full items-center justify-between gap-2 text-left outline-none"
               >
-                <span className={cn(!date && "font-normal text-muted-foreground")}>
+                <span className={cn("truncate text-sm", date ? "text-foreground" : "text-[13px] tracking-wide text-muted-foreground/55")}>
                   {date ? format(date, "dd MMM yyyy") : "Choose date"}
                 </span>
-                <ChevronDown className="size-4 text-muted-foreground" />
+                <ChevronDown className="size-4 text-muted-foreground/70" />
               </button>
             </PopoverTrigger>
             <PopoverContent className="w-auto border-border bg-popover p-0" align="start">
@@ -536,6 +595,7 @@ export function BookingForm() {
                 onSelect={(d) => {
                   setDate(d);
                   setDateOpen(false);
+                  if (d) clearError("date");
                 }}
                 disabled={{ before: today }}
                 autoFocus
@@ -545,12 +605,16 @@ export function BookingForm() {
         </Field>
 
         <SelectField
-          label="Pickup time *"
+          label="Pickup time"
           value={time}
-          onChange={setTime}
+          onChange={(v) => {
+            setTime(v);
+            if (v) clearError("time");
+          }}
           options={times}
           error={errors.time}
           icon={<Clock />}
+          placeholder="Select pickup time"
         />
 
         <SelectField
@@ -558,11 +622,15 @@ export function BookingForm() {
           value={selectedVehicle?.label ?? ""}
           onChange={(label) => {
             const hit = vehicleOptions.find((v) => v.label === label);
-            if (hit) setVehicleId(hit.id);
+            if (hit) {
+              setVehicleId(hit.id);
+              clearError("vehicle");
+            }
           }}
           options={vehicleOptions.map((v) => v.label)}
           error={errors.vehicle}
           searchable={false}
+          placeholder="Select vehicle"
         />
         <SelectField
           label="Trip type"
@@ -570,14 +638,21 @@ export function BookingForm() {
           onChange={setTrip}
           options={tripTypes}
           searchable={false}
+          placeholder="Select trip type"
         />
         <TextField
-          label="Email (optional — invoice will be sent here)"
+          label="Email (optional)"
+          name="yc_rider_email"
           value={email}
-          onChange={setEmail}
+          onChange={(v) => {
+            setEmail(v);
+            if (!v.trim() || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim())) clearError("email");
+          }}
           error={errors.email}
           type="email"
+          inputMode="email"
           icon={<Mail />}
+          placeholder="name@email.com"
         />
       </div>
 

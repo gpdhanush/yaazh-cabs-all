@@ -126,21 +126,26 @@ export function LocationField({
 
   return (
     <div className="relative w-full" ref={rootRef}>
+      <label className="mb-1.5 block text-[13px] font-medium text-foreground">{label}</label>
       <div
         className={cn(
-          "rounded-xl border bg-background px-3.5 py-2.5 transition-colors",
+          "flex h-11 items-center gap-2.5 rounded-lg border px-3 transition-colors",
           error
-            ? "border-error"
-            : "border-border focus-within:border-brand focus-within:ring-2 focus-within:ring-brand/20",
+            ? "border-error bg-error/5"
+            : "border-border/80 bg-muted/35 hover:border-brand/40 focus-within:border-brand focus-within:bg-background focus-within:ring-2 focus-within:ring-brand/15",
         )}
       >
-        <label className="block text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
-          {label}
-        </label>
-        <div className="mt-1 flex items-center gap-2">
-          <span className="shrink-0 text-brand [&_svg]:size-4">{icon ?? <MapPin />}</span>
+        <span className="shrink-0 text-muted-foreground [&_svg]:size-4">{icon ?? <MapPin />}</span>
           <input
             value={query}
+            name={isFixed ? "yc_pickup_location" : "yc_drop_location"}
+            autoComplete="off"
+            autoCorrect="off"
+            autoCapitalize="none"
+            spellCheck={false}
+            data-lpignore="true"
+            data-1p-ignore="true"
+            data-form-type="other"
             readOnly={isFixed}
             onChange={(e) => {
               if (isFixed) return;
@@ -169,10 +174,10 @@ export function LocationField({
             role="combobox"
             aria-expanded={open}
             aria-controls={listId}
-            aria-autocomplete="list"
+            aria-autocomplete="none"
             placeholder={displayPlaceholder}
             className={cn(
-              "w-full bg-transparent text-sm font-medium text-foreground outline-none placeholder:font-normal placeholder:text-muted-foreground",
+              "w-full bg-transparent text-sm font-normal text-foreground outline-none placeholder:text-[13px] placeholder:font-normal placeholder:tracking-wide placeholder:text-muted-foreground/55",
               isFixed && "cursor-pointer",
             )}
           />
@@ -196,7 +201,6 @@ export function LocationField({
             />
           )}
           {!isFixed && loading ? <Loader2 className="size-4 shrink-0 animate-spin text-brand" /> : null}
-        </div>
       </div>
 
       {open && list.length > 0 ? (
