@@ -126,10 +126,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" prefix="og: https://ogp.me/ns#" suppressHydrationWarning>
       <head>
-        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
-        {/* Static so WhatsApp/Facebook see tags without running JS (SPA shell). */}
         <meta property="og:title" content="Yaazh Cabs | Premium Taxi Service in Udumalpet" />
         <meta property="og:description" content="Comfortable rides, reliable service, best prices. Book a cab 24×7." />
         <meta property="og:type" content="website" />
@@ -143,6 +141,7 @@ function RootShell({ children }: { children: ReactNode }) {
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:image" content={OG_IMAGE} />
         <link rel="image_src" href={OG_IMAGE} />
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
         <HeadContent />
         {GA_MEASUREMENT_ID ? (
           <>

@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite dev",
     "build": "vite build",
-    "build:cpanel": "vite build && cp .output/public/_shell.html .output/public/index.html",
+    "build:cpanel": "vite build && node scripts/inject-og-meta.mjs && cp .output/public/_shell.html .output/public/index.html",
     "build:vercel": "npm run build:cpanel",
     "build:dev": "vite build --mode development",
     "preview": "vite preview",

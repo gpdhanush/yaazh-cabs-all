@@ -17,6 +17,14 @@ RewriteRule ^api/v1/public/invoices/(.+)$ https://luxe-motion-ride-1.onrender.co
 # Old share-image URL (WhatsApp/Facebook may have cached .png)
 RewriteRule ^og-cover\.png$ /og-cover.jpg [L,R=301]
 
+# Share image: force JPEG type and a short cache so crawlers pick up replacements
+<IfModule mod_headers.c>
+  <Files "og-cover.jpg">
+    Header set Content-Type "image/jpeg"
+    Header set Cache-Control "public, max-age=3600, must-revalidate"
+  </Files>
+</IfModule>
+
 # Serve real files / directories first (assets, favicon, robots, shell)
 RewriteCond %{REQUEST_FILENAME} -f [OR]
 RewriteCond %{REQUEST_FILENAME} -d
