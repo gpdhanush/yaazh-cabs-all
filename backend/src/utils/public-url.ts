@@ -65,6 +65,20 @@ export function publicInvoiceApiPath(invoiceNumber: string): string {
   return `/api/v1/public/invoices/${encodeURIComponent(num)}.pdf`;
 }
 
+/** Persist `/storage/...` paths so files stay on the API host, not the marketing site. */
+export function toStoredMediaPath(pathOrUrl: string | null | undefined): string | null {
+  const raw = (pathOrUrl ?? "").trim();
+  if (!raw) return null;
+  let pathname = raw;
+  try {
+    pathname = new URL(raw).pathname;
+  } catch {
+    pathname = raw.split("?")[0] ?? raw;
+  }
+  if (pathname.startsWith("/storage/")) return pathname;
+  return raw;
+}
+
 function rewriteInvoicePath(raw: string): string {
   const match = raw.match(/\/(?:storage\/public\/invoices|api\/v1\/public\/invoices)\/([^/?#]+)/i);
   if (!match?.[1]) return raw;

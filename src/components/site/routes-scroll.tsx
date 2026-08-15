@@ -6,7 +6,7 @@ import gallery2 from "@/assets/gallery-city.jpg";
 import gallery3 from "@/assets/gallery-temple.jpg";
 import gallery4 from "@/assets/gallery-lake.jpg";
 import { BOOKING_FARE_NOTE, popularOneWayRoutes } from "@/lib/site-data";
-import { getAppConfig, getRoutes, isApiConfigured, type PublicRoute } from "@/lib/api";
+import { getAppConfig, getRoutes, isApiConfigured, mediaUrl, type PublicRoute } from "@/lib/api";
 
 const routeImages = [gallery3, gallery2, gallery3, gallery3, gallery4, gallery4, gallery2, gallery2, gallery2];
 
@@ -55,7 +55,7 @@ function mapRoutes(rows: PublicRoute[]): Card[] {
         to: right,
         price,
       };
-      if (r.image_url) card.imageUrl = r.image_url;
+      if (r.image_url) card.imageUrl = mediaUrl(r.image_url) ?? r.image_url;
       if (r.distance_km) card.km = r.distance_km;
       const mins = formatMins(r.duration_minutes);
       if (mins) card.mins = mins;

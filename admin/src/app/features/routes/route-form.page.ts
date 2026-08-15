@@ -5,6 +5,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { AdminApiService } from '../../core/api/admin-api.service';
+import { mediaUrl } from '../../core/api/media-url';
 import { YaImageCropperComponent } from '../../shared/ya-image-cropper.component';
 
 type CityOpt = { id: string; name: string };
@@ -178,7 +179,7 @@ function slugify(value: string): string {
               <div class="ya-upload">
                 <div class="ya-upload__preview">
                   @if (form.controls.image_url.value) {
-                    <img [src]="form.controls.image_url.value" alt="Route card preview" />
+                    <img [src]="previewImage()" alt="Route card preview" />
                   } @else {
                     <div class="ya-upload__placeholder">
                       <mat-icon>image</mat-icon>
@@ -307,6 +308,10 @@ export class RouteFormPage implements OnInit {
     { label: 'No', value: false },
   ];
 
+  previewImage(): string {
+    return mediaUrl(this.form.controls.image_url.value) ?? '';
+  }
+
   readonly form = this.fb.group({
     title: this.fb.nonNullable.control('', [Validators.required, Validators.minLength(3), Validators.maxLength(180)]),
     pickup_city_id: this.fb.nonNullable.control('', [Validators.required]),
@@ -382,8 +387,9 @@ export class RouteFormPage implements OnInit {
     this.api.upload('/uploads', body).subscribe({
       next: (res) => {
         this.uploading.set(false);
-        const url = (res.data as { url?: string } | undefined)?.url;
-        if (url) this.form.controls.image_url.setValue(url);
+        const data = res.data as { url?: string; path?: string } | undefined;
+        const stored = data?.path || data?.url;
+        if (stored) this.form.controls.image_url.setValue(stored);
         this.snack.open('Image uploaded', 'OK', { duration: 2000 });
       },
       error: (err: unknown) => {

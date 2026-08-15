@@ -5,9 +5,18 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { AdminApiService } from '../../core/api/admin-api.service';
+import { mediaUrl } from '../../core/api/media-url';
 import { YaImageCropperComponent } from '../../shared/ya-image-cropper.component';
 
 type FieldOpt = { label: string; value: string | boolean | number };
+
+type DigitKey =
+  | 'seating_capacity'
+  | 'one_way_rate_per_km'
+  | 'round_trip_rate_per_km'
+  | 'driver_batta'
+  | 'minimum_km_per_day'
+  | 'display_order';
 
 function slugify(value: string): string {
   return value
@@ -16,6 +25,26 @@ function slugify(value: string): string {
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
     .slice(0, 120);
+}
+
+/** Digits only (optional one decimal), max length. */
+function digitAmount(value: string, maxLen = 8): string {
+  const cleaned = String(value ?? '').replace(/[^\d.]/g, '');
+  const dot = cleaned.indexOf('.');
+  const normalized =
+    dot === -1
+      ? cleaned
+      : cleaned.slice(0, dot + 1) + cleaned.slice(dot + 1).replace(/\./g, '');
+  return normalized.slice(0, maxLen);
+}
+
+function digitsOnly(value: string, maxLen: number): string {
+  return String(value ?? '').replace(/\D/g, '').slice(0, maxLen);
+}
+
+function numOrZero(value: string): number {
+  const n = Number(value);
+  return Number.isFinite(n) && n >= 0 ? n : 0;
 }
 
 @Component({
@@ -84,10 +113,14 @@ function slugify(value: string): string {
               <input
                 id="seating_capacity"
                 class="ya-input"
-                type="number"
-                min="1"
+                type="text"
+                inputmode="numeric"
+                autocomplete="off"
+                maxlength="2"
                 formControlName="seating_capacity"
                 [class.ya-input--error]="showError('seating_capacity')"
+                (input)="onDigitInput('seating_capacity', $event, 2, true)"
+                placeholder="4"
               />
               @if (showError('seating_capacity')) {
                 <p class="ya-error">{{ errorText('seating_capacity') }}</p>
@@ -101,27 +134,77 @@ function slugify(value: string): string {
 
             <div class="ya-field ya-field--stacked">
               <label class="ya-label" for="one_way_rate_per_km">One-way ₹/km</label>
-              <input id="one_way_rate_per_km" class="ya-input" type="number" min="0" step="0.01" formControlName="one_way_rate_per_km" />
+              <input
+                id="one_way_rate_per_km"
+                class="ya-input"
+                type="text"
+                inputmode="decimal"
+                autocomplete="off"
+                maxlength="8"
+                formControlName="one_way_rate_per_km"
+                (input)="onDigitInput('one_way_rate_per_km', $event)"
+                placeholder="0"
+              />
             </div>
 
             <div class="ya-field ya-field--stacked">
               <label class="ya-label" for="round_trip_rate_per_km">Round-trip ₹/km</label>
-              <input id="round_trip_rate_per_km" class="ya-input" type="number" min="0" step="0.01" formControlName="round_trip_rate_per_km" />
+              <input
+                id="round_trip_rate_per_km"
+                class="ya-input"
+                type="text"
+                inputmode="decimal"
+                autocomplete="off"
+                maxlength="8"
+                formControlName="round_trip_rate_per_km"
+                (input)="onDigitInput('round_trip_rate_per_km', $event)"
+                placeholder="0"
+              />
             </div>
 
             <div class="ya-field ya-field--stacked">
               <label class="ya-label" for="driver_batta">Driver batta</label>
-              <input id="driver_batta" class="ya-input" type="number" min="0" step="0.01" formControlName="driver_batta" />
+              <input
+                id="driver_batta"
+                class="ya-input"
+                type="text"
+                inputmode="decimal"
+                autocomplete="off"
+                maxlength="8"
+                formControlName="driver_batta"
+                (input)="onDigitInput('driver_batta', $event)"
+                placeholder="0"
+              />
             </div>
 
             <div class="ya-field ya-field--stacked">
               <label class="ya-label" for="minimum_km_per_day">Minimum km/day</label>
-              <input id="minimum_km_per_day" class="ya-input" type="number" min="0" step="0.01" formControlName="minimum_km_per_day" />
+              <input
+                id="minimum_km_per_day"
+                class="ya-input"
+                type="text"
+                inputmode="decimal"
+                autocomplete="off"
+                maxlength="8"
+                formControlName="minimum_km_per_day"
+                (input)="onDigitInput('minimum_km_per_day', $event)"
+                placeholder="0"
+              />
             </div>
 
             <div class="ya-field ya-field--stacked">
               <label class="ya-label" for="display_order">Display order</label>
-              <input id="display_order" class="ya-input" type="number" formControlName="display_order" />
+              <input
+                id="display_order"
+                class="ya-input"
+                type="text"
+                inputmode="numeric"
+                autocomplete="off"
+                maxlength="4"
+                formControlName="display_order"
+                (input)="onDigitInput('display_order', $event, 4, true)"
+                placeholder="0"
+              />
             </div>
 
             <div class="ya-field ya-field--stacked">
@@ -138,7 +221,7 @@ function slugify(value: string): string {
               <div class="ya-upload" [class.ya-upload--filled]="!!form.controls.image_url.value">
                 <div class="ya-upload__preview">
                   @if (form.controls.image_url.value) {
-                    <img [src]="form.controls.image_url.value" alt="Category preview" />
+                    <img [src]="previewImage()" alt="Category preview" />
                   } @else {
                     <div class="ya-upload__placeholder">
                       <mat-icon>directions_car</mat-icon>
@@ -229,18 +312,22 @@ export class VehicleCategoryFormPage implements OnInit {
     { label: 'No', value: false },
   ];
 
+  previewImage(): string {
+    return mediaUrl(this.form.controls.image_url.value) ?? '';
+  }
+
   readonly form = this.fb.group({
     name: this.fb.nonNullable.control('', [Validators.required, Validators.minLength(2)]),
     slug: this.fb.nonNullable.control('', [Validators.required, Validators.minLength(2)]),
-    seating_capacity: this.fb.nonNullable.control(4, [Validators.required, Validators.min(1)]),
+    seating_capacity: this.fb.nonNullable.control('4', [Validators.required, Validators.pattern(/^[1-9]\d*$/)]),
     luggage_capacity: this.fb.nonNullable.control(''),
     description: this.fb.nonNullable.control(''),
     image_url: this.fb.nonNullable.control(''),
-    one_way_rate_per_km: this.fb.nonNullable.control(0),
-    round_trip_rate_per_km: this.fb.nonNullable.control(0),
-    driver_batta: this.fb.nonNullable.control(0),
-    minimum_km_per_day: this.fb.nonNullable.control(0),
-    display_order: this.fb.nonNullable.control(0),
+    one_way_rate_per_km: this.fb.nonNullable.control(''),
+    round_trip_rate_per_km: this.fb.nonNullable.control(''),
+    driver_batta: this.fb.nonNullable.control(''),
+    minimum_km_per_day: this.fb.nonNullable.control(''),
+    display_order: this.fb.nonNullable.control('0'),
     is_active: this.fb.nonNullable.control(true),
   });
 
@@ -268,8 +355,16 @@ export class VehicleCategoryFormPage implements OnInit {
     const c = this.form.controls[name];
     if (c.hasError('required')) return 'This field is required.';
     if (c.hasError('minlength')) return 'Value is too short.';
-    if (c.hasError('min')) return 'Must be at least 1.';
+    if (c.hasError('pattern')) return 'Must be at least 1.';
     return 'Invalid value.';
+  }
+
+  onDigitInput(key: DigitKey, event: Event, maxLen = 8, integer = false): void {
+    const el = event.target as HTMLInputElement;
+    const next = integer ? digitsOnly(el.value, maxLen) : digitAmount(el.value, maxLen);
+    el.value = next;
+    this.form.controls[key].setValue(next, { emitEvent: false });
+    this.form.controls[key].markAsDirty();
   }
 
   onImageSelected(event: Event): void {
@@ -298,8 +393,9 @@ export class VehicleCategoryFormPage implements OnInit {
     this.api.upload('/uploads', body).subscribe({
       next: (res) => {
         this.uploading.set(false);
-        const url = (res.data as { url?: string })?.url;
-        if (url) this.form.controls.image_url.setValue(url);
+        const data = res.data as { url?: string; path?: string } | undefined;
+        const stored = data?.path || data?.url;
+        if (stored) this.form.controls.image_url.setValue(stored);
       },
       error: (err: unknown) => {
         this.uploading.set(false);
@@ -323,15 +419,15 @@ export class VehicleCategoryFormPage implements OnInit {
         this.form.patchValue({
           name: String(d['name'] ?? ''),
           slug: String(d['slug'] ?? ''),
-          seating_capacity: Number(d['seating_capacity'] ?? 4),
+          seating_capacity: String(d['seating_capacity'] ?? '4'),
           luggage_capacity: String(d['luggage_capacity'] ?? ''),
           description: String(d['description'] ?? ''),
           image_url: String(d['image_url'] ?? ''),
-          one_way_rate_per_km: Number(d['one_way_rate_per_km'] ?? 0),
-          round_trip_rate_per_km: Number(d['round_trip_rate_per_km'] ?? 0),
-          driver_batta: Number(d['driver_batta'] ?? 0),
-          minimum_km_per_day: Number(d['minimum_km_per_day'] ?? 0),
-          display_order: Number(d['display_order'] ?? 0),
+          one_way_rate_per_km: d['one_way_rate_per_km'] != null ? String(d['one_way_rate_per_km']) : '',
+          round_trip_rate_per_km: d['round_trip_rate_per_km'] != null ? String(d['round_trip_rate_per_km']) : '',
+          driver_batta: d['driver_batta'] != null ? String(d['driver_batta']) : '',
+          minimum_km_per_day: d['minimum_km_per_day'] != null ? String(d['minimum_km_per_day']) : '',
+          display_order: String(d['display_order'] ?? '0'),
           is_active: d['is_active'] !== false,
         });
       },
@@ -352,15 +448,15 @@ export class VehicleCategoryFormPage implements OnInit {
     const body = {
       name: raw.name.trim(),
       slug: raw.slug.trim(),
-      seating_capacity: Number(raw.seating_capacity),
+      seating_capacity: numOrZero(raw.seating_capacity),
       luggage_capacity: raw.luggage_capacity.trim() || null,
       description: raw.description.trim() || null,
       image_url: raw.image_url.trim() || null,
-      one_way_rate_per_km: Number(raw.one_way_rate_per_km),
-      round_trip_rate_per_km: Number(raw.round_trip_rate_per_km),
-      driver_batta: Number(raw.driver_batta),
-      minimum_km_per_day: Number(raw.minimum_km_per_day),
-      display_order: Number(raw.display_order),
+      one_way_rate_per_km: numOrZero(raw.one_way_rate_per_km),
+      round_trip_rate_per_km: numOrZero(raw.round_trip_rate_per_km),
+      driver_batta: numOrZero(raw.driver_batta),
+      minimum_km_per_day: numOrZero(raw.minimum_km_per_day),
+      display_order: numOrZero(raw.display_order),
       is_active: raw.is_active,
     };
     const req$ = this.isEdit()

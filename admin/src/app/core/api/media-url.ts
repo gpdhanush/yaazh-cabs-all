@@ -9,7 +9,10 @@ export function mediaUrl(raw?: string | null): string | null {
 
   try {
     const u = new URL(value);
-    if (['localhost', '127.0.0.1', '10.0.2.2'].includes(u.hostname)) {
+    const host = u.hostname.toLowerCase();
+    const rewriteHost =
+      ['localhost', '127.0.0.1', '10.0.2.2'].includes(host) || host.endsWith('.vercel.app');
+    if (rewriteHost) {
       return `${apiOrigin}${u.pathname}${u.search}`;
     }
     return value;

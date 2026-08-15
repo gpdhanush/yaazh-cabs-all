@@ -10,6 +10,7 @@ import { loadDriverPhotoBytes } from "../../../services/driver-photo.service.js"
 import { loadAdminPhotoBytes } from "../../../services/admin-photo.service.js";
 import { loadPublicInvoicePdf } from "../../../services/invoice.service.js";
 import { mapService } from "../../../services/map.service.js";
+import { absolutePublicUrl } from "../../../utils/public-url.js";
 import type { TripType } from "@prisma/client";
 
 function paginate(query: Record<string, unknown>) {
@@ -167,7 +168,7 @@ export const publicRoutes: FastifyPluginAsync = async (app) => {
           is_popular: r.is_popular,
           amount: r.amount != null ? Number(r.amount) : null,
           starting_fare: startingFare,
-          image_url: r.image_url,
+          image_url: r.image_url ? absolutePublicUrl(r.image_url, req) : null,
           tag: r.content?.trim() || (r.is_popular ? "Popular" : null),
         };
       }),
@@ -189,13 +190,13 @@ export const publicRoutes: FastifyPluginAsync = async (app) => {
       duration_minutes: route.duration_minutes,
       content: route.content,
       faq_content: route.faq_content,
-      image_url: route.image_url,
+      image_url: route.image_url ? absolutePublicUrl(route.image_url, req) : null,
       amount: route.amount != null ? Number(route.amount) : null,
       starting_fare: route.amount != null ? Math.round(Number(route.amount)) : null,
     });
   });
 
-  app.get("/vehicle-categories", async (_req, reply) => {
+  app.get("/vehicle-categories", async (req, reply) => {
     const rows = await prisma.vehicleCategories.findMany({
       where: { is_active: true },
       orderBy: { display_order: "asc" },
@@ -209,7 +210,7 @@ export const publicRoutes: FastifyPluginAsync = async (app) => {
         seating_capacity: v.seating_capacity,
         luggage_capacity: v.luggage_capacity,
         description: v.description,
-        image_url: v.image_url,
+        image_url: v.image_url ? absolutePublicUrl(v.image_url, req) : null,
         one_way_rate_per_km: Number(v.one_way_rate_per_km),
         round_trip_rate_per_km: Number(v.round_trip_rate_per_km),
         driver_batta: Number(v.driver_batta),

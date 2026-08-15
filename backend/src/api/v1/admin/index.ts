@@ -29,7 +29,7 @@ import {
 } from "../../../services/fcm.service.js";
 import type { TripType } from "@prisma/client";
 import { hashPassword } from "../../../utils/crypto.js";
-import { absolutePublicUrl, publicInvoiceApiPath } from "../../../utils/public-url.js";
+import { absolutePublicUrl, publicInvoiceApiPath, toStoredMediaPath } from "../../../utils/public-url.js";
 
 function haversineKm(
   a: { lat: number; lng: number },
@@ -182,7 +182,7 @@ function serializeRoute(
     route_map_embed_url: r.route_map_embed_url,
     content: r.content,
     faq_content: r.faq_content,
-    image_url: r.image_url ?? null,
+    image_url: r.image_url ? absolutePublicUrl(r.image_url) : null,
     amount: r.amount != null ? Number(r.amount) : null,
     is_popular: r.is_popular,
     is_active: r.is_active,
@@ -410,7 +410,7 @@ function serializeVehicleCategory(c: {
     seating_capacity: c.seating_capacity,
     luggage_capacity: c.luggage_capacity,
     description: c.description,
-    image_url: c.image_url,
+    image_url: c.image_url ? absolutePublicUrl(c.image_url) : null,
     one_way_rate_per_km: Number(c.one_way_rate_per_km),
     round_trip_rate_per_km: Number(c.round_trip_rate_per_km),
     driver_batta: Number(c.driver_batta),
@@ -1663,7 +1663,7 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
           seating_capacity: parsed.data.seating_capacity,
           luggage_capacity: parsed.data.luggage_capacity?.trim() || null,
           description: parsed.data.description?.trim() || null,
-          image_url: parsed.data.image_url?.trim() || null,
+          image_url: toStoredMediaPath(parsed.data.image_url),
           one_way_rate_per_km: parsed.data.one_way_rate_per_km ?? 0,
           round_trip_rate_per_km: parsed.data.round_trip_rate_per_km ?? 0,
           driver_batta: parsed.data.driver_batta ?? 0,
@@ -1717,7 +1717,7 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
           ...(parsed.data.description !== undefined
             ? { description: parsed.data.description?.trim() || null }
             : {}),
-          ...(parsed.data.image_url !== undefined ? { image_url: parsed.data.image_url?.trim() || null } : {}),
+          ...(parsed.data.image_url !== undefined ? { image_url: toStoredMediaPath(parsed.data.image_url) } : {}),
           ...(parsed.data.one_way_rate_per_km != null
             ? { one_way_rate_per_km: parsed.data.one_way_rate_per_km }
             : {}),
@@ -2121,8 +2121,7 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
     await fs.promises.writeFile(fullPath, await file.toBuffer());
 
     const relativeUrl = `/storage/public/routes/${filename}`;
-    const absoluteUrl = `${env.APP_URL.replace(/\/$/, "")}${relativeUrl}`;
-    return ok(reply, { url: absoluteUrl, path: relativeUrl }, "Image uploaded.", 201);
+    return ok(reply, { url: absolutePublicUrl(relativeUrl, req), path: relativeUrl }, "Image uploaded.", 201);
   });
 
   app.get("/cities", { preHandler: [requirePermission("routes.manage")] }, async (_req, reply) => {
@@ -2219,7 +2218,7 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
           content: parsed.data.content?.trim() || null,
           faq_content: parsed.data.faq_content?.trim() || null,
           route_map_embed_url: parsed.data.route_map_embed_url?.trim() || null,
-          image_url: parsed.data.image_url?.trim() || null,
+          image_url: toStoredMediaPath(parsed.data.image_url),
           amount: parsed.data.amount ?? null,
           is_popular: parsed.data.is_popular ?? false,
           is_active: parsed.data.is_active ?? true,
@@ -2287,7 +2286,7 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
             ? { route_map_embed_url: parsed.data.route_map_embed_url?.trim() || null }
             : {}),
           ...(parsed.data.image_url !== undefined
-            ? { image_url: parsed.data.image_url?.trim() || null }
+            ? { image_url: toStoredMediaPath(parsed.data.image_url) }
             : {}),
           ...(parsed.data.amount !== undefined ? { amount: parsed.data.amount } : {}),
           ...(parsed.data.is_active != null ? { is_active: parsed.data.is_active } : {}),

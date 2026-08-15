@@ -7,7 +7,7 @@ import mpv from "@/assets/car-mpv.jpg";
 import suv from "@/assets/car-suv.jpg";
 import tempo from "@/assets/car-tempo.jpg";
 import { vehicles } from "@/lib/site-data";
-import { getVehicleCategories, isApiConfigured, type VehicleCategory } from "@/lib/api";
+import { getVehicleCategories, isApiConfigured, mediaUrl, type VehicleCategory } from "@/lib/api";
 
 function imageFor(slug: string, name: string) {
   const key = `${slug} ${name}`.toLowerCase();
@@ -65,7 +65,7 @@ export function Fleet() {
         seats: c.seating_capacity,
         bags: bagsFrom(c.luggage_capacity, c.seating_capacity),
         perKm: c.one_way_rate_per_km,
-        image: c.image_url || imageFor(c.slug, c.name),
+        image: mediaUrl(c.image_url) || imageFor(c.slug, c.name),
       }));
     }
     return vehicles.map((v) => ({

@@ -4,20 +4,27 @@ export function mediaUrl(raw?: string | null): string | null {
   if (!raw) return null;
   const value = raw.trim();
   if (!value || value === "null") return null;
+
+  const apiOrigin = API_BASE.replace(/\/api\/v1\/?$/i, "").replace(/\/$/, "");
+
   if (/^https?:\/\//i.test(value)) {
     try {
       const u = new URL(value);
-      if (["localhost", "127.0.0.1", "10.0.2.2"].includes(u.hostname)) {
-        return API_BASE ? `${API_BASE}${u.pathname}${u.search}` : value;
+      const host = u.hostname.toLowerCase();
+      const rewriteHost =
+        ["localhost", "127.0.0.1", "10.0.2.2"].includes(host) ||
+        host.endsWith(".vercel.app");
+      if (rewriteHost && apiOrigin) {
+        return `${apiOrigin}${u.pathname}${u.search}`;
       }
     } catch {
       /* keep */
     }
     return value;
   }
-  if (!API_BASE) return value;
-  if (value.startsWith("/")) return `${API_BASE}${value}`;
-  return `${API_BASE}/${value}`;
+  if (!apiOrigin) return value;
+  if (value.startsWith("/")) return `${apiOrigin}${value}`;
+  return `${apiOrigin}/${value}`;
 }
 
 export class ApiError extends Error {
