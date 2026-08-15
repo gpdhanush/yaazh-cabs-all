@@ -138,34 +138,48 @@ class _CustomerCard extends StatelessWidget {
 
   const _CustomerCard({required this.customer});
 
+  String get _initials {
+    final parts =
+        customer.name.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty);
+    if (parts.length >= 2) {
+      return (parts.first[0] + parts.elementAt(1)[0]).toUpperCase();
+    }
+    if (customer.name.trim().isNotEmpty) {
+      return customer.name.trim()[0].toUpperCase();
+    }
+    return 'C';
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final c = customer;
+    final blocked = c.appStatus == 'blocked';
+    final bookings = c.bookingCount;
 
     return Material(
       color: theme.colorScheme.surface,
+      clipBehavior: Clip.antiAlias,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppConstants.radiusL),
         side: BorderSide(color: theme.dividerColor),
       ),
       child: InkWell(
-        borderRadius: BorderRadius.circular(AppConstants.radiusL),
         onTap: () => context.push('/customers/${c.id}'),
         child: Padding(
           padding: const EdgeInsets.all(14),
           child: Row(
             children: [
               CircleAvatar(
-                radius: 24,
+                radius: 26,
                 backgroundColor: theme.colorScheme.primary.withValues(
                   alpha: 0.14,
                 ),
                 child: Text(
-                  c.name.isNotEmpty ? c.name[0].toUpperCase() : 'C',
+                  _initials,
                   style: TextStyle(
                     color: theme.colorScheme.primary,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
               ),
@@ -175,28 +189,44 @@ class _CustomerCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      c.name,
+                      c.name.isNotEmpty ? c.name : 'Customer',
                       style: theme.textTheme.titleSmall,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 2),
+                    const SizedBox(height: 4),
                     Text(c.phone, style: theme.textTheme.bodySmall),
-                    if (c.city != null && c.city!.isNotEmpty) ...[
+                    if (c.email != null && c.email!.trim().isNotEmpty) ...[
                       const SizedBox(height: 2),
                       Text(
-                        c.city!,
+                        c.email!,
                         style: theme.textTheme.bodySmall,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
                     ],
-                    // const SizedBox(height: 8),
-                    // StatusChip(
-                    //   status: c.appStatus,
-                    //   label: c.appStatusLabel,
-                    //   tone: CustomerMeta.color(c.appStatus),
-                    // ),
+                    if ((c.city != null && c.city!.isNotEmpty) ||
+                        bookings != null) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        [
+                          if (c.city != null && c.city!.isNotEmpty) c.city!,
+                          if (bookings != null)
+                            '$bookings booking${bookings == 1 ? '' : 's'}',
+                        ].join(' · '),
+                        style: theme.textTheme.bodySmall,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                    if (blocked) ...[
+                      const SizedBox(height: 8),
+                      StatusChip(
+                        status: c.appStatus,
+                        label: c.appStatusLabel,
+                        tone: CustomerMeta.color(c.appStatus),
+                      ),
+                    ],
                   ],
                 ),
               ),

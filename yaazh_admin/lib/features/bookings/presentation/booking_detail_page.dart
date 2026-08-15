@@ -186,23 +186,55 @@ class _BookingDetailPageState extends ConsumerState<BookingDetailPage> {
                   const SizedBox(height: 12),
                   _Panel(
                     title: 'Customer',
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    child: Row(
                       children: [
-                        _kv('Name', b.customerName),
-                        _kv('Phone', b.customerPhone),
-                        _kv(
-                          'Email',
-                          b.customerEmail?.isNotEmpty == true
-                              ? b.customerEmail!
-                              : 'Not provided',
+                        CircleAvatar(
+                          radius: 24,
+                          backgroundColor: theme.colorScheme.primary
+                              .withValues(alpha: 0.14),
+                          child: Text(
+                            _initials(b.customerName),
+                            style: TextStyle(
+                              color: theme.colorScheme.primary,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                b.customerName.isNotEmpty
+                                    ? b.customerName
+                                    : 'Customer',
+                                style: theme.textTheme.titleMedium,
+                              ),
+                              if (b.customerPhone.isNotEmpty)
+                                Text(
+                                  b.customerPhone,
+                                  style: theme.textTheme.bodySmall,
+                                ),
+                              Text(
+                                b.customerEmail?.isNotEmpty == true
+                                    ? b.customerEmail!
+                                    : 'No email',
+                                style: theme.textTheme.bodySmall,
+                              ),
+                            ],
+                          ),
                         ),
                         if (b.customerPhone.isNotEmpty)
-                          TextButton.icon(
-                            onPressed: () =>
-                                launchUrl(Uri.parse('tel:${b.customerPhone}')),
+                          IconButton.filled(
+                            onPressed: () => launchUrl(
+                              Uri.parse('tel:${b.customerPhone}'),
+                            ),
+                            style: IconButton.styleFrom(
+                              backgroundColor: theme.colorScheme.primary,
+                              foregroundColor: theme.colorScheme.onPrimary,
+                            ),
                             icon: const Icon(Icons.phone_rounded),
-                            label: const Text('Call customer'),
                           ),
                       ],
                     ),
@@ -274,11 +306,21 @@ class _BookingDetailPageState extends ConsumerState<BookingDetailPage> {
                     onRecord: () => _recordPayment(b),
                     onMarkPaid: () => _markPaid(b),
                   ),
+                  const SizedBox(height: 12),
+                  _Panel(
+                    title: 'Timeline',
+                    child: b.history.isEmpty
+                        ? Text(
+                            'No history yet.',
+                            style: theme.textTheme.bodySmall,
+                          )
+                        : _StatusTimeline(history: b.history),
+                  ),
                   if (BookingStatus.canComplete(b.status) ||
                       (BookingStatus.canAssign(b.status) &&
                           b.assignedDriverId != null &&
                           b.assignedDriverId!.isNotEmpty)) ...[
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 20),
                     Row(
                       children: [
                         if (BookingStatus.canComplete(b.status))
@@ -312,18 +354,8 @@ class _BookingDetailPageState extends ConsumerState<BookingDetailPage> {
                       ],
                     ),
                   ],
-                  const SizedBox(height: 12),
-                  _Panel(
-                    title: 'Timeline',
-                    child: b.history.isEmpty
-                        ? Text(
-                            'No history yet.',
-                            style: theme.textTheme.bodySmall,
-                          )
-                        : _StatusTimeline(history: b.history),
-                  ),
                   if (BookingStatus.canCancel(b.status)) ...[
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 12),
                     YaDangerButton(
                       onPressed: () {
                         hideKeyboard();
@@ -347,23 +379,15 @@ class _BookingDetailPageState extends ConsumerState<BookingDetailPage> {
     if (!b.isFullyPaid) {
       if (!mounted) return;
       final due = b.payment?.balanceDue;
-      final remaining = due != null && due > 0
-          ? 'Remaining ${formatInr(due)}.\n\n'
-          : '';
-      await showDialog<void>(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          title: const Text('Payment pending'),
-          content: Text(
-            '${remaining}Please mark as fully paid then click complete.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text('OK'),
-            ),
-          ],
-        ),
+      await showNoticeSheet(
+        context,
+        title: 'Payment pending',
+        message: 'Mark this booking as fully paid, then tap Complete again.',
+        actionLabel: 'Got it',
+        icon: Icons.payments_rounded,
+        color: AppColors.warning,
+        highlightLabel: due != null && due > 0 ? 'Amount due' : null,
+        highlightValue: due != null && due > 0 ? formatInr(due) : null,
       );
       return;
     }
@@ -674,6 +698,15 @@ class _Panel extends StatelessWidget {
       ),
     );
   }
+}
+
+String _initials(String name) {
+  final parts = name.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty);
+  if (parts.length >= 2) {
+    return (parts.first[0] + parts.elementAt(1)[0]).toUpperCase();
+  }
+  if (name.trim().isNotEmpty) return name.trim()[0].toUpperCase();
+  return 'C';
 }
 
 Widget _kv(String label, String value) {

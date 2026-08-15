@@ -62,8 +62,7 @@ class BookingStatus {
 
   static bool canConfirm(String status) => status == pending;
 
-  static bool canSendInvoice(String status) =>
-      status != pending && status != rejected;
+  static bool canSendInvoice(String status) => status == completed;
 
   static bool canSendFeedback(String status) => status == completed;
 
