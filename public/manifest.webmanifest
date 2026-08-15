@@ -9,7 +9,7 @@
   "lang": "en-IN",
   "icons": [
     {
-      "src": "/favicon-32.png",
+      "src": "/app-logo.png",
       "sizes": "32x32",
       "type": "image/png"
     },

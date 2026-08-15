@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Clock, ExternalLink, Loader2, Mail, MapPin, MessageCircle, Phone, Send } from "lucide-react";
+import { Loader2, Send } from "lucide-react";
 import { toast } from "sonner";
 import {
   ADMIN_EMAIL,
@@ -9,12 +9,16 @@ import {
   BUSINESS_ADDRESS,
   BUSINESS_HOURS,
   MAP_EMBED_URL,
-  MAPS_SHARE_URL,
   PHONE_PRIMARY,
   PHONE_SECONDARY,
 } from "@/lib/site-data";
 import { ApiError, getAppConfig, isApiConfigured, submitContact } from "@/lib/api";
 import { Reveal, StaggerGroup, StaggerItem } from "./motion-primitives";
+import iconPhone from "@/assets/contact/phone.png";
+import iconWhatsapp from "@/assets/contact/whatsapp.png";
+import iconEmail from "@/assets/contact/email.png";
+import iconLocation from "@/assets/contact/location.png";
+import iconHours from "@/assets/contact/hours.png";
 
 type ContactInfo = {
   phonePrimary: string;
@@ -23,7 +27,6 @@ type ContactInfo = {
   email: string;
   address: string;
   hours: string;
-  mapsShare: string;
   mapEmbed: string;
 };
 
@@ -50,7 +53,6 @@ export function Contact() {
     email: ADMIN_EMAIL,
     address: BUSINESS_ADDRESS,
     hours: BUSINESS_HOURS,
-    mapsShare: MAPS_SHARE_URL,
     mapEmbed: MAP_EMBED_URL,
   });
   const [name, setName] = useState("");
@@ -73,7 +75,6 @@ export function Contact() {
           email: s["support_email"] || prev.email,
           address: s["business_address"] || prev.address,
           hours: s["business_hours"] || prev.hours,
-          mapsShare: s["maps_share_url"] || prev.mapsShare,
           mapEmbed: buildEmbed(s["map_lat"], s["map_lng"]),
         }));
       })
@@ -85,7 +86,7 @@ export function Contact() {
   const contactRows = useMemo(
     () => [
       {
-        icon: Phone,
+        icon: iconPhone,
         label: "Call us",
         body: (
           <span className="flex flex-col gap-1">
@@ -99,7 +100,7 @@ export function Contact() {
         ),
       },
       {
-        icon: MessageCircle,
+        icon: iconWhatsapp,
         label: "WhatsApp",
         body: (
           <a
@@ -113,7 +114,7 @@ export function Contact() {
         ),
       },
       {
-        icon: Mail,
+        icon: iconEmail,
         label: "Email",
         body: (
           <a href={`mailto:${info.email}`} className="hover:text-brand">
@@ -122,12 +123,12 @@ export function Contact() {
         ),
       },
       {
-        icon: MapPin,
+        icon: iconLocation,
         label: "Location",
         body: info.address,
       },
       {
-        icon: Clock,
+        icon: iconHours,
         label: "Hours",
         body: info.hours,
       },
@@ -196,12 +197,11 @@ export function Contact() {
           <div>
             <StaggerGroup className="space-y-6">
               {contactRows.map((row) => {
-                const Icon = row.icon;
                 return (
                   <StaggerItem key={row.label}>
                   <div className="flex gap-4">
-                    <span className="mt-0.5 grid size-11 shrink-0 place-items-center rounded-xl border border-primary/35 bg-primary/12 text-brand">
-                      <Icon className="size-5" strokeWidth={2} />
+                    <span className="mt-0.5 grid size-12 shrink-0 place-items-center overflow-hidden rounded-full shadow-[0_8px_20px_-10px_rgba(17,24,39,0.45)] ring-2 ring-primary/25 sm:size-14">
+                      <img src={row.icon} alt="" width={56} height={56} className="size-full object-cover" />
                     </span>
                     <div>
                       <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
@@ -215,18 +215,6 @@ export function Contact() {
                   </StaggerItem>
                 );
               })}
-
-              <StaggerItem className="pt-2">
-                <a
-                  href={info.mapsShare}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground gold-ring"
-                >
-                  Open in Google Maps
-                  <ExternalLink className="size-3.5" />
-                </a>
-              </StaggerItem>
             </StaggerGroup>
 
             <form onSubmit={onSubmit} className="mt-10 space-y-3 rounded-2xl border border-border bg-card p-5 shadow-sm">

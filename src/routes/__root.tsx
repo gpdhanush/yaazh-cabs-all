@@ -12,6 +12,7 @@ import type { ReactNode } from "react";
 import appCss from "../styles.css?url";
 import { ThemeProvider, themeInitScript } from "../components/theme-provider";
 import { ClearStaleServiceWorkers } from "../components/site/clear-stale-sw";
+import { SiteCursor } from "../components/site/site-cursor";
 
 function NotFoundComponent() {
   return (
@@ -101,9 +102,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         rel: "stylesheet",
         href: "https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;1,14..32,400&display=swap",
       },
-      { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
-      { rel: "icon", href: "/favicon-32.png", type: "image/png", sizes: "32x32" },
-      { rel: "apple-touch-icon", href: "/apple-touch-icon.png", sizes: "180x180" },
+      { rel: "icon", href: "/app-logo.png", type: "image/png" },
+      { rel: "icon", href: "/app-logo.png", type: "image/png", sizes: "32x32" },
+      { rel: "apple-touch-icon", href: "/app-logo.png", sizes: "180x180" },
       { rel: "manifest", href: "/manifest.webmanifest" },
     ],
   }),
@@ -136,6 +137,7 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider defaultTheme="light">
         <ClearStaleServiceWorkers />
+        <SiteCursor />
         {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
         <Outlet />
       </ThemeProvider>
