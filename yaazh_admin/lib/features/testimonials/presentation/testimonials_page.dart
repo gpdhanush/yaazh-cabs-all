@@ -9,7 +9,6 @@ import 'package:yaazh_admin/core/widgets/coming_soon.dart';
 import 'package:yaazh_admin/core/widgets/confirm_sheet.dart';
 import 'package:yaazh_admin/core/widgets/keyboard_dismiss.dart';
 import 'package:yaazh_admin/core/widgets/status_chip.dart';
-import 'package:yaazh_admin/core/widgets/ya_danger_button.dart';
 import 'package:yaazh_admin/core/widgets/ya_loader.dart';
 import 'package:yaazh_admin/features/testimonials/data/testimonial_repository.dart';
 import 'package:yaazh_admin/features/testimonials/domain/testimonial.dart';
@@ -207,98 +206,148 @@ class _TestimonialCard extends ConsumerWidget {
     final snippet = t.reviewSnippet?.isNotEmpty == true
         ? t.reviewSnippet!
         : t.review;
+    final initial = t.customerName.isNotEmpty
+        ? t.customerName[0].toUpperCase()
+        : 'T';
+    final approved = t.approvalStatus == 'approved';
+    final rejected = t.approvalStatus == 'rejected';
+    final radius = BorderRadius.circular(AppConstants.radiusS);
 
     return Material(
       color: theme.colorScheme.surface,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppConstants.radiusL),
+        borderRadius: radius,
         side: BorderSide(color: theme.dividerColor),
       ),
+      clipBehavior: Clip.antiAlias,
       child: InkWell(
-        borderRadius: BorderRadius.circular(AppConstants.radiusL),
         onTap: () => context.push('/testimonials/${t.id}/edit'),
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
+                  CircleAvatar(
+                    radius: 22,
+                    backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.14),
                     child: Text(
-                      t.customerName,
-                      style: theme.textTheme.titleSmall,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  StatusChip(
-                    status: t.approvalStatus,
-                    label: t.statusLabel,
-                    tone: TestimonialMeta.color(t.approvalStatus),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 6),
-              Row(
-                children: [
-                  ...List.generate(5, (i) {
-                    return Icon(
-                      i < t.rating
-                          ? Icons.star_rounded
-                          : Icons.star_outline_rounded,
-                      size: 16,
-                      color: AppColors.warning,
-                    );
-                  }),
-                  if (t.isFeatured) ...[
-                    const SizedBox(width: 8),
-                    Text(
-                      'Featured',
-                      style: theme.textTheme.bodySmall?.copyWith(
+                      initial,
+                      style: TextStyle(
                         color: theme.colorScheme.primary,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
-                  ],
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                t.customerName,
+                                style: theme.textTheme.titleSmall,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            StatusChip(
+                              status: t.approvalStatus,
+                              label: t.statusLabel,
+                              tone: TestimonialMeta.color(t.approvalStatus),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            ...List.generate(5, (i) {
+                              return Icon(
+                                i < t.rating
+                                    ? Icons.star_rounded
+                                    : Icons.star_outline_rounded,
+                                size: 16,
+                                color: AppColors.warning,
+                              );
+                            }),
+                            if (t.isFeatured) ...[
+                              const SizedBox(width: 8),
+                              Text(
+                                'Featured',
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: theme.colorScheme.primary,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          snippet,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.bodySmall,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          formatDateTime(t.createdAt),
+                          style: theme.textTheme.bodySmall,
+                        ),
+                      ],
+                    ),
+                  ),
                 ],
               ),
-              const SizedBox(height: 8),
-              Text(
-                snippet,
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.bodySmall,
-              ),
-              const SizedBox(height: 8),
-              Text(formatDateTime(t.createdAt), style: theme.textTheme.bodySmall),
-              if (t.approvalStatus == 'pending') ...[
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () => _approve(ref),
-                        child: const Text('APPROVE'),
+            ),
+            Divider(height: 1, color: theme.dividerColor),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(4, 0, 4, 0),
+              child: Row(
+                children: [
+                  if (!approved && !rejected) ...[
+                    TextButton(
+                      onPressed: () => _approve(ref),
+                      style: TextButton.styleFrom(
+                        foregroundColor: AppColors.success,
+                        visualDensity: VisualDensity.compact,
+                        textStyle: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13,
+                        ),
                       ),
+                      child: const Text('Approved'),
                     ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: () => _reject(context, ref),
-                        child: const Text('REJECT'),
+                    TextButton(
+                      onPressed: () => _reject(context, ref),
+                      style: TextButton.styleFrom(
+                        foregroundColor: AppColors.salmon,
+                        visualDensity: VisualDensity.compact,
+                        textStyle: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13,
+                        ),
                       ),
+                      child: const Text('Rejected'),
                     ),
                   ],
-                ),
-              ],
-              YaDangerButton(
-                onPressed: () => _delete(context, ref),
-                icon: Icons.delete_outline_rounded,
-                label: 'DELETE',
+                  const Spacer(),
+                  IconButton(
+                    tooltip: 'Delete',
+                    visualDensity: VisualDensity.compact,
+                    onPressed: () => _delete(context, ref),
+                    icon: const Icon(Icons.delete_outline_rounded),
+                    color: AppColors.salmon,
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
