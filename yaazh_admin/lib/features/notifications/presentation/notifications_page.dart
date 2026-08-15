@@ -9,6 +9,7 @@ import 'package:yaazh_admin/core/widgets/coming_soon.dart';
 import 'package:yaazh_admin/core/widgets/confirm_sheet.dart';
 import 'package:yaazh_admin/core/widgets/keyboard_dismiss.dart';
 import 'package:yaazh_admin/core/widgets/status_chip.dart';
+import 'package:yaazh_admin/core/widgets/ya_danger_button.dart';
 import 'package:yaazh_admin/core/widgets/ya_loader.dart';
 import 'package:yaazh_admin/features/notifications/data/notification_repository.dart';
 import 'package:yaazh_admin/features/notifications/domain/notification_log.dart';
@@ -242,11 +243,9 @@ class _NotificationCard extends ConsumerWidget {
                     ],
                   ),
                 ),
-                IconButton(
+                YaDangerIconButton(
                   tooltip: 'Delete',
                   onPressed: () => _delete(context, ref),
-                  color: const Color(0xFFE53935),
-                  icon: const Icon(Icons.delete_outline_rounded),
                 ),
               ],
             ),

@@ -561,6 +561,7 @@ class _BrandActionButton extends StatelessWidget {
         disabledBackgroundColor: color.withValues(alpha: 0.4),
         minimumSize: const Size(0, 52),
         padding: const EdgeInsets.symmetric(horizontal: 8),
+        side: BorderSide(color: color, width: 1.4),
         textStyle: _labelStyle,
       ),
       icon: Icon(icon, size: 18),

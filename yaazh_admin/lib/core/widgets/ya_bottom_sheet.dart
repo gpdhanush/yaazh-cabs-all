@@ -78,12 +78,20 @@ class _ActionRow<T> extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final color = action.destructive ? AppColors.salmon : theme.colorScheme.primary;
+    final destructiveFill = action.destructive && !isDark;
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Material(
-        color: color.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(16),
+        color: destructiveFill ? color : color.withValues(alpha: isDark && action.destructive ? 0 : 0.08),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: action.destructive
+              ? BorderSide(color: color, width: 1.4)
+              : BorderSide.none,
+        ),
+        clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: () => Navigator.of(context).pop(action.value),
           borderRadius: BorderRadius.circular(16),
@@ -95,10 +103,18 @@ class _ActionRow<T> extends StatelessWidget {
                   width: 42,
                   height: 42,
                   decoration: BoxDecoration(
-                    color: theme.colorScheme.surface,
+                    color: destructiveFill
+                        ? Colors.white.withValues(alpha: 0.18)
+                        : theme.colorScheme.surface,
                     borderRadius: BorderRadius.circular(12),
+                    border: action.destructive
+                        ? Border.all(color: isDark ? color : Colors.white.withValues(alpha: 0.35))
+                        : null,
                   ),
-                  child: Icon(action.icon, color: color),
+                  child: Icon(
+                    action.icon,
+                    color: destructiveFill ? Colors.white : color,
+                  ),
                 ),
                 const SizedBox(width: 14),
                 Expanded(
@@ -106,11 +122,18 @@ class _ActionRow<T> extends StatelessWidget {
                     action.label,
                     style: theme.textTheme.titleSmall?.copyWith(
                       fontWeight: FontWeight.w700,
-                      color: action.destructive ? AppColors.salmon : null,
+                      color: action.destructive
+                          ? (destructiveFill ? Colors.white : color)
+                          : null,
                     ),
                   ),
                 ),
-                Icon(Icons.chevron_right_rounded, color: theme.textTheme.bodySmall?.color),
+                Icon(
+                  Icons.chevron_right_rounded,
+                  color: action.destructive
+                      ? (destructiveFill ? Colors.white70 : color)
+                      : theme.textTheme.bodySmall?.color,
+                ),
               ],
             ),
           ),

@@ -52,6 +52,7 @@ Future<bool> showConfirmSheet(
                       Navigator.of(ctx).pop(true);
                     },
                     label: actionLabel,
+                    color: color,
                   )
                 : ElevatedButton(
                     onPressed: () {

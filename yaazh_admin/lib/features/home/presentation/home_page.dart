@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:line_awesome_flutter/line_awesome_flutter.dart';
 import 'package:yaazh_admin/app/constants.dart';
-import 'package:yaazh_admin/app/theme.dart';
 import 'package:yaazh_admin/core/widgets/admin_avatar.dart';
 import 'package:yaazh_admin/core/widgets/keyboard_dismiss.dart';
 import 'package:yaazh_admin/core/widgets/ya_loader.dart';
@@ -97,261 +96,131 @@ class _DashboardBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final metrics = <_Metric>[
+      _Metric(
+        label: 'Today',
+        hint: 'Trips booked today',
+        value: '${data.bookingsToday}',
+        icon: LineAwesomeIcons.calendar,
+        color: AppColors.primary,
+        onTap: () => context.go('/bookings'),
+      ),
+      _Metric(
+        label: 'Pending',
+        hint: 'Need action',
+        value: '${data.pendingBookings}',
+        icon: LineAwesomeIcons.clock,
+        color: AppColors.warning,
+        onTap: () => context.go('/bookings'),
+      ),
+      _Metric(
+        label: 'Bookings',
+        hint: 'All time',
+        value: '${data.totalBookings}',
+        icon: LineAwesomeIcons.taxi_solid,
+        color: AppColors.supportBlue,
+        onTap: () => context.go('/bookings'),
+      ),
+      _Metric(
+        label: 'Drivers',
+        hint: 'Active now',
+        value: '${data.activeDrivers}',
+        icon: LineAwesomeIcons.id_card,
+        color: AppColors.success,
+        onTap: () => context.push('/drivers'),
+      ),
+      _Metric(
+        label: 'Customers',
+        hint: 'Registered',
+        value: '${data.customers}',
+        icon: LineAwesomeIcons.users_solid,
+        color: AppColors.supportPurple,
+        onTap: () => context.push('/customers'),
+      ),
+      _Metric(
+        label: 'Enquiries',
+        hint: 'Website form',
+        value: '${data.enquiries}',
+        icon: LineAwesomeIcons.envelope,
+        color: AppColors.salmon,
+        onTap: () => context.go('/enquiries'),
+      ),
+    ];
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return GridView.count(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      crossAxisCount: isTablet ? 3 : 2,
+      mainAxisSpacing: 12,
+      crossAxisSpacing: 12,
+      childAspectRatio: isTablet ? 1.7 : 1.35,
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: _GlassCard(
-                label: 'Today',
-                value: '${data.bookingsToday}',
-                hint: 'Trips booked',
-                icon: LineAwesomeIcons.calendar,
-                color: AppColors.primary,
-                onTap: () => context.go('/bookings'),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _GlassCard(
-                label: 'Pending',
-                value: '${data.pendingBookings}',
-                hint: 'Need action',
-                icon: LineAwesomeIcons.clock,
-                color: AppColors.warning,
-                onTap: () => context.go('/bookings'),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 22),
-        Text('Overview', style: theme.textTheme.titleMedium),
-        const SizedBox(height: 12),
-        GridView.count(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          crossAxisCount: isTablet ? 4 : 2,
-          mainAxisSpacing: 12,
-          crossAxisSpacing: 12,
-          childAspectRatio: isTablet ? 1.55 : 1.28,
-          children: [
-            _GlassCard(
-              label: 'Bookings',
-              value: '${data.totalBookings}',
-              icon: LineAwesomeIcons.taxi_solid,
-              color: AppColors.primary,
-              onTap: () => context.go('/bookings'),
-            ),
-            _GlassCard(
-              label: 'Drivers',
-              value: '${data.activeDrivers}',
-              icon: LineAwesomeIcons.id_card,
-              color: AppColors.supportBlue,
-              onTap: () => context.push('/drivers'),
-            ),
-            _GlassCard(
-              label: 'Customers',
-              value: '${data.customers}',
-              icon: LineAwesomeIcons.users_solid,
-              color: AppColors.supportPurple,
-              onTap: () => context.push('/customers'),
-            ),
-            _GlassCard(
-              label: 'Enquiries',
-              value: '${data.enquiries}',
-              icon: LineAwesomeIcons.envelope,
-              color: AppColors.salmon,
-              onTap: () => context.go('/enquiries'),
-            ),
-          ],
-        ),
-        const SizedBox(height: 22),
-        Text('Shortcuts', style: theme.textTheme.titleMedium),
-        const SizedBox(height: 12),
-        GridView.count(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          crossAxisCount: isTablet ? 4 : 2,
-          mainAxisSpacing: 12,
-          crossAxisSpacing: 12,
-          childAspectRatio: isTablet ? 1.8 : 1.65,
-          children: [
-            _GlassShortcut(
-              icon: LineAwesomeIcons.user_check_solid,
-              label: 'Assign driver',
-              color: AppColors.primary,
-              onTap: () => context.go('/bookings'),
-            ),
-            _GlassShortcut(
-              icon: LineAwesomeIcons.car_solid,
-              label: 'Fleet',
-              color: AppColors.supportBlue,
-              onTap: () => context.push('/fleet'),
-            ),
-            _GlassShortcut(
-              icon: LineAwesomeIcons.map_marked_solid,
-              label: 'Live tracking',
-              color: AppColors.supportPurple,
-              onTap: () => context.push('/tracking'),
-            ),
-            _GlassShortcut(
-              icon: LineAwesomeIcons.id_card,
-              label: 'Drivers',
-              color: AppColors.warning,
-              onTap: () => context.push('/drivers'),
-            ),
-            _GlassShortcut(
-              icon: LineAwesomeIcons.bullhorn_solid,
-              label: 'Push alerts',
-              color: AppColors.salmon,
-              onTap: () => context.push('/notifications'),
-            ),
-            _GlassShortcut(
-              icon: LineAwesomeIcons.chart_bar,
-              label: 'Reports',
-              color: AppColors.primary,
-              onTap: () => context.push('/reports'),
-            ),
-          ],
-        ),
+        for (final metric in metrics) _StatCard(metric: metric),
       ],
     );
   }
 }
 
-class _GlassCard extends StatelessWidget {
+class _Metric {
   final String label;
+  final String hint;
   final String value;
-  final String? hint;
   final IconData icon;
   final Color color;
   final VoidCallback onTap;
 
-  const _GlassCard({
+  const _Metric({
     required this.label,
+    required this.hint,
     required this.value,
-    this.hint,
     required this.icon,
     required this.color,
     required this.onTap,
   });
-
-  @override
-  Widget build(BuildContext context) {
-    final onColor = AppTheme.onPrimaryOf(color);
-    return _GlassSurface(
-      color: color,
-      onTap: onTap,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, size: 22, color: onColor.withValues(alpha: 0.95)),
-          const SizedBox(height: 14),
-          Text(
-            value,
-            style: TextStyle(
-              color: onColor,
-              fontSize: 26,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            label,
-            style: TextStyle(
-              color: onColor,
-              fontWeight: FontWeight.w700,
-              fontSize: 14,
-            ),
-          ),
-          if (hint != null)
-            Text(
-              hint!,
-              style: TextStyle(color: onColor.withValues(alpha: 0.78), fontSize: 12),
-            ),
-        ],
-      ),
-    );
-  }
 }
 
-class _GlassShortcut extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final Color color;
-  final VoidCallback onTap;
+class _StatCard extends StatelessWidget {
+  final _Metric metric;
 
-  const _GlassShortcut({
-    required this.icon,
-    required this.label,
-    required this.color,
-    required this.onTap,
-  });
+  const _StatCard({required this.metric});
 
   @override
   Widget build(BuildContext context) {
-    final onColor = AppTheme.onPrimaryOf(color);
-    return _GlassSurface(
-      color: color,
-      onTap: onTap,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, color: onColor),
-          const Spacer(),
-          Text(
-            label,
-            style: TextStyle(
-              color: onColor,
-              fontWeight: FontWeight.w700,
-              fontSize: 14,
-            ),
-          ),
-        ],
+    final theme = Theme.of(context);
+    return Material(
+      color: theme.colorScheme.surface,
+      clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: theme.dividerColor),
       ),
-    );
-  }
-}
-
-class _GlassSurface extends StatelessWidget {
-  final Color color;
-  final VoidCallback onTap;
-  final Widget child;
-
-  const _GlassSurface({
-    required this.color,
-    required this.onTap,
-    required this.child,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(18),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          child: Ink(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(18),
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Color.alphaBlend(Colors.white.withValues(alpha: 0.28), color),
-                  color.withValues(alpha: 0.88),
-                ],
+      child: InkWell(
+        onTap: metric.onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: metric.color.withValues(alpha: 0.14),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(metric.icon, size: 20, color: metric.color),
               ),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.38)),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(14),
-              child: child,
-            ),
+              const Spacer(),
+              Text(
+                metric.value,
+                style: theme.textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(metric.label, style: theme.textTheme.titleSmall),
+              Text(metric.hint, style: theme.textTheme.bodySmall),
+            ],
           ),
         ),
       ),

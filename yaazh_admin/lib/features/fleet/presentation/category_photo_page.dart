@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_cropper/image_cropper.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:yaazh_admin/app/constants.dart';
 import 'package:yaazh_admin/core/image_encode.dart';
 import 'package:yaazh_admin/core/network/api_exception.dart';
 import 'package:yaazh_admin/core/network/media_url.dart';
@@ -12,6 +11,7 @@ import 'package:yaazh_admin/core/widgets/coming_soon.dart';
 import 'package:yaazh_admin/core/widgets/confirm_sheet.dart';
 import 'package:yaazh_admin/core/widgets/keyboard_dismiss.dart';
 import 'package:yaazh_admin/core/widgets/ya_bottom_sheet.dart';
+import 'package:yaazh_admin/core/widgets/ya_danger_button.dart';
 import 'package:yaazh_admin/core/widgets/ya_loader.dart';
 import 'package:yaazh_admin/features/fleet/data/fleet_repository.dart';
 import 'package:yaazh_admin/features/fleet/domain/vehicle.dart';
@@ -167,11 +167,10 @@ class _CategoryPhotoPageState extends ConsumerState<CategoryPhotoPage> {
                 ),
                 if (url != null) ...[
                   const SizedBox(height: 10),
-                  OutlinedButton.icon(
+                  YaDangerButton(
                     onPressed: _busy ? null : () => _removePhoto(category),
-                    icon: const Icon(Icons.hide_image_outlined),
-                    label: const Text('REMOVE PHOTO'),
-                    style: OutlinedButton.styleFrom(foregroundColor: AppColors.salmon),
+                    icon: Icons.hide_image_outlined,
+                    label: 'REMOVE PHOTO',
                   ),
                 ],
               ],

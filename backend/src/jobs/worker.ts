@@ -3,6 +3,10 @@ import { prisma } from "../config/database.js";
 import { loadEnv } from "../config/env.js";
 import { claimJobs, completeJob, failJob } from "../queues/job-queue.js";
 import { deliverBookingNotification } from "../services/fcm.service.js";
+import {
+  enqueueDailyQueuedNotificationPurge,
+  purgeQueuedNotificationLogs,
+} from "./purge-queued-notifications.js";
 
 loadEnv();
 
@@ -79,6 +83,10 @@ async function handleJob(jobType: string, payload: Record<string, unknown>) {
       });
       return;
     }
+    case "purge_queued_notifications": {
+      await purgeQueuedNotificationLogs();
+      return;
+    }
     default:
       if (NOTIFY_JOBS.has(jobType)) return;
       console.warn(`Unknown job type: ${jobType}`);
@@ -86,6 +94,7 @@ async function handleJob(jobType: string, payload: Record<string, unknown>) {
 }
 
 export async function processOnce(limit = 20) {
+  await enqueueDailyQueuedNotificationPurge();
   const jobs = await claimJobs(workerId, limit);
   for (const job of jobs) {
     try {

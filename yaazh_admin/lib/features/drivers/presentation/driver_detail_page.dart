@@ -179,19 +179,19 @@ class _DriverDetailPageState extends ConsumerState<DriverDetailPage> {
                     child: const Text('APPROVE'),
                   ),
                   const SizedBox(height: 8),
-                  OutlinedButton(
+                  YaDangerButton(
                     onPressed: () => _run(
                       () => ref.read(driverRepositoryProvider).reject(d.id),
                       success: 'Driver rejected',
                     ),
-                    child: const Text('REJECT'),
+                    label: 'REJECT',
                   ),
                 ],
                 if (d.verificationStatus != 'blocked') ...[
                   const SizedBox(height: 8),
-                  OutlinedButton(
+                  YaDangerButton(
                     onPressed: () => _block(d),
-                    child: const Text('BLOCK'),
+                    label: 'BLOCK',
                   ),
                 ],
                 const SizedBox(height: 12),
