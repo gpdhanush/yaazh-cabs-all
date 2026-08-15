@@ -3240,11 +3240,19 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
   });
 
   app.get("/gallery", { preHandler: [requireAuth("admin")] }, async (req, reply) => {
-    const rows = await prisma.galleryGroups.findMany({
-      orderBy: [{ display_order: "asc" }, { id: "asc" }],
-      include: { images: { orderBy: [{ display_order: "asc" }, { id: "asc" }] } },
-    });
-    return ok(reply, rows.map((g) => serializeGalleryGroup(g, req)));
+    try {
+      const rows = await prisma.galleryGroups.findMany({
+        orderBy: [{ display_order: "asc" }, { id: "asc" }],
+        include: { images: { orderBy: [{ display_order: "asc" }, { id: "asc" }] } },
+      });
+      return ok(reply, rows.map((g) => serializeGalleryGroup(g, req)));
+    } catch (err: unknown) {
+      const code = err && typeof err === "object" && "code" in err ? String((err as { code: unknown }).code) : "";
+      if (code === "P2021") {
+        return ok(reply, [], "Gallery tables are not installed yet. Run database/migrations/007_gallery.sql.");
+      }
+      throw err;
+    }
   });
 
   app.post("/gallery/groups", { preHandler: [requireAuth("admin")] }, async (req, reply) => {

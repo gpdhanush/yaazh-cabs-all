@@ -27,14 +27,7 @@ CREATE TABLE IF NOT EXISTS gallery_images (
   KEY idx_gallery_images_group (group_id, display_order)
 ) ENGINE=InnoDB;
 
-INSERT INTO gallery_groups (slug, title, group_type, display_order, is_active)
-SELECT 'cars-outside', 'Cars — Outside', 'cars_outside', 1, 1
-WHERE NOT EXISTS (SELECT 1 FROM gallery_groups WHERE slug = 'cars-outside');
-
-INSERT INTO gallery_groups (slug, title, group_type, display_order, is_active)
-SELECT 'cars-inside', 'Cars — Inside', 'cars_inside', 2, 1
-WHERE NOT EXISTS (SELECT 1 FROM gallery_groups WHERE slug = 'cars-inside');
-
-INSERT INTO gallery_groups (slug, title, group_type, display_order, is_active)
-SELECT 'destinations', 'Destinations', 'destinations', 3, 1
-WHERE NOT EXISTS (SELECT 1 FROM gallery_groups WHERE slug = 'destinations');
+INSERT IGNORE INTO gallery_groups (slug, title, group_type, display_order, is_active) VALUES
+  ('cars-outside', 'Cars — Outside', 'cars_outside', 1, 1),
+  ('cars-inside', 'Cars — Inside', 'cars_inside', 2, 1),
+  ('destinations', 'Destinations', 'destinations', 3, 1);

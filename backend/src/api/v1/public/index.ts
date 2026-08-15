@@ -517,32 +517,38 @@ export const publicRoutes: FastifyPluginAsync = async (app) => {
   });
 
   app.get("/gallery", async (req, reply) => {
-    const rows = await prisma.galleryGroups.findMany({
-      where: { is_active: true },
-      orderBy: [{ display_order: "asc" }, { id: "asc" }],
-      include: {
-        images: {
-          where: { is_active: true },
-          orderBy: [{ display_order: "asc" }, { id: "asc" }],
+    try {
+      const rows = await prisma.galleryGroups.findMany({
+        where: { is_active: true },
+        orderBy: [{ display_order: "asc" }, { id: "asc" }],
+        include: {
+          images: {
+            where: { is_active: true },
+            orderBy: [{ display_order: "asc" }, { id: "asc" }],
+          },
         },
-      },
-    });
-    return ok(
-      reply,
-      rows
-        .filter((g) => g.images.length > 0)
-        .map((g) => ({
-          id: String(g.id),
-          slug: g.slug,
-          title: g.title,
-          group_type: g.group_type,
-          images: g.images.map((img) => ({
-            id: String(img.id),
-            image_url: absolutePublicUrl(img.image_url, req),
-            caption: img.caption,
+      });
+      return ok(
+        reply,
+        rows
+          .filter((g) => g.images.length > 0)
+          .map((g) => ({
+            id: String(g.id),
+            slug: g.slug,
+            title: g.title,
+            group_type: g.group_type,
+            images: g.images.map((img) => ({
+              id: String(img.id),
+              image_url: absolutePublicUrl(img.image_url, req),
+              caption: img.caption,
+            })),
           })),
-        })),
-    );
+      );
+    } catch (err: unknown) {
+      const code = err && typeof err === "object" && "code" in err ? String((err as { code: unknown }).code) : "";
+      if (code === "P2021") return ok(reply, []);
+      throw err;
+    }
   });
 
   app.get("/feedback/:token", async (req, reply) => {
