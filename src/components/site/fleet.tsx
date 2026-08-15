@@ -139,10 +139,7 @@ export function Fleet() {
                 </button>
 
                 <div className="flex flex-1 flex-col gap-4 px-5 pb-5 pt-4">
-                  <div>
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-brand">{v.tag}</p>
-                    <h3 className="mt-1 font-display text-xl font-bold leading-tight sm:text-[1.35rem]">{v.name}</h3>
-                  </div>
+                  <h3 className="font-display text-xl font-bold leading-tight sm:text-[1.35rem]">{v.name}</h3>
                   <div className="flex flex-wrap gap-2">
                     <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/50 px-3 py-1 text-xs text-muted-foreground">
                       <Users className="size-3.5 text-brand" /> {v.seats} seats
@@ -150,24 +147,6 @@ export function Fleet() {
                     <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/50 px-3 py-1 text-xs text-muted-foreground">
                       <Briefcase className="size-3.5 text-brand" /> {v.bags} bags
                     </span>
-                    <span className="inline-flex items-center rounded-full border border-border bg-muted/50 px-3 py-1 text-xs text-muted-foreground">
-                      AC · chauffeur
-                    </span>
-                  </div>
-                  <div className="mt-auto flex items-center justify-between gap-3 border-t border-border/80 pt-4">
-                    <button
-                      type="button"
-                      onClick={() => setActiveId(v.id)}
-                      className="text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
-                    >
-                      View car
-                    </button>
-                    <a
-                      href="#book"
-                      className="inline-flex rounded-full bg-primary px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-primary-foreground"
-                    >
-                      Book this cab
-                    </a>
                   </div>
                 </div>
               </article>
@@ -208,13 +187,6 @@ export function Fleet() {
                   {active.seats} seats · {active.bags} bags · ₹{active.perKm}/km
                 </p>
               </div>
-              <a
-                href="#book"
-                onClick={() => setActiveId(null)}
-                className="inline-flex rounded-full bg-primary px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.12em] text-primary-foreground"
-              >
-                Book this cab
-              </a>
             </figcaption>
           </figure>
         </div>

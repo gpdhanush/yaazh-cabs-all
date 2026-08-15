@@ -13,6 +13,7 @@ import {
   PHONE_SECONDARY,
 } from "@/lib/site-data";
 import { ApiError, getAppConfig, isApiConfigured, submitContact } from "@/lib/api";
+import { trackEvent } from "@/lib/analytics";
 import { Reveal, StaggerGroup, StaggerItem } from "./motion-primitives";
 import iconPhone from "@/assets/contact/phone.png";
 import iconWhatsapp from "@/assets/contact/whatsapp.png";
@@ -163,6 +164,7 @@ export function Contact() {
       };
       if (email.trim()) payload.email = email.trim();
       await submitContact(payload);
+      trackEvent("generate_lead", { method: "contact" });
       toast.success("Enquiry sent. We'll get back to you shortly.");
       setName("");
       setPhone("");

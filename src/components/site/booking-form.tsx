@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/command";
 import { LocationField, type LocationValue } from "@/components/site/location-field";
 import { cn } from "@/lib/utils";
+import { trackEvent } from "@/lib/analytics";
 import {
   tripTypes,
   vehicles,
@@ -415,6 +416,7 @@ export function BookingForm() {
         createdAt: Date.now(),
       });
       setDone(booking);
+      trackEvent("generate_lead", { method: "booking_form" });
       toast.success(`Booking ${booking.ref} confirmed`, {
         description: "Saved with our desk. Track status or notify us on WhatsApp.",
       });

@@ -14,6 +14,7 @@ import {
 import { ADMIN_WHATSAPP, PHONE_PRIMARY, BOOKING_FARE_NOTE } from "@/lib/site-data";
 import { ApiError, formatTripType, isApiConfigured, mediaUrl, trackBooking, type TrackedBooking } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { defaultOgMeta } from "@/lib/analytics";
 
 const title = "Track Your Booking | Yaazh Cabs Udumalpet";
 const description =
@@ -35,6 +36,7 @@ export const Route = createFileRoute("/status")({
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:title", content: title },
       { name: "twitter:description", content: description },
+      ...defaultOgMeta,
     ],
     links: [{ rel: "canonical", href: url }],
   }),

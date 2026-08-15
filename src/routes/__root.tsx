@@ -13,6 +13,8 @@ import appCss from "../styles.css?url";
 import { ThemeProvider, themeInitScript } from "../components/theme-provider";
 import { ClearStaleServiceWorkers } from "../components/site/clear-stale-sw";
 import { SiteCursor } from "../components/site/site-cursor";
+import { GoogleAnalytics } from "../components/site/google-analytics";
+import { defaultOgMeta, GA_MEASUREMENT_ID, GOOGLE_SITE_VERIFICATION } from "../lib/analytics";
 
 function NotFoundComponent() {
   return (
@@ -90,6 +92,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
+      ...defaultOgMeta,
+      ...(GOOGLE_SITE_VERIFICATION
+        ? [{ name: "google-site-verification", content: GOOGLE_SITE_VERIFICATION }]
+        : []),
     ],
     links: [
       {
@@ -121,6 +127,16 @@ function RootShell({ children }: { children: ReactNode }) {
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
         <HeadContent />
+        {GA_MEASUREMENT_ID ? (
+          <>
+            <script async src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`} />
+            <script
+              dangerouslySetInnerHTML={{
+                __html: `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','${GA_MEASUREMENT_ID}');`,
+              }}
+            />
+          </>
+        ) : null}
       </head>
       <body className="font-sans antialiased">
         {children}
@@ -137,6 +153,7 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider defaultTheme="light">
         <ClearStaleServiceWorkers />
+        <GoogleAnalytics />
         <SiteCursor />
         {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
         <Outlet />

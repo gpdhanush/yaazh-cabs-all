@@ -14,6 +14,7 @@ import { FAQ, faqJsonLd } from "@/components/site/faq";
 import { SiteFooter } from "@/components/site/footer";
 import { ChatWidget } from "@/components/site/chat-widget";
 import { Toaster } from "@/components/ui/sonner";
+import { defaultOgMeta } from "@/lib/analytics";
 
 const title = "Yaazh Cabs Udumalpet | Airport, Outstation & Tour Taxi";
 const description =
@@ -33,6 +34,7 @@ export const Route = createFileRoute("/")({
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:title", content: title },
       { name: "twitter:description", content: description },
+      ...defaultOgMeta,
     ],
     links: [{ rel: "canonical", href: url }],
     scripts: [

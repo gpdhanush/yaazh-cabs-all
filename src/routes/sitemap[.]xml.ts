@@ -5,7 +5,7 @@ const BASE_URL = "https://yaazhcabs.in";
 
 const entries = [
   { path: "/", changefreq: "weekly", priority: "1.0" },
-  { path: "/status", changefreq: "daily", priority: "0.6" },
+  { path: "/status", changefreq: "monthly", priority: "0.4" },
 ];
 
 export const Route = createFileRoute("/sitemap.xml")({
