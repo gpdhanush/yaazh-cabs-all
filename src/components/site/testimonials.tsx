@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/carousel";
 import { cn } from "@/lib/utils";
 import { getTestimonials, isApiConfigured, type PublicTestimonial } from "@/lib/api";
+import { Reveal } from "./motion-primitives";
 
 const FALLBACK = [
   {
@@ -102,6 +103,7 @@ export function Testimonials() {
   return (
     <section className="py-16 md:py-28">
       <div className="mx-auto max-w-7xl px-5 md:px-8">
+        <Reveal>
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-brand sm:text-[11px]">
@@ -115,8 +117,9 @@ export function Testimonials() {
             {current + 1} / {testimonials.length}
           </p>
         </div>
+        </Reveal>
 
-        <div className="relative mt-10">
+        <Reveal delay={0.08} className="relative mt-10">
           <Carousel
             setApi={setApi}
             opts={{ loop: true, align: "start" }}
@@ -170,7 +173,7 @@ export function Testimonials() {
               />
             ))}
           </div>
-        </div>
+        </Reveal>
       </div>
     </section>
   );

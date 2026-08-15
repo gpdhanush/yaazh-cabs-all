@@ -14,6 +14,8 @@ import {
   mediaUrl,
   type PublicGalleryGroup,
 } from "@/lib/api";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { Reveal, StaggerGroup, StaggerItem } from "./motion-primitives";
 
 const fallbackGroups: PublicGalleryGroup[] = [
   {
@@ -45,6 +47,7 @@ type AlbumImage = {
 };
 
 export function Gallery() {
+  const reduceMotion = useReducedMotion();
   const [groups, setGroups] = useState<PublicGalleryGroup[]>([]);
   const [openId, setOpenId] = useState<string | null>(null);
   const [photoIndex, setPhotoIndex] = useState(0);
@@ -109,7 +112,8 @@ export function Gallery() {
       />
 
       <div className="relative mx-auto max-w-7xl px-5 md:px-8">
-        <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+        <Reveal>
+          <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
           <div>
             <p className="text-[10px] uppercase tracking-[0.28em] text-brand sm:text-[11px]">
               Gallery
@@ -121,17 +125,18 @@ export function Gallery() {
           {/* <p className="max-w-sm text-sm leading-relaxed text-muted-foreground md:text-right">
             Tap a group to see every photo — outside, inside, and more.
           </p> */}
-        </div>
+          </div>
+        </Reveal>
 
-        <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <StaggerGroup className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {albums.map((g) => {
             const cover = g.photos[0];
             return (
+              <StaggerItem key={g.id}>
               <button
-                key={g.id}
                 type="button"
                 onClick={() => openAlbum(g.id)}
-                className="group overflow-hidden rounded-2xl border border-border/80 bg-card text-left shadow-[0_18px_50px_-28px_rgba(17,24,39,0.4)] outline-none transition-transform hover:-translate-y-1 focus-visible:ring-2 focus-visible:ring-primary"
+                className="group w-full overflow-hidden rounded-2xl border border-border/80 bg-card text-left shadow-[0_18px_50px_-28px_rgba(17,24,39,0.4)] outline-none transition-transform hover:-translate-y-1 hover:border-brand/40 focus-visible:ring-2 focus-visible:ring-primary"
               >
                 <div className="relative aspect-[16/10] bg-[linear-gradient(180deg,#f4f6fb,#ffffff)]">
                   {cover && (
@@ -139,7 +144,7 @@ export function Gallery() {
                       src={cover.src}
                       alt={g.title}
                       loading="lazy"
-                      className="absolute inset-0 size-full object-cover transition-transform duration-700 group-hover:scale-[1.05]"
+                      className="absolute inset-0 size-full object-cover transition-transform duration-700 group-hover:scale-[1.03]"
                     />
                   )}
                   <div className="absolute inset-0 bg-gradient-to-t from-[#1F2933]/90 via-[#1F2933]/20 to-transparent" />
@@ -152,19 +157,26 @@ export function Gallery() {
                   </div>
                 </div>
               </button>
+              </StaggerItem>
             );
           })}
-        </div>
+        </StaggerGroup>
       </div>
 
-      {album && current && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label={album.title}
-          className="fixed inset-0 z-[60] flex items-center justify-center bg-[#1F2933]/85 p-3 backdrop-blur-sm sm:p-6"
-          onClick={() => setOpenId(null)}
-        >
+      <AnimatePresence>
+        {album && current && (
+          <motion.div
+            key="gallery-lightbox"
+            role="dialog"
+            aria-modal="true"
+            aria-label={album.title}
+            className="fixed inset-0 z-[60] flex items-center justify-center bg-[#1F2933]/85 p-3 backdrop-blur-sm sm:p-6"
+            onClick={() => setOpenId(null)}
+            initial={reduceMotion ? false : { opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={reduceMotion ? { opacity: 1 } : { opacity: 0 }}
+            transition={{ duration: reduceMotion ? 0 : 0.22 }}
+          >
           <button
             type="button"
             aria-label="Close album"
@@ -174,9 +186,13 @@ export function Gallery() {
             <X className="size-5" />
           </button>
 
-          <div
+          <motion.div
             className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-white/15 bg-[#0b1220] shadow-2xl"
             onClick={(e) => e.stopPropagation()}
+            initial={reduceMotion ? false : { opacity: 0, scale: 0.96 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={reduceMotion ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.96 }}
+            transition={{ duration: reduceMotion ? 0 : 0.28, ease: [0.22, 1, 0.36, 1] }}
           >
             <div className="flex items-center justify-between gap-3 border-b border-white/10 px-4 py-3 sm:px-5">
               <div>
@@ -234,9 +250,10 @@ export function Gallery() {
                 ))}
               </div>
             )}
-          </div>
-        </div>
-      )}
+          </motion.div>
+        </motion.div>
+        )}
+      </AnimatePresence>
     </section>
   );
 }

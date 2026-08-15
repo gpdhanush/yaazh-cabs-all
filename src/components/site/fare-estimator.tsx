@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
-import { BOOKING_FARE_NOTE, vehicles } from "@/lib/site-data";
+import { BOOKING_FARE_NOTE, vehicleDisplayName, vehicles } from "@/lib/site-data";
 import {
   estimateFare,
   getAppConfig,
@@ -12,16 +12,6 @@ import {
   type FareEstimate,
   type VehicleCategory,
 } from "@/lib/api";
-
-function shortName(name: string) {
-  const lower = name.toLowerCase();
-  if (lower.includes("sedan") || lower.includes("dzire")) return "Dzire";
-  if (lower.includes("ertiga")) return "Ertiga";
-  if (lower.includes("innova")) return "Innova";
-  if (lower.includes("crysta") || lower.includes("suv")) return "SUV";
-  if (lower.includes("tempo")) return "Tempo Traveller";
-  return name;
-}
 
 export function FareEstimator() {
   const [km, setKm] = useState(60);
@@ -55,7 +45,7 @@ export function FareEstimator() {
     if (categories.length) {
       return categories.map((c) => ({
         id: c.id,
-        name: shortName(c.name),
+        name: vehicleDisplayName(c.name, c.seating_capacity),
         perKm: c.one_way_rate_per_km,
         base: 0,
         batta: c.driver_batta,

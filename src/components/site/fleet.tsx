@@ -8,6 +8,7 @@ import suv from "@/assets/car-suv.jpg";
 import tempo from "@/assets/car-tempo.jpg";
 import { vehicles } from "@/lib/site-data";
 import { getVehicleCategories, isApiConfigured, mediaUrl, type VehicleCategory } from "@/lib/api";
+import { Reveal, StaggerGroup, StaggerItem } from "./motion-primitives";
 
 function imageFor(slug: string, name: string) {
   const key = `${slug} ${name}`.toLowerCase();
@@ -93,19 +94,21 @@ export function Fleet() {
       />
 
       <div className="relative mx-auto max-w-7xl px-5 md:px-8">
-        <p className="text-[10px] uppercase tracking-[0.28em] text-brand sm:text-[11px]">The fleet</p>
-        <h2 className="mt-3 max-w-2xl font-display text-3xl font-bold sm:text-4xl md:text-5xl">
-          Sanitised, serviced, <span className="text-brand">showroom clean</span>
-        </h2>
-        <p className="mt-3 max-w-xl text-sm text-muted-foreground sm:text-base">
-          Tap a car to view it full size. Every cab is AC, chauffeur-driven, and ready from Udumalpet.
-        </p>
+        <Reveal>
+          <p className="text-[10px] uppercase tracking-[0.28em] text-brand sm:text-[11px]">The fleet</p>
+          <h2 className="mt-3 max-w-2xl font-display text-3xl font-bold sm:text-4xl md:text-5xl">
+            Sanitised, serviced, <span className="text-brand">showroom clean</span>
+          </h2>
+          <p className="mt-3 max-w-xl text-sm text-muted-foreground sm:text-base">
+            Tap a car to view it full size. Every cab is AC, chauffeur-driven, and ready from Udumalpet.
+          </p>
+        </Reveal>
 
-        <div className="mt-10 grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+        <StaggerGroup className="mt-10 grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
           {cards.map((v) => (
+            <StaggerItem key={v.id}>
             <article
-              key={v.id}
-              className="group flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-[0_18px_50px_-28px_rgba(17,24,39,0.45)] transition-transform duration-300 hover:-translate-y-1"
+              className="group flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-[0_18px_50px_-28px_rgba(17,24,39,0.45)] transition-transform duration-300 hover:-translate-y-1 hover:border-brand/40"
             >
               <button
                 type="button"
@@ -119,7 +122,7 @@ export function Fleet() {
                   loading="lazy"
                   width={1280}
                   height={800}
-                  className="absolute inset-0 size-full object-contain p-3 transition-transform duration-500 group-hover:scale-[1.06] sm:p-4"
+                  className="absolute inset-0 size-full object-contain p-3 transition-transform duration-500 group-hover:scale-[1.03] sm:p-4"
                 />
                 <span className="absolute right-3 top-3 inline-flex items-center gap-1.5 rounded-full bg-[#1F2933]/80 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-white backdrop-blur-sm">
                   <Expand className="size-3" /> View
@@ -144,8 +147,9 @@ export function Fleet() {
                 </div>
               </div>
             </article>
+            </StaggerItem>
           ))}
-        </div>
+        </StaggerGroup>
       </div>
 
       {active && (

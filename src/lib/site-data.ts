@@ -3,6 +3,37 @@ import mpv from "@/assets/car-mpv.jpg";
 import suv from "@/assets/car-suv.jpg";
 import tempo from "@/assets/car-tempo.jpg";
 
+/** Short marketing name; tempo variants stay distinguishable via seats. */
+export function shortVehicleName(name: string) {
+  const lower = name.toLowerCase();
+  if (lower.includes("sedan") || lower.includes("dzire")) return "Dzire";
+  if (lower.includes("ertiga")) return "Ertiga";
+  if (lower.includes("innova")) return "Innova";
+  if (lower.includes("crysta") || lower.includes("suv")) return "SUV";
+  if (lower.includes("eicher") || lower.includes("mini bus")) return "Eicher Mini Bus";
+  if (lower.includes("tempo")) return "Tempo Traveller";
+  return name;
+}
+
+export function vehicleSeatsLabel(name: string, seating: number) {
+  const plusOne = name.match(/(\d+)\s*\+\s*1/);
+  if (plusOne) return Number(plusOne[1]) + 1;
+  return seating;
+}
+
+export function vehicleDisplayName(name: string, seats: number) {
+  const short = shortVehicleName(name);
+  const shown = vehicleSeatsLabel(name, seats);
+  if (short === "Tempo Traveller" || /tempo|eicher|mini bus/i.test(name)) {
+    return `${short} (${shown} seats)`;
+  }
+  return short;
+}
+
+export function vehicleChoiceLabel(name: string, seats: number, perKm: number) {
+  return `${vehicleDisplayName(name, seats)} — ₹${perKm}/km`;
+}
+
 export type Vehicle = {
   id: string;
   name: string;

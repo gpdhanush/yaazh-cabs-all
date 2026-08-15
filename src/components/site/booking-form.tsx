@@ -30,7 +30,16 @@ import {
 } from "@/components/ui/command";
 import { LocationField, type LocationValue } from "@/components/site/location-field";
 import { cn } from "@/lib/utils";
-import { tripTypes, vehicles, pickupPlaces, BOOKING_FARE_NOTE, ADMIN_WHATSAPP, ADMIN_EMAIL } from "@/lib/site-data";
+import {
+  tripTypes,
+  vehicles,
+  pickupPlaces,
+  BOOKING_FARE_NOTE,
+  ADMIN_WHATSAPP,
+  ADMIN_EMAIL,
+  vehicleChoiceLabel,
+  vehicleDisplayName,
+} from "@/lib/site-data";
 import { cacheBooking } from "@/lib/bookings";
 import {
   ApiError,
@@ -261,16 +270,6 @@ function buildMessage(b: DoneBooking) {
   ].join("\n");
 }
 
-function shortVehicleName(name: string) {
-  const lower = name.toLowerCase();
-  if (lower.includes("sedan") || lower.includes("dzire")) return "Dzire";
-  if (lower.includes("ertiga")) return "Ertiga";
-  if (lower.includes("innova")) return "Innova";
-  if (lower.includes("crysta") || lower.includes("suv")) return "SUV";
-  if (lower.includes("tempo")) return "Tempo Traveller";
-  return name;
-}
-
 export function BookingForm() {
   const [name, setName] = useState("");
   const [mobile, setMobile] = useState("");
@@ -311,8 +310,8 @@ export function BookingForm() {
     if (categories.length) {
       return categories.map((c) => ({
         id: c.id,
-        label: `${shortVehicleName(c.name)} — ₹${c.one_way_rate_per_km}/km`,
-        name: shortVehicleName(c.name),
+        label: vehicleChoiceLabel(c.name, c.seating_capacity, c.one_way_rate_per_km),
+        name: vehicleDisplayName(c.name, c.seating_capacity),
         perKm: c.one_way_rate_per_km,
         base: 0,
       }));

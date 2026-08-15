@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { PHONE_PRIMARY } from "@/lib/site-data";
 
 const links = [
+  { label: "Book your ride", href: "#book", id: "book" },
   { label: "Services", href: "#services", id: "services" },
   { label: "Routes", href: "#routes", id: "routes" },
   { label: "Fleet", href: "#fleet", id: "fleet" },
@@ -17,6 +18,8 @@ const links = [
   { label: "Contact", href: "#contact", id: "contact" },
   { label: "FAQ", href: "#faq", id: "faq" },
 ];
+
+const spyLinks = links.filter((l) => l.id !== "book");
 
 const HEADER_OFFSET = 88;
 
@@ -32,14 +35,14 @@ function navLinkClass(active: boolean) {
 function sectionFromScroll(): string {
   const line = HEADER_OFFSET + 12;
   let current = "";
-  for (const l of links) {
+  for (const l of spyLinks) {
     const el = document.getElementById(l.id);
     if (!el) continue;
     if (el.getBoundingClientRect().top <= line) current = l.id;
   }
   const doc = document.documentElement;
   if (window.innerHeight + window.scrollY >= doc.scrollHeight - 48) {
-    current = links[links.length - 1]?.id ?? current;
+    current = spyLinks[spyLinks.length - 1]?.id ?? current;
   }
   return current;
 }
@@ -118,16 +121,20 @@ export function SiteNav() {
           <BrandLogo variant="nav" />
         </a>
 
-        <ul className="hidden items-center gap-7 lg:flex">
+        <ul className="hidden items-center gap-6 xl:gap-7 lg:flex">
           {links.map((l) => {
-            const active = onHome && activeHash === l.id;
+            const active = onHome && l.id !== "book" && activeHash === l.id;
             return (
               <li key={l.href}>
                 <a
                   href={onHome ? l.href : `/${l.href}`}
                   aria-current={active ? "page" : undefined}
                   onClick={(event) => goToSection(l.id, event)}
-                  className={navLinkClass(active)}
+                  className={
+                    l.id === "book"
+                      ? "rounded-full bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground"
+                      : navLinkClass(active)
+                  }
                 >
                   {l.label}
                 </a>
@@ -185,7 +192,11 @@ export function SiteNav() {
                   onClick={(event) => goToSection(l.id, event)}
                   className={cn(
                     "block py-3 text-sm font-medium",
-                    active ? "text-brand" : "text-body",
+                    l.id === "book"
+                      ? "font-semibold text-brand"
+                      : active
+                        ? "text-brand"
+                        : "text-body",
                   )}
                 >
                   {l.label}

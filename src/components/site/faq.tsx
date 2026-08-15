@@ -8,6 +8,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { getFaqs, isApiConfigured, type PublicFaq } from "@/lib/api";
+import { Reveal } from "./motion-primitives";
 
 export const FALLBACK_FAQS = [
   {
@@ -57,14 +58,16 @@ export function FAQ() {
   return (
     <section id="faq" className="py-16 md:py-28">
       <div className="mx-auto max-w-3xl px-5 md:px-8">
-        <div className="text-center">
-          <p className="text-[10px] uppercase tracking-[0.28em] text-brand sm:text-[11px]">FAQ</p>
-          <h2 className="mt-3 font-display text-3xl font-bold sm:text-4xl md:text-5xl">
-            Good to <span className="text-brand">know</span>
-          </h2>
-        </div>
+        <Reveal>
+          <div className="text-center">
+            <p className="text-[10px] uppercase tracking-[0.28em] text-brand sm:text-[11px]">FAQ</p>
+            <h2 className="mt-3 font-display text-3xl font-bold sm:text-4xl md:text-5xl">
+              Good to <span className="text-brand">know</span>
+            </h2>
+          </div>
+        </Reveal>
 
-        <div className="mt-10">
+        <Reveal delay={0.08} className="mt-10">
           <Accordion type="single" collapsible className="w-full">
             {faqs.map((f, i) => (
               <AccordionItem key={f.id} value={`item-${i}`} className="border-border">
@@ -77,7 +80,7 @@ export function FAQ() {
               </AccordionItem>
             ))}
           </Accordion>
-        </div>
+        </Reveal>
       </div>
     </section>
   );
