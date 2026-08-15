@@ -125,6 +125,20 @@ export type PublicCity = {
   is_airport: boolean;
 };
 
+export type PublicGalleryImage = {
+  id: string;
+  image_url: string;
+  caption: string | null;
+};
+
+export type PublicGalleryGroup = {
+  id: string;
+  slug: string;
+  title: string;
+  group_type: string;
+  images: PublicGalleryImage[];
+};
+
 export type AppConfig = {
   settings: Record<string, string | null>;
   remote_config: Record<string, string | null>;
@@ -229,6 +243,10 @@ export function isApiConfigured() {
 
 export function getVehicleCategories() {
   return request<VehicleCategory[]>("/vehicle-categories");
+}
+
+export function getGallery() {
+  return request<PublicGalleryGroup[]>("/gallery");
 }
 
 export function getFaqs() {

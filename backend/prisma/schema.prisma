@@ -1303,3 +1303,33 @@ model RouteEstimateCache {
   @@index([expires_at])
   @@map("route_estimate_cache")
 }
+
+model GalleryGroups {
+  id            BigInt          @id @default(autoincrement())
+  slug          String          @unique @db.VarChar(80)
+  title         String          @db.VarChar(120)
+  group_type    String          @default("custom") @db.VarChar(40)
+  display_order Int             @default(0)
+  is_active     Boolean         @default(true)
+  created_at    DateTime        @default(now()) @db.Timestamp(0)
+  updated_at    DateTime?       @updatedAt @db.Timestamp(0)
+  images        GalleryImages[]
+
+  @@index([is_active, display_order])
+  @@map("gallery_groups")
+}
+
+model GalleryImages {
+  id            BigInt         @id @default(autoincrement())
+  group_id      BigInt
+  image_url     String         @db.VarChar(500)
+  caption       String?        @db.VarChar(180)
+  display_order Int            @default(0)
+  is_active     Boolean        @default(true)
+  created_at    DateTime       @default(now()) @db.Timestamp(0)
+  updated_at    DateTime?      @updatedAt @db.Timestamp(0)
+  group         GalleryGroups  @relation(fields: [group_id], references: [id], onDelete: Cascade)
+
+  @@index([group_id, display_order])
+  @@map("gallery_images")
+}

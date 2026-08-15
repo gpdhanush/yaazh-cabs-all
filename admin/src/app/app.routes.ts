@@ -165,6 +165,10 @@ export const routes: Routes = [
         data: { resource: reviewsResource },
       },
       {
+        path: 'gallery',
+        loadComponent: () => import('./features/gallery/gallery.page').then((m) => m.GalleryPage),
+      },
+      {
         path: 'enquiries',
         loadComponent: () => import('./features/resource/resource-list.page').then((m) => m.ResourceListPage),
         data: { resource: enquiriesResource },

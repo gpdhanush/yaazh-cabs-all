@@ -387,6 +387,71 @@ function serializeFaq(f: {
   };
 }
 
+function slugifyGallery(value: string): string {
+  return value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80);
+}
+
+function serializeGalleryImage(
+  img: {
+    id: bigint;
+    group_id: bigint;
+    image_url: string;
+    caption: string | null;
+    display_order: number;
+    is_active: boolean;
+    created_at: Date;
+  },
+  req?: Parameters<typeof absolutePublicUrl>[1],
+) {
+  return {
+    id: String(img.id),
+    group_id: String(img.group_id),
+    image_url: absolutePublicUrl(img.image_url, req),
+    caption: img.caption,
+    display_order: img.display_order,
+    is_active: img.is_active,
+    created_at: img.created_at.toISOString(),
+  };
+}
+
+function serializeGalleryGroup(
+  g: {
+    id: bigint;
+    slug: string;
+    title: string;
+    group_type: string;
+    display_order: number;
+    is_active: boolean;
+    created_at: Date;
+    images?: Array<{
+      id: bigint;
+      group_id: bigint;
+      image_url: string;
+      caption: string | null;
+      display_order: number;
+      is_active: boolean;
+      created_at: Date;
+    }>;
+  },
+  req?: Parameters<typeof absolutePublicUrl>[1],
+) {
+  return {
+    id: String(g.id),
+    slug: g.slug,
+    title: g.title,
+    group_type: g.group_type,
+    display_order: g.display_order,
+    is_active: g.is_active,
+    created_at: g.created_at.toISOString(),
+    images: (g.images ?? []).map((img) => serializeGalleryImage(img, req)),
+  };
+}
+
 function serializeVehicleCategory(c: {
   id: bigint;
   name: string;
@@ -3172,6 +3237,156 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
     await prisma.faqs.delete({ where: { id } });
     await audit(user.id, "faq.delete", "faqs", String(id), serializeFaq(existing), null, req);
     return ok(reply, { id: String(id) }, "FAQ deleted.");
+  });
+
+  app.get("/gallery", { preHandler: [requireAuth("admin")] }, async (req, reply) => {
+    const rows = await prisma.galleryGroups.findMany({
+      orderBy: [{ display_order: "asc" }, { id: "asc" }],
+      include: { images: { orderBy: [{ display_order: "asc" }, { id: "asc" }] } },
+    });
+    return ok(reply, rows.map((g) => serializeGalleryGroup(g, req)));
+  });
+
+  app.post("/gallery/groups", { preHandler: [requireAuth("admin")] }, async (req, reply) => {
+    const user = requireUser(req);
+    const schema = z.object({
+      title: z.string().min(2).max(120),
+      slug: z.string().min(2).max(80).optional(),
+      group_type: z.enum(["cars_outside", "cars_inside", "destinations", "custom"]).optional(),
+      display_order: z.coerce.number().int().optional(),
+      is_active: z.boolean().optional(),
+    });
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) throw new ValidationError("Validation failed.", parsed.error.flatten());
+    const slug = slugifyGallery(parsed.data.slug || parsed.data.title);
+    if (!slug) throw new ValidationError("A valid group name is required.");
+    try {
+      const row = await prisma.galleryGroups.create({
+        data: {
+          title: parsed.data.title.trim(),
+          slug,
+          group_type: parsed.data.group_type ?? "custom",
+          display_order: parsed.data.display_order ?? 0,
+          is_active: parsed.data.is_active ?? true,
+        },
+        include: { images: true },
+      });
+      const serialized = serializeGalleryGroup(row, req);
+      await audit(user.id, "gallery_group.create", "gallery_groups", String(row.id), null, serialized, req);
+      return ok(reply, serialized, "Gallery group created.", 201);
+    } catch (err: unknown) {
+      if (err && typeof err === "object" && "code" in err && (err as { code: string }).code === "P2002") {
+        throw new ConflictError("A gallery group with this name already exists.");
+      }
+      throw err;
+    }
+  });
+
+  app.put("/gallery/groups/:id", { preHandler: [requireAuth("admin")] }, async (req, reply) => {
+    const user = requireUser(req);
+    const id = BigInt((req.params as { id: string }).id);
+    const existing = await prisma.galleryGroups.findUnique({ where: { id } });
+    if (!existing) throw new NotFoundError("Gallery group not found.");
+    const schema = z.object({
+      title: z.string().min(2).max(120).optional(),
+      group_type: z.enum(["cars_outside", "cars_inside", "destinations", "custom"]).optional(),
+      display_order: z.coerce.number().int().optional(),
+      is_active: z.boolean().optional(),
+    });
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) throw new ValidationError("Validation failed.", parsed.error.flatten());
+    const d = parsed.data;
+    const row = await prisma.galleryGroups.update({
+      where: { id },
+      data: {
+        ...(d.title != null ? { title: d.title.trim() } : {}),
+        ...(d.group_type != null ? { group_type: d.group_type } : {}),
+        ...(d.display_order != null ? { display_order: d.display_order } : {}),
+        ...(d.is_active != null ? { is_active: d.is_active } : {}),
+      },
+      include: { images: { orderBy: [{ display_order: "asc" }, { id: "asc" }] } },
+    });
+    const serialized = serializeGalleryGroup(row, req);
+    await audit(user.id, "gallery_group.update", "gallery_groups", String(id), existing, serialized, req);
+    return ok(reply, serialized, "Gallery group updated.");
+  });
+
+  app.delete("/gallery/groups/:id", { preHandler: [requireAuth("admin")] }, async (req, reply) => {
+    const user = requireUser(req);
+    const id = BigInt((req.params as { id: string }).id);
+    const existing = await prisma.galleryGroups.findUnique({ where: { id } });
+    if (!existing) throw new NotFoundError("Gallery group not found.");
+    await prisma.galleryGroups.delete({ where: { id } });
+    await audit(user.id, "gallery_group.delete", "gallery_groups", String(id), existing, null, req);
+    return ok(reply, { id: String(id) }, "Gallery group deleted.");
+  });
+
+  app.post("/gallery/images", { preHandler: [requireAuth("admin")] }, async (req, reply) => {
+    const user = requireUser(req);
+    const schema = z.object({
+      group_id: z.string().min(1),
+      image_url: z.string().min(1).max(500),
+      caption: z.string().max(180).optional().nullable(),
+      display_order: z.coerce.number().int().optional(),
+      is_active: z.boolean().optional(),
+    });
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) throw new ValidationError("Validation failed.", parsed.error.flatten());
+    const groupId = BigInt(parsed.data.group_id);
+    const group = await prisma.galleryGroups.findUnique({ where: { id: groupId } });
+    if (!group) throw new NotFoundError("Gallery group not found.");
+    const stored = toStoredMediaPath(parsed.data.image_url);
+    if (!stored) throw new ValidationError("Image is required.");
+    const row = await prisma.galleryImages.create({
+      data: {
+        group_id: groupId,
+        image_url: stored,
+        caption: parsed.data.caption?.trim() || null,
+        display_order: parsed.data.display_order ?? 0,
+        is_active: parsed.data.is_active ?? true,
+      },
+    });
+    const serialized = serializeGalleryImage(row, req);
+    await audit(user.id, "gallery_image.create", "gallery_images", String(row.id), null, serialized, req);
+    return ok(reply, serialized, "Gallery image added.", 201);
+  });
+
+  app.put("/gallery/images/:id", { preHandler: [requireAuth("admin")] }, async (req, reply) => {
+    const user = requireUser(req);
+    const id = BigInt((req.params as { id: string }).id);
+    const existing = await prisma.galleryImages.findUnique({ where: { id } });
+    if (!existing) throw new NotFoundError("Gallery image not found.");
+    const schema = z.object({
+      caption: z.string().max(180).optional().nullable(),
+      display_order: z.coerce.number().int().optional(),
+      is_active: z.boolean().optional(),
+      group_id: z.string().optional(),
+    });
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) throw new ValidationError("Validation failed.", parsed.error.flatten());
+    const d = parsed.data;
+    const row = await prisma.galleryImages.update({
+      where: { id },
+      data: {
+        ...(d.caption !== undefined ? { caption: d.caption?.trim() || null } : {}),
+        ...(d.display_order != null ? { display_order: d.display_order } : {}),
+        ...(d.is_active != null ? { is_active: d.is_active } : {}),
+        ...(d.group_id != null ? { group_id: BigInt(d.group_id) } : {}),
+      },
+    });
+    const serialized = serializeGalleryImage(row, req);
+    await audit(user.id, "gallery_image.update", "gallery_images", String(id), existing, serialized, req);
+    return ok(reply, serialized, "Gallery image updated.");
+  });
+
+  app.delete("/gallery/images/:id", { preHandler: [requireAuth("admin")] }, async (req, reply) => {
+    const user = requireUser(req);
+    const id = BigInt((req.params as { id: string }).id);
+    const existing = await prisma.galleryImages.findUnique({ where: { id } });
+    if (!existing) throw new NotFoundError("Gallery image not found.");
+    await prisma.galleryImages.delete({ where: { id } });
+    await audit(user.id, "gallery_image.delete", "gallery_images", String(id), existing, null, req);
+    return ok(reply, { id: String(id) }, "Gallery image deleted.");
   });
 
   app.get("/seo", { preHandler: [requirePermission("seo.manage")] }, async (_req, reply) => {

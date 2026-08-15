@@ -32,6 +32,9 @@ mysql_cmd < database/migrations/005_utf8mb4.sql
 echo "Applying trip_events fare_adjusted enum..."
 mysql_cmd < database/migrations/006_trip_events_fare_adjusted.sql
 
+echo "Applying gallery groups and images..."
+mysql_cmd < database/migrations/007_gallery.sql
+
 echo "Generating Prisma client..."
 npx prisma generate
 

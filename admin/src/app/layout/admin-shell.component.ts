@@ -184,6 +184,7 @@ export class AdminShellComponent {
     { label: 'Tariffs', path: '/tariffs', icon: 'payments' },
     { label: 'FAQs', path: '/faqs', icon: 'help' },
     { label: 'Testimonials', path: '/testimonials', icon: 'star' },
+    { label: 'Gallery', path: '/gallery', icon: 'photo_library' },
     { label: 'Enquiries', path: '/enquiries', icon: 'mail' },
     { label: 'Notifications', path: '/notifications', icon: 'notifications' },
     { label: 'Remote config', path: '/remote-config', icon: 'tune' },

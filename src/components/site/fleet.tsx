@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Briefcase, Users } from "lucide-react";
+import { Briefcase, Expand, Users, X } from "lucide-react";
 import sedan from "@/assets/car-sedan.jpg";
 import mpv from "@/assets/car-mpv.jpg";
 import suv from "@/assets/car-suv.jpg";
@@ -15,17 +15,6 @@ function imageFor(slug: string, name: string) {
   if (key.includes("suv") || key.includes("crysta")) return suv;
   if (key.includes("ertiga") || key.includes("innova") || key.includes("mpv")) return mpv;
   return sedan;
-}
-
-function shortName(name: string) {
-  const lower = name.toLowerCase();
-  if (lower.includes("sedan") || lower.includes("dzire")) return "Dzire";
-  if (lower.includes("ertiga")) return "Ertiga";
-  if (lower.includes("innova")) return "Innova";
-  if (lower.includes("crysta")) return "Crysta";
-  if (lower.includes("suv")) return "SUV";
-  if (lower.includes("tempo")) return "Tempo Traveller";
-  return name;
 }
 
 function bagsFrom(luggage: string | null | undefined, seats: number) {
@@ -46,6 +35,7 @@ type FleetCard = {
 
 export function Fleet() {
   const [categories, setCategories] = useState<VehicleCategory[]>([]);
+  const [activeId, setActiveId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isApiConfigured()) return;
@@ -60,7 +50,7 @@ export function Fleet() {
     if (categories.length) {
       return categories.map((c) => ({
         id: c.id,
-        name: shortName(c.name),
+        name: c.name,
         tag: c.description || "AC cab",
         seats: c.seating_capacity,
         bags: bagsFrom(c.luggage_capacity, c.seating_capacity),
@@ -79,51 +69,128 @@ export function Fleet() {
     }));
   }, [categories]);
 
+  const active = cards.find((c) => c.id === activeId) ?? null;
+
+  useEffect(() => {
+    if (!active) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setActiveId(null);
+    };
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = prev;
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [active]);
+
   return (
-    <section id="fleet" className="py-16 md:py-28">
-      <div className="mx-auto max-w-7xl px-5 md:px-8">
+    <section id="fleet" className="relative overflow-hidden py-16 md:py-28">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 h-64 bg-[radial-gradient(ellipse_at_center,color-mix(in_oklab,var(--primary)_14%,transparent),transparent_70%)]"
+      />
+
+      <div className="relative mx-auto max-w-7xl px-5 md:px-8">
         <p className="text-[10px] uppercase tracking-[0.28em] text-brand sm:text-[11px]">The fleet</p>
         <h2 className="mt-3 max-w-2xl font-display text-3xl font-bold sm:text-4xl md:text-5xl">
           Sanitised, serviced, <span className="text-brand">showroom clean</span>
         </h2>
+        <p className="mt-3 max-w-xl text-sm text-muted-foreground sm:text-base">
+          Tap a car to view it full size. Every cab is AC, chauffeur-driven, and ready from Udumalpet.
+        </p>
 
-        <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-10 grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
           {cards.map((v) => (
             <article
               key={v.id}
-              className="h-full rounded-2xl border border-border bg-card p-5 shadow-sm hover:border-brand/50"
+              className="group flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-[0_18px_50px_-28px_rgba(17,24,39,0.45)] transition-transform duration-300 hover:-translate-y-1"
             >
-              <div className="h-36 overflow-hidden rounded-xl bg-muted sm:h-40">
+              <button
+                type="button"
+                onClick={() => setActiveId(v.id)}
+                className="relative aspect-[16/10] w-full overflow-hidden bg-[linear-gradient(180deg,#f4f6fb_0%,#ffffff_55%,#eef1f6_100%)] text-left"
+                aria-label={`View ${v.name} larger`}
+              >
                 <img
                   src={v.image}
                   alt={`${v.name} taxi available for booking`}
                   loading="lazy"
-                  width={1024}
-                  height={640}
-                  className="size-full object-contain p-2"
+                  width={1280}
+                  height={800}
+                  className="absolute inset-0 size-full object-contain p-3 transition-transform duration-500 group-hover:scale-[1.06] sm:p-4"
                 />
-              </div>
-              <div className="mt-4 flex items-start justify-between gap-3">
-                <div>
-                  <h3 className="font-display text-lg font-bold sm:text-xl">{v.name}</h3>
-                  <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">{v.tag}</p>
-                </div>
-                <p className="whitespace-nowrap rounded-md bg-primary px-2.5 py-1 font-data text-sm font-semibold text-primary-foreground">
+                <span className="absolute right-3 top-3 inline-flex items-center gap-1.5 rounded-full bg-[#1F2933]/80 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-white backdrop-blur-sm">
+                  <Expand className="size-3" /> View
+                </span>
+                <span className="absolute bottom-3 left-3 rounded-full bg-primary px-2.5 py-1 font-data text-xs font-semibold text-primary-foreground shadow-sm">
                   ₹{v.perKm}/km
-                </p>
-              </div>
-              <div className="mt-4 flex items-center gap-4 border-t border-border pt-4 text-xs text-muted-foreground">
-                <span className="inline-flex items-center gap-1.5">
-                  <Users className="size-3.5 text-brand" /> {v.seats} seats
                 </span>
-                <span className="inline-flex items-center gap-1.5">
-                  <Briefcase className="size-3.5 text-brand" /> {v.bags} bags
-                </span>
+              </button>
+
+              <div className="flex flex-1 flex-col gap-3 p-4 sm:p-5">
+                <div>
+                  <h3 className="font-display text-lg font-bold leading-tight sm:text-xl">{v.name}</h3>
+                  <p className="mt-1 text-[11px] uppercase tracking-[0.16em] text-muted-foreground">{v.tag}</p>
+                </div>
+                <div className="mt-auto flex items-center gap-4 border-t border-border pt-3 text-xs text-muted-foreground">
+                  <span className="inline-flex items-center gap-1.5">
+                    <Users className="size-3.5 text-brand" /> {v.seats} seats
+                  </span>
+                  <span className="inline-flex items-center gap-1.5">
+                    <Briefcase className="size-3.5 text-brand" /> {v.bags} bags
+                  </span>
+                </div>
               </div>
             </article>
           ))}
         </div>
       </div>
+
+      {active && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={`${active.name} preview`}
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-[#1F2933]/80 p-4 backdrop-blur-sm"
+          onClick={() => setActiveId(null)}
+        >
+          <button
+            type="button"
+            aria-label="Close car preview"
+            className="absolute right-4 top-4 grid size-10 place-items-center rounded-full border border-white/20 bg-white/10 text-white hover:bg-white/20"
+            onClick={() => setActiveId(null)}
+          >
+            <X className="size-5" />
+          </button>
+          <figure
+            className="relative w-full max-w-5xl overflow-hidden rounded-2xl border border-white/15 bg-[linear-gradient(180deg,#f8fafc_0%,#ffffff_100%)] shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <img
+              src={active.image}
+              alt={`${active.name} taxi`}
+              className="mx-auto max-h-[72vh] w-full object-contain p-4 sm:p-8"
+            />
+            <figcaption className="flex flex-wrap items-center justify-between gap-3 border-t border-black/10 bg-white px-5 py-4">
+              <div>
+                <p className="font-display text-lg font-bold text-[#111827]">{active.name}</p>
+                <p className="text-xs uppercase tracking-[0.16em] text-[#6B7289]">
+                  {active.seats} seats · {active.bags} bags · ₹{active.perKm}/km
+                </p>
+              </div>
+              <a
+                href="#fare"
+                onClick={() => setActiveId(null)}
+                className="inline-flex rounded-full bg-primary px-5 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-[#111827]"
+              >
+                Estimate fare
+              </a>
+            </figcaption>
+          </figure>
+        </div>
+      )}
     </section>
   );
 }

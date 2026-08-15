@@ -516,6 +516,35 @@ export const publicRoutes: FastifyPluginAsync = async (app) => {
     return ok(reply, data, "Booking created successfully.", 201);
   });
 
+  app.get("/gallery", async (req, reply) => {
+    const rows = await prisma.galleryGroups.findMany({
+      where: { is_active: true },
+      orderBy: [{ display_order: "asc" }, { id: "asc" }],
+      include: {
+        images: {
+          where: { is_active: true },
+          orderBy: [{ display_order: "asc" }, { id: "asc" }],
+        },
+      },
+    });
+    return ok(
+      reply,
+      rows
+        .filter((g) => g.images.length > 0)
+        .map((g) => ({
+          id: String(g.id),
+          slug: g.slug,
+          title: g.title,
+          group_type: g.group_type,
+          images: g.images.map((img) => ({
+            id: String(img.id),
+            image_url: absolutePublicUrl(img.image_url, req),
+            caption: img.caption,
+          })),
+        })),
+    );
+  });
+
   app.get("/feedback/:token", async (req, reply) => {
     const { token } = req.params as { token: string };
     const data = await getPublicFeedback(token);
