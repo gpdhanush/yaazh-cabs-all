@@ -5,8 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http_parser/http_parser.dart';
 import 'package:yaazh_admin/core/config/app_config.dart';
 import 'package:yaazh_admin/core/network/api_exception.dart';
+import 'package:yaazh_admin/core/network/auth_refresh.dart';
 import 'package:yaazh_admin/core/network/firebase_perf_interceptor.dart';
-import 'package:yaazh_admin/core/storage/storage_service.dart';
 
 final dioProvider = Provider<Dio>((ref) {
   final dio = Dio(
@@ -22,93 +22,9 @@ final dioProvider = Provider<Dio>((ref) {
   );
   dio.transformer = BackgroundTransformer();
 
-  final storage = ref.watch(storageServiceProvider);
-  var isRefreshing = false;
-
   dio.interceptors.add(FirebasePerfInterceptor());
   dio.interceptors.add(EasyLoadingInterceptor());
-
-  dio.interceptors.add(
-    InterceptorsWrapper(
-      onRequest: (options, handler) async {
-        final method = options.method.toUpperCase();
-        if (method == 'GET') {
-          options.headers.remove('content-type');
-          options.headers.remove('Content-Type');
-        }
-        final token = await storage.getAccessToken();
-        if (token != null && token.isNotEmpty) {
-          options.headers['Authorization'] = 'Bearer $token';
-        }
-        return handler.next(options);
-      },
-      onError: (DioException error, handler) async {
-        final status = error.response?.statusCode;
-        final path = error.requestOptions.path;
-        final isAuthPath = path.contains('/auth/admin/');
-
-        if (status == 401 && !isAuthPath && !isRefreshing) {
-          isRefreshing = true;
-          try {
-            final refreshToken = await storage.getRefreshToken();
-            if (refreshToken == null || refreshToken.isEmpty) {
-              await storage.clearTokens();
-              return handler.next(error);
-            }
-
-            final refreshDio = Dio(
-              BaseOptions(
-                baseUrl: AppConfig.apiBaseUrl,
-                connectTimeout: const Duration(seconds: 15),
-                receiveTimeout: const Duration(seconds: 15),
-                headers: {
-                  'Content-Type': 'application/json',
-                  'Accept': 'application/json',
-                },
-              ),
-            );
-
-            final refreshResponse = await refreshDio.post(
-              '/auth/admin/refresh',
-              data: {'refresh_token': refreshToken},
-            );
-
-            final body = refreshResponse.data;
-            final data = body is Map && body['data'] is Map
-                ? body['data'] as Map
-                : body is Map
-                    ? body
-                    : null;
-
-            final newAccess = data?['access_token']?.toString();
-            final newRefresh = data?['refresh_token']?.toString();
-
-            if (newAccess == null || newAccess.isEmpty) {
-              await storage.clearTokens();
-              return handler.next(error);
-            }
-
-            await storage.setAccessToken(newAccess);
-            if (newRefresh != null && newRefresh.isNotEmpty) {
-              await storage.setRefreshToken(newRefresh);
-            }
-
-            final opts = error.requestOptions;
-            opts.headers['Authorization'] = 'Bearer $newAccess';
-            final clone = await dio.fetch(opts);
-            return handler.resolve(clone);
-          } catch (_) {
-            await storage.clearTokens();
-            return handler.next(error);
-          } finally {
-            isRefreshing = false;
-          }
-        }
-
-        return handler.next(error);
-      },
-    ),
-  );
+  dio.interceptors.add(AuthRefreshInterceptor(ref, dio));
 
   if (kDebugMode) {
     dio.interceptors.add(

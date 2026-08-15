@@ -97,6 +97,11 @@ class AuthNotifier extends StateNotifier<AuthState> {
     return user;
   }
 
+  void onSessionInvalid() {
+    if (state.status == AuthStatus.unauthenticated) return;
+    state = AuthState.unauthenticated();
+  }
+
   Future<void> logout() async {
     if (state.status == AuthStatus.unauthenticated) return;
     state = AuthState.unauthenticated();

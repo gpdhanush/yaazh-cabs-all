@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:yaazh_admin/app/page_transitions.dart';
 import 'package:yaazh_admin/core/firebase/analytics_service.dart';
+import 'package:yaazh_admin/core/network/session_invalid.dart';
 import 'package:yaazh_admin/core/notifications/push_notification_service.dart';
 import 'package:yaazh_admin/core/widgets/coming_soon.dart';
 import 'package:yaazh_admin/features/auth/presentation/auth_viewmodel.dart';
@@ -61,6 +62,11 @@ final routerProvider = Provider<GoRouter>((ref) {
     if (next.status == AuthStatus.unauthenticated &&
         previous?.status == AuthStatus.authenticated) {
       ref.read(analyticsServiceProvider).clearUser();
+    }
+  });
+  ref.listen<int>(authSessionInvalidProvider, (previous, next) {
+    if (previous != next) {
+      ref.read(authNotifierProvider.notifier).onSessionInvalid();
     }
   });
   ref.listen<String?>(pendingNotificationLocationProvider, (previous, next) {
