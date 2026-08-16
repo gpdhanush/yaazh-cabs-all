@@ -241,13 +241,6 @@ class _AdminDrawer extends ConsumerWidget {
                     selected: location.startsWith('/fleet'),
                     onTap: () => _open('/fleet'),
                   ),
-                  _item(
-                    context,
-                    icon: LineAwesomeIcons.map,
-                    label: 'Live tracking',
-                    selected: location.startsWith('/tracking'),
-                    onTap: () => _open('/tracking'),
-                  ),
                   const SizedBox(height: 8),
                   _sectionLabel(context, 'Website'),
                   _item(

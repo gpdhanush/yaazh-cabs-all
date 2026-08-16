@@ -36,7 +36,6 @@ import 'package:yaazh_admin/features/settings/presentation/web_settings_page.dar
 import 'package:yaazh_admin/features/shell/admin_shell.dart';
 import 'package:yaazh_admin/features/testimonials/presentation/testimonial_form_page.dart';
 import 'package:yaazh_admin/features/testimonials/presentation/testimonials_page.dart';
-import 'package:yaazh_admin/features/tracking/presentation/live_tracking_page.dart';
 
 final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -120,7 +119,8 @@ final routerProvider = Provider<GoRouter>((ref) {
         return '/home';
       }
 
-      if (status == AuthStatus.authenticated && loc == '/more') {
+      if (status == AuthStatus.authenticated &&
+          (loc == '/more' || loc == '/tracking')) {
         return '/home';
       }
 
@@ -140,11 +140,6 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/profile',
         parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const ProfilePage(),
-      ),
-      slideRoute(
-        path: '/tracking',
-        parentNavigatorKey: rootNavigatorKey,
-        builder: (context, state) => const LiveTrackingPage(),
       ),
       slideRoute(
         path: '/drivers/new',

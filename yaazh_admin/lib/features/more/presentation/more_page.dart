@@ -18,7 +18,6 @@ class MorePage extends ConsumerWidget {
     final isTablet = Breakpoints.isTablet(context);
 
     final items = <_MoreItem>[
-      _MoreItem(Icons.explore_rounded, 'Live tracking', '/tracking', () => context.push('/tracking')),
       _MoreItem(Icons.insights_rounded, 'Reports', null, () => showComingSoon('Reports')),
       _MoreItem(Icons.star_rounded, 'Testimonials', '/testimonials', () => context.push('/testimonials')),
       _MoreItem(Icons.photo_library_rounded, 'Gallery', '/gallery', () => context.push('/gallery')),
