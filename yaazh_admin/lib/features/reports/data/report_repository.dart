@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:yaazh_admin/core/format.dart';
 import 'package:yaazh_admin/core/network/api_client.dart';
 import 'package:yaazh_admin/features/reports/domain/report.dart';
 
@@ -22,6 +23,11 @@ class ReportDateRange {
 
   String get fromParam => _ymd.format(from);
   String get toParam => _ymd.format(to);
+
+  bool contains(DateTime value) {
+    final day = _dateOnly(value.toLocal());
+    return !day.isBefore(from) && !day.isAfter(to);
+  }
 }
 
 final reportPeriodProvider = StateProvider<String>((ref) => 'day');
@@ -52,11 +58,39 @@ class ReportRepository {
     required String period,
     required ReportDateRange range,
   }) async {
-    final data = await _api.get('/admin/reports', queryParameters: {
-      'period': period,
-      'from': range.fromParam,
-      'to': range.toParam,
-    });
+    var payload = _payloadFrom(
+      await _api.get('/admin/reports', queryParameters: {
+        'period': period,
+        'from': range.fromParam,
+        'to': range.toParam,
+      }),
+      period,
+      range,
+    );
+
+    var bookings = payload.bookings;
+    try {
+      final fromList = _bookingsFromList(
+        await _api.get('/admin/bookings', queryParameters: {
+          'page': 1,
+          'per_page': 500,
+          'from': range.fromParam,
+          'to': range.toParam,
+        }),
+        range,
+      );
+      if (fromList.isNotEmpty) bookings = fromList;
+    } catch (_) {}
+
+    final counts = bookings.isNotEmpty ? _countsFrom(bookings) : payload.counts;
+    return payload.copyWith(counts: counts, bookings: bookings);
+  }
+
+  ReportsPayload _payloadFrom(
+    dynamic data,
+    String period,
+    ReportDateRange range,
+  ) {
     if (data is Map<String, dynamic>) return ReportsPayload.fromJson(data);
     if (data is Map) {
       return ReportsPayload.fromJson(Map<String, dynamic>.from(data));
@@ -75,6 +109,47 @@ class ReportRepository {
       series: const [],
       byStatus: const [],
       bookings: const [],
+    );
+  }
+
+  List<ReportBooking> _bookingsFromList(dynamic data, ReportDateRange range) {
+    return asMapList(data)
+        .where((json) {
+          final raw = json['created_at']?.toString() ??
+              json['pickup_at']?.toString() ??
+              '';
+          final parsed = DateTime.tryParse(raw);
+          if (parsed == null) return true;
+          return range.contains(parsed);
+        })
+        .map(ReportBooking.fromJson)
+        .toList();
+  }
+
+  ReportCounts _countsFrom(List<ReportBooking> bookings) {
+    var completed = 0;
+    var cancelled = 0;
+    var pending = 0;
+    var revenue = 0.0;
+    for (final booking in bookings) {
+      switch (booking.status) {
+        case 'completed':
+          completed++;
+          revenue += booking.amount;
+        case 'cancelled':
+        case 'rejected':
+        case 'no_show':
+          cancelled++;
+        default:
+          pending++;
+      }
+    }
+    return ReportCounts(
+      bookings: bookings.length,
+      completed: completed,
+      cancelled: cancelled,
+      pending: pending,
+      revenue: revenue,
     );
   }
 }

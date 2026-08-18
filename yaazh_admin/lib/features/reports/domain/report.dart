@@ -101,9 +101,15 @@ class ReportBooking {
           parseDouble(json['final_total']) ??
           parseDouble(json['estimated_total']) ??
           0,
-      km: parseDouble(json['km']) ??
-          parseDouble(json['actual_distance_km']) ??
-          parseDouble(json['estimated_distance_km']),
+      km: () {
+        final actual = parseDouble(json['km']) ??
+            parseDouble(json['actual_distance_km']) ??
+            parseDouble(json['odometer_difference_km']);
+        if (actual != null && actual > 0) return actual;
+        final estimated = parseDouble(json['estimated_distance_km']);
+        if (estimated != null && estimated > 0) return estimated;
+        return null;
+      }(),
       pickupAt: json['pickup_at']?.toString(),
     );
   }
@@ -141,6 +147,21 @@ class ReportsPayload {
       series: asMapList(json['series']).map(ReportSeriesPoint.fromJson).toList(),
       byStatus: asMapList(json['bookings_by_status']).map(ReportStatusCount.fromJson).toList(),
       bookings: asMapList(json['bookings']).map(ReportBooking.fromJson).toList(),
+    );
+  }
+
+  ReportsPayload copyWith({
+    ReportCounts? counts,
+    List<ReportBooking>? bookings,
+  }) {
+    return ReportsPayload(
+      period: period,
+      from: from,
+      to: to,
+      counts: counts ?? this.counts,
+      series: series,
+      byStatus: byStatus,
+      bookings: bookings ?? this.bookings,
     );
   }
 }

@@ -27,7 +27,7 @@ import {
   deliverBookingNotification,
   type AdminNotificationAudience,
 } from "../../../services/fcm.service.js";
-import type { TripType } from "@prisma/client";
+import type { BookingStatus, Prisma, TripType } from "@prisma/client";
 import { hashPassword } from "../../../utils/crypto.js";
 import { absolutePublicUrl, publicInvoiceApiPath, toStoredMediaPath } from "../../../utils/public-url.js";
 import { persistPublicFile } from "../../../services/stored-media.service.js";
@@ -1340,10 +1340,19 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
     "/bookings",
     { preHandler: [requirePermission("bookings.view")] },
     async (req, reply) => {
-      const q = req.query as { page?: string; per_page?: string; status?: string };
+      const q = req.query as { page?: string; per_page?: string; status?: string; from?: string; to?: string };
       const page = Math.max(1, Number(q.page ?? 1) || 1);
       const perPage = Math.min(500, Math.max(1, Number(q.per_page ?? 20) || 20));
-      const where = q.status ? { status: q.status as never } : {};
+      const ymd = /^\d{4}-\d{2}-\d{2}$/;
+      const from = q.from && ymd.test(q.from) ? new Date(`${q.from}T00:00:00`) : null;
+      const to = q.to && ymd.test(q.to) ? new Date(`${q.to}T00:00:00`) : null;
+      const where: Prisma.BookingsWhereInput = {};
+      if (q.status) where.status = q.status as BookingStatus;
+      if (from && to && !Number.isNaN(from.getTime()) && !Number.isNaN(to.getTime())) {
+        const toExclusive = new Date(to);
+        toExclusive.setDate(toExclusive.getDate() + 1);
+        where.created_at = { gte: from, lt: toExclusive };
+      }
       const [total, rows] = await Promise.all([
         prisma.bookings.count({ where }),
         prisma.bookings.findMany({
