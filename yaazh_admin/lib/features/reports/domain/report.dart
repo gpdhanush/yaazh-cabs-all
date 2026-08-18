@@ -74,6 +74,7 @@ class ReportStatusCount {
 
 class ReportBooking {
   final String reference;
+  final String customerName;
   final String pickup;
   final String drop;
   final String status;
@@ -83,6 +84,7 @@ class ReportBooking {
 
   const ReportBooking({
     required this.reference,
+    this.customerName = '',
     required this.pickup,
     required this.drop,
     required this.status,
@@ -94,6 +96,7 @@ class ReportBooking {
   factory ReportBooking.fromJson(Map<String, dynamic> json) {
     return ReportBooking(
       reference: json['reference']?.toString() ?? json['booking_reference']?.toString() ?? '',
+      customerName: json['customer_name']?.toString() ?? json['customer']?.toString() ?? '',
       pickup: json['pickup']?.toString() ?? json['pickup_location']?.toString() ?? '',
       drop: json['drop']?.toString() ?? json['drop_location']?.toString() ?? '',
       status: json['status']?.toString() ?? 'pending',

@@ -4320,6 +4320,7 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
       take: 500,
       select: {
         booking_reference: true,
+        customer_name: true,
         status: true,
         pickup_location: true,
         drop_location: true,
@@ -4340,6 +4341,7 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
       bookings_by_status: byStatus.map((s) => ({ status: s.status, count: s._count._all })),
       bookings: bookingRows.map((b) => ({
         reference: b.booking_reference,
+        customer_name: b.customer_name,
         pickup: b.pickup_location,
         drop: b.drop_location,
         status: b.status ?? "pending",
