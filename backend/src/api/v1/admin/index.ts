@@ -4305,6 +4305,23 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
     );
     counts.revenue = Math.round(counts.revenue * 100) / 100;
 
+    const bookingRows = await prisma.bookings.findMany({
+      where: { created_at: { gte: from, lt: toExclusive } },
+      orderBy: { created_at: "desc" },
+      take: 500,
+      select: {
+        booking_reference: true,
+        status: true,
+        pickup_location: true,
+        drop_location: true,
+        pickup_at: true,
+        estimated_total: true,
+        final_total: true,
+        estimated_distance_km: true,
+        actual_distance_km: true,
+      },
+    });
+
     return ok(reply, {
       period,
       from: from.toISOString(),
@@ -4312,6 +4329,19 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
       counts,
       series,
       bookings_by_status: byStatus.map((s) => ({ status: s.status, count: s._count._all })),
+      bookings: bookingRows.map((b) => ({
+        reference: b.booking_reference,
+        pickup: b.pickup_location,
+        drop: b.drop_location,
+        status: b.status ?? "pending",
+        amount: Number(b.final_total ?? b.estimated_total ?? 0),
+        km: b.actual_distance_km != null
+          ? Number(b.actual_distance_km)
+          : b.estimated_distance_km != null
+            ? Number(b.estimated_distance_km)
+            : null,
+        pickup_at: b.pickup_at.toISOString(),
+      })),
     });
   });
 };

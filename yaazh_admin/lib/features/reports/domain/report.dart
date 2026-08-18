@@ -72,6 +72,43 @@ class ReportStatusCount {
   }
 }
 
+class ReportBooking {
+  final String reference;
+  final String pickup;
+  final String drop;
+  final String status;
+  final double amount;
+  final double? km;
+  final String? pickupAt;
+
+  const ReportBooking({
+    required this.reference,
+    required this.pickup,
+    required this.drop,
+    required this.status,
+    required this.amount,
+    this.km,
+    this.pickupAt,
+  });
+
+  factory ReportBooking.fromJson(Map<String, dynamic> json) {
+    return ReportBooking(
+      reference: json['reference']?.toString() ?? json['booking_reference']?.toString() ?? '',
+      pickup: json['pickup']?.toString() ?? json['pickup_location']?.toString() ?? '',
+      drop: json['drop']?.toString() ?? json['drop_location']?.toString() ?? '',
+      status: json['status']?.toString() ?? 'pending',
+      amount: parseDouble(json['amount']) ??
+          parseDouble(json['final_total']) ??
+          parseDouble(json['estimated_total']) ??
+          0,
+      km: parseDouble(json['km']) ??
+          parseDouble(json['actual_distance_km']) ??
+          parseDouble(json['estimated_distance_km']),
+      pickupAt: json['pickup_at']?.toString(),
+    );
+  }
+}
+
 class ReportsPayload {
   final String period;
   final String? from;
@@ -79,6 +116,7 @@ class ReportsPayload {
   final ReportCounts counts;
   final List<ReportSeriesPoint> series;
   final List<ReportStatusCount> byStatus;
+  final List<ReportBooking> bookings;
 
   const ReportsPayload({
     required this.period,
@@ -87,6 +125,7 @@ class ReportsPayload {
     required this.counts,
     required this.series,
     required this.byStatus,
+    this.bookings = const [],
   });
 
   factory ReportsPayload.fromJson(Map<String, dynamic> json) {
@@ -101,6 +140,7 @@ class ReportsPayload {
       ),
       series: asMapList(json['series']).map(ReportSeriesPoint.fromJson).toList(),
       byStatus: asMapList(json['bookings_by_status']).map(ReportStatusCount.fromJson).toList(),
+      bookings: asMapList(json['bookings']).map(ReportBooking.fromJson).toList(),
     );
   }
 }

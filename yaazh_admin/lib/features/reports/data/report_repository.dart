@@ -74,6 +74,7 @@ class ReportRepository {
       ),
       series: const [],
       byStatus: const [],
+      bookings: const [],
     );
   }
 }
