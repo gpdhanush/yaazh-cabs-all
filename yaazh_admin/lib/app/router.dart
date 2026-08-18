@@ -22,8 +22,9 @@ import 'package:yaazh_admin/features/drivers/presentation/driver_form_page.dart'
 import 'package:yaazh_admin/features/drivers/presentation/drivers_page.dart';
 import 'package:yaazh_admin/features/enquiries/presentation/enquiries_page.dart';
 import 'package:yaazh_admin/features/enquiries/presentation/enquiry_detail_page.dart';
-import 'package:yaazh_admin/features/fleet/presentation/category_photo_page.dart';
 import 'package:yaazh_admin/features/fleet/presentation/fleet_page.dart';
+import 'package:yaazh_admin/features/fleet/presentation/vehicle_categories_page.dart';
+import 'package:yaazh_admin/features/fleet/presentation/vehicle_category_form_page.dart';
 import 'package:yaazh_admin/features/fleet/presentation/vehicle_form_page.dart';
 import 'package:yaazh_admin/features/gallery/presentation/gallery_page.dart';
 import 'package:yaazh_admin/features/home/presentation/home_page.dart';
@@ -34,6 +35,8 @@ import 'package:yaazh_admin/features/settings/presentation/app_settings_page.dar
 import 'package:yaazh_admin/features/settings/presentation/profile_page.dart';
 import 'package:yaazh_admin/features/settings/presentation/web_settings_page.dart';
 import 'package:yaazh_admin/features/shell/admin_shell.dart';
+import 'package:yaazh_admin/features/tariffs/presentation/tariff_form_page.dart';
+import 'package:yaazh_admin/features/tariffs/presentation/tariffs_page.dart';
 import 'package:yaazh_admin/features/testimonials/presentation/testimonial_form_page.dart';
 import 'package:yaazh_admin/features/testimonials/presentation/testimonials_page.dart';
 
@@ -166,16 +169,50 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const DriversPage(),
       ),
       slideRoute(
+        path: '/tariffs/new',
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const TariffFormPage(),
+      ),
+      slideRoute(
+        path: '/tariffs/:id/edit',
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => TariffFormPage(
+          tariffId: state.pathParameters['id'],
+        ),
+      ),
+      slideRoute(
+        path: '/tariffs',
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const TariffsPage(),
+      ),
+      slideRoute(
+        path: '/vehicle-categories/new',
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const VehicleCategoryFormPage(),
+      ),
+      slideRoute(
+        path: '/vehicle-categories/:id/edit',
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => VehicleCategoryFormPage(
+          categoryId: state.pathParameters['id'],
+        ),
+      ),
+      slideRoute(
+        path: '/vehicle-categories',
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const VehicleCategoriesPage(),
+      ),
+      slideRoute(
         path: '/fleet/new',
         parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const VehicleFormPage(),
       ),
-      slideRoute(
+      GoRoute(
         path: '/fleet/categories/:id',
-        parentNavigatorKey: rootNavigatorKey,
-        builder: (context, state) => CategoryPhotoPage(
-          categoryId: state.pathParameters['id']!,
-        ),
+        redirect: (context, state) {
+          final id = state.pathParameters['id'];
+          return '/vehicle-categories/$id/edit';
+        },
       ),
       slideRoute(
         path: '/fleet/:id/edit',

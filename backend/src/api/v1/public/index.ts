@@ -482,16 +482,28 @@ export const publicRoutes: FastifyPluginAsync = async (app) => {
   });
 
   app.post("/bookings/track", async (req, reply) => {
-    const schema = z.object({
-      booking_reference: z.string().min(3),
-      customer_phone: z.string().min(8),
-    });
+    const schema = z
+      .object({
+        booking_reference: z
+          .string()
+          .trim()
+          .optional()
+          .transform((v) => (v && v.length >= 3 ? v : undefined)),
+        customer_phone: z
+          .string()
+          .trim()
+          .optional()
+          .transform((v) => (v && v.replace(/\D/g, "").length >= 8 ? v : undefined)),
+      })
+      .refine((d) => Boolean(d.booking_reference || d.customer_phone), {
+        message: "Enter booking reference or mobile number.",
+      });
     const parsed = schema.safeParse(req.body);
     if (!parsed.success) throw new ValidationError("Validation failed.", parsed.error.flatten());
-    const data = await bookingService.trackPublic(
-      parsed.data.booking_reference,
-      parsed.data.customer_phone,
-    );
+    const data = await bookingService.trackPublicFlexible({
+      booking_reference: parsed.data.booking_reference,
+      customer_phone: parsed.data.customer_phone,
+    });
     return ok(reply, data, "Booking status fetched.");
   });
 

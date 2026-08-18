@@ -52,6 +52,15 @@ class FleetRepository {
     return VehicleCategory.fromJson(Map<String, dynamic>.from(data as Map));
   }
 
+  Future<VehicleCategory> createCategory(Map<String, dynamic> body) async {
+    final data = await _api.post('/admin/vehicle-categories', data: body);
+    return VehicleCategory.fromJson(Map<String, dynamic>.from(data as Map));
+  }
+
+  Future<void> deleteCategory(String id) async {
+    await _api.delete('/admin/vehicle-categories/$id');
+  }
+
   Future<String> uploadCategoryImage(String filePath) async {
     final data = await _api.uploadFile(
       '/admin/uploads',

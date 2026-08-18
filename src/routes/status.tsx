@@ -1,6 +1,15 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
-import { ArrowLeft, CheckCircle2, Circle, Loader2, MessageCircle, Phone, RefreshCw } from "lucide-react";
+import {
+  ArrowLeft,
+  CheckCircle2,
+  ChevronRight,
+  Circle,
+  Loader2,
+  MessageCircle,
+  Phone,
+  RefreshCw,
+} from "lucide-react";
 import { SiteFooter } from "@/components/site/footer";
 import { ChatWidget } from "@/components/site/chat-widget";
 import { Toaster } from "@/components/ui/sonner";
@@ -12,14 +21,34 @@ import {
   type LocalBookingCache,
 } from "@/lib/bookings";
 import { ADMIN_WHATSAPP, PHONE_PRIMARY, BOOKING_FARE_NOTE } from "@/lib/site-data";
-import { ApiError, formatTripType, isApiConfigured, mediaUrl, trackBooking, type TrackedBooking } from "@/lib/api";
+import {
+  ApiError,
+  formatTripType,
+  isApiConfigured,
+  mediaUrl,
+  trackBooking,
+  type BookingTrackSummary,
+  type TrackedBooking,
+} from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { defaultOgMeta } from "@/lib/analytics";
 
 const title = "Track Your Booking | Yaazh Cabs Udumalpet";
 const description =
-  "Check your Yaazh Cabs booking status — confirmation, driver assignment, cab number and pickup time updates using your booking reference and mobile number.";
+  "Check your Yaazh Cabs booking status — confirmation, driver assignment, cab number and pickup time updates using your booking reference or mobile number.";
 const url = "https://yaazhcabs.in/status";
+
+type View = "form" | "list" | "detail";
+
+/** One field: 10-digit mobile → phone lookup; anything else → booking reference. */
+function parseTrackQuery(raw: string): { booking_reference?: string; customer_phone?: string } {
+  const trimmed = raw.trim();
+  if (!trimmed) return {};
+  const digits = trimmed.replace(/\D/g, "");
+  const looksLikePhone = digits.length >= 10 && /^[\d\s+()-]+$/.test(trimmed);
+  if (looksLikePhone) return { customer_phone: digits.slice(-10) };
+  return { booking_reference: trimmed };
+}
 
 export const Route = createFileRoute("/status")({
   validateSearch: (s: Record<string, unknown>) => ({
@@ -45,78 +74,155 @@ export const Route = createFileRoute("/status")({
 
 function StatusPage() {
   const { ref } = Route.useSearch();
-  const [reference, setReference] = useState(ref);
-  const [phone, setPhone] = useState("");
+  const [view, setView] = useState<View>("form");
+  const [query, setQuery] = useState(ref);
   const [booking, setBooking] = useState<TrackedBooking | null>(null);
+  const [bookingList, setBookingList] = useState<BookingTrackSummary[]>([]);
+  const [listPhone, setListPhone] = useState("");
   const [searched, setSearched] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [recent, setRecent] = useState<LocalBookingCache[]>([]);
 
   useEffect(() => {
-    const cached = loadBookingCache();
-    setRecent(cached);
-    if (ref) {
-      setReference(ref);
-      const match = cached.find((b) => b.ref.toLowerCase() === ref.toLowerCase());
-      if (match) setPhone(match.phone);
-    }
+    setRecent(loadBookingCache());
+    if (ref) setQuery(ref);
   }, [ref]);
 
-  const lookup = useCallback(async (bookingRef: string, mobile: string) => {
-    const cleanRef = bookingRef.trim();
-    const cleanPhone = mobile.replace(/\D/g, "");
-    setReference(cleanRef);
-    setPhone(cleanPhone);
-    setSearched(true);
-    setError(null);
+  const runTrack = useCallback(
+    async (payload: { booking_reference?: string; customer_phone?: string }) => {
+      if (!isApiConfigured()) {
+        throw new ApiError("Tracking API is not configured (VITE_API_URL).", 503);
+      }
+      return trackBooking(payload);
+    },
+    [],
+  );
 
-    if (!cleanRef || cleanPhone.length < 10) {
-      setBooking(null);
-      setError("Enter both booking reference and 10-digit mobile number.");
-      return;
-    }
-    if (!isApiConfigured()) {
-      setBooking(null);
-      setError("Tracking API is not configured (VITE_API_URL).");
-      return;
-    }
+  const lookup = useCallback(
+    async (raw: string) => {
+      const payload = parseTrackQuery(raw);
+      setQuery(raw.trim());
+      setSearched(true);
+      setError(null);
+      setBookingList([]);
+      setListPhone("");
 
+      if (!payload.booking_reference && !payload.customer_phone) {
+        setBooking(null);
+        setView("form");
+        setError("Enter your booking number or 10-digit mobile number.");
+        return;
+      }
+
+      setLoading(true);
+      try {
+        const data = await runTrack(payload);
+        if (data.mode === "list") {
+          setBooking(null);
+          setBookingList(data.bookings);
+          setListPhone(payload.customer_phone ?? "");
+          setView("list");
+        } else if (data.booking) {
+          setBooking(data.booking);
+          setView("detail");
+        } else {
+          setBooking(null);
+          setView("form");
+          setError("Booking not found.");
+        }
+      } catch (err) {
+        setBooking(null);
+        setView("form");
+        setError(err instanceof ApiError ? err.message : "Booking not found.");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [runTrack],
+  );
+
+  const loadDetail = useCallback(
+    async (bookingRef: string) => {
+      setError(null);
+      setLoading(true);
+      try {
+        const data = await runTrack({ booking_reference: bookingRef });
+        if (data.mode === "detail" && data.booking) {
+          setBooking(data.booking);
+          setQuery(data.booking.booking_reference);
+          setView("detail");
+        }
+      } catch (err) {
+        setError(err instanceof ApiError ? err.message : "Booking not found.");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [runTrack],
+  );
+
+  const refreshDetail = useCallback(async () => {
+    if (!booking) return;
     setLoading(true);
     try {
-      const data = await trackBooking(cleanRef, cleanPhone);
-      setBooking(data);
-    } catch (err) {
-      setBooking(null);
-      setError(err instanceof ApiError ? err.message : "Booking not found.");
+      const data = await runTrack({ booking_reference: booking.booking_reference });
+      if (data.mode === "detail" && data.booking) setBooking(data.booking);
+    } catch {
+      /* keep last known state on refresh failure */
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [booking, runTrack]);
 
   useEffect(() => {
     if (!ref) return;
-    const cached = loadBookingCache().find((b) => b.ref.toLowerCase() === ref.toLowerCase());
-    if (cached?.phone) {
-      void lookup(ref, cached.phone);
-    }
+    void lookup(ref);
   }, [ref, lookup]);
 
   useEffect(() => {
-    if (!booking || !isActiveTripStatus(booking.status)) return;
+    if (view !== "detail" || !booking || !isActiveTripStatus(booking.status)) return;
     const id = window.setInterval(() => {
-      void lookup(booking.booking_reference, booking.customer_phone);
+      void refreshDetail();
     }, 20000);
     return () => window.clearInterval(id);
-  }, [booking, lookup]);
+  }, [view, booking, refreshDetail]);
+
+  const goBack = () => {
+    if (view === "detail" && bookingList.length > 0) {
+      setBooking(null);
+      setView("list");
+      return;
+    }
+    setView("form");
+    setBooking(null);
+    setBookingList([]);
+    setSearched(false);
+    setError(null);
+  };
+
+  const showForm = view === "form";
+  const showList = view === "list";
+  const showDetail = view === "detail" && booking;
+  const showNotFound = searched && !showDetail && !showList && !loading;
 
   return (
     <main className="min-h-screen bg-background">
       <header className="border-b border-border">
         <div className="mx-auto flex max-w-3xl items-center justify-between gap-3 px-5 py-4 md:px-8">
-          <Link to="/" className="inline-flex items-center gap-2 text-sm text-muted-foreground">
-            <ArrowLeft className="size-4" /> Back to site
-          </Link>
+          {view !== "form" ? (
+            <button
+              type="button"
+              onClick={goBack}
+              className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
+            >
+              <ArrowLeft className="size-4" /> Back
+            </button>
+          ) : (
+            <Link to="/" className="inline-flex items-center gap-2 text-sm text-muted-foreground">
+              <ArrowLeft className="size-4" /> Back to site
+            </Link>
+          )}
           <a
             href={`tel:+91${PHONE_PRIMARY.replace(/\s/g, "")}`}
             className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground"
@@ -132,66 +238,62 @@ function StatusPage() {
           Track your <span className="text-brand">pickup &amp; driver</span>
         </h1>
         <p className="mt-3 text-sm text-muted-foreground">
-          Enter your booking reference and the mobile number used while booking.
+          Enter your <strong className="font-medium text-foreground">booking number</strong> or{" "}
+          <strong className="font-medium text-foreground">mobile number</strong> — one is enough.
         </p>
 
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            void lookup(reference, phone);
-          }}
-          className="mt-6 grid gap-2 sm:grid-cols-[1fr_1fr_auto]"
-        >
-          <input
-            value={reference}
-            onChange={(e) => setReference(e.target.value)}
-            placeholder="Booking reference"
-            aria-label="Booking reference"
-            className="w-full rounded-[5px] border border-border bg-surface-2/40 px-4 py-3 text-sm outline-none focus:border-brand"
-          />
-          <input
-            value={phone}
-            onChange={(e) => setPhone(e.target.value.replace(/[^\d\s]/g, ""))}
-            placeholder="Mobile number"
-            aria-label="Mobile number"
-            inputMode="tel"
-            maxLength={12}
-            className="w-full rounded-[5px] border border-border bg-surface-2/40 px-4 py-3 text-sm outline-none focus:border-brand"
-          />
-          <button
-            type="submit"
-            disabled={loading}
-            className="inline-flex shrink-0 items-center justify-center gap-2 rounded-[5px] bg-primary px-6 py-3 text-xs font-semibold uppercase tracking-[0.12em] text-primary-foreground disabled:opacity-70"
-          >
-            {loading ? <Loader2 className="size-4 animate-spin" /> : null}
-            Check status
-          </button>
-        </form>
-
-        {recent.length > 0 && (
-          <div className="mt-4 flex flex-wrap gap-2">
-            {recent.slice(0, 4).map((b) => (
+        {showForm && (
+          <>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                void lookup(query);
+              }}
+              className="mt-6 grid gap-2 sm:grid-cols-[1fr_auto]"
+            >
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Booking number or mobile number"
+                aria-label="Booking number or mobile number"
+                className="w-full rounded-[5px] border border-border bg-surface-2/40 px-4 py-3 text-sm outline-none focus:border-brand"
+              />
               <button
-                key={b.ref}
-                type="button"
-                onClick={() => void lookup(b.ref, b.phone)}
-                className="rounded-full border border-border px-3 py-1.5 text-xs text-muted-foreground hover:border-brand/50 hover:text-foreground"
+                type="submit"
+                disabled={loading}
+                className="inline-flex shrink-0 items-center justify-center gap-2 rounded-[5px] bg-primary px-6 py-3 text-xs font-semibold uppercase tracking-[0.12em] text-primary-foreground disabled:opacity-70"
               >
-                {b.ref}
+                {loading ? <Loader2 className="size-4 animate-spin" /> : null}
+                Check status
               </button>
-            ))}
-          </div>
+            </form>
+
+            {recent.length > 0 && (
+              <div className="mt-4 flex flex-wrap gap-2">
+                {recent.slice(0, 4).map((b) => (
+                  <button
+                    key={b.ref}
+                    type="button"
+                    onClick={() => void lookup(b.ref)}
+                    className="rounded-full border border-border px-3 py-1.5 text-xs text-muted-foreground hover:border-brand/50 hover:text-foreground"
+                  >
+                    {b.ref}
+                  </button>
+                ))}
+              </div>
+            )}
+          </>
         )}
 
-        {searched && !booking && !loading && (
+        {showNotFound && (
           <div className="mt-8 rounded-2xl border border-border bg-card/70 p-6">
             <p className="text-sm font-semibold">{error ?? "No booking found."}</p>
             <p className="mt-2 text-sm text-muted-foreground">
-              Double-check the reference and mobile number. If you booked by phone, message the desk.
+              Try the booking number (e.g. CAB202608160001) or the 10-digit mobile used at booking.
             </p>
             <a
               href={`https://wa.me/${ADMIN_WHATSAPP}?text=${encodeURIComponent(
-                `Hi Yaazh Cabs, I'd like the status of my booking: ${reference}`,
+                `Hi Yaazh Cabs, I'd like the status of my booking: ${query}`,
               )}`}
               target="_blank"
               rel="noopener"
@@ -202,12 +304,31 @@ function StatusPage() {
           </div>
         )}
 
-        {booking && (
-          <StatusCard
-            booking={booking}
-            onRefresh={() => void lookup(booking.booking_reference, booking.customer_phone)}
-            refreshing={loading}
-          />
+        {showList && (
+          <div className="mt-8 space-y-4">
+            <div>
+              <h2 className="font-display text-lg font-bold">Select a booking</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {listPhone
+                  ? `We found ${bookingList.length} bookings for +91 ${listPhone}. Tap one to view status.`
+                  : `We found ${bookingList.length} bookings. Tap one to view status.`}
+              </p>
+            </div>
+            <ul className="space-y-3">
+              {bookingList.map((item) => (
+                <BookingListCard
+                  key={item.id}
+                  item={item}
+                  loading={loading}
+                  onSelect={() => void loadDetail(item.booking_reference)}
+                />
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {showDetail && (
+          <StatusCard booking={booking} onRefresh={() => void refreshDetail()} refreshing={loading} />
         )}
       </div>
 
@@ -215,6 +336,58 @@ function StatusPage() {
       <ChatWidget />
       <Toaster position="top-center" />
     </main>
+  );
+}
+
+function BookingListCard({
+  item,
+  loading,
+  onSelect,
+}: {
+  item: BookingTrackSummary;
+  loading: boolean;
+  onSelect: () => void;
+}) {
+  const pickupAt = new Date(item.pickup_at);
+  const pickupLabel = Number.isNaN(pickupAt.getTime())
+    ? item.pickup_at
+    : pickupAt.toLocaleString("en-IN", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+
+  return (
+    <li>
+      <button
+        type="button"
+        onClick={onSelect}
+        disabled={loading}
+        className="flex w-full items-center gap-4 rounded-2xl border border-border bg-card/70 p-4 text-left transition hover:border-brand/40 disabled:opacity-70 sm:p-5"
+      >
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="font-data text-lg font-semibold text-brand">{item.booking_reference}</p>
+            <span
+              className={cn(
+                "rounded-full border px-2.5 py-1 text-[11px] font-medium",
+                item.status === "pending" ? "status-pending" : "status-confirmed",
+              )}
+            >
+              {statusLabel(item.status)}
+            </span>
+          </div>
+          <p className="mt-1 text-sm text-muted-foreground">{formatTripType(item.trip_type)}</p>
+          <p className="mt-1 truncate text-sm">
+            {item.pickup_location} → {item.drop_location}
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground">Pickup · {pickupLabel}</p>
+        </div>
+        <ChevronRight className="size-5 shrink-0 text-muted-foreground" />
+      </button>
+    </li>
   );
 }
 

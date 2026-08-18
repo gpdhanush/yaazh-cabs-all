@@ -284,6 +284,71 @@ export type CreateBookingInput = {
   createdByAdminId?: bigint | null;
 };
 
+type PublicTrackBookingRow = NonNullable<Awaited<ReturnType<typeof prisma.bookings.findFirst>>>;
+
+function toPublicTrackSummary(booking: PublicTrackBookingRow) {
+  return {
+    id: String(booking.id),
+    booking_reference: booking.booking_reference,
+    status: booking.status ?? "pending",
+    trip_type: booking.trip_type,
+    customer_name: booking.customer_name,
+    pickup_location: booking.pickup_location,
+    drop_location: booking.drop_location,
+    pickup_at: booking.pickup_at.toISOString(),
+  };
+}
+
+async function buildTrackedPublicBooking(booking: PublicTrackBookingRow) {
+  const history = await prisma.bookingStatusHistory.findMany({
+    where: { booking_id: booking.id },
+    orderBy: { changed_at: "asc" },
+  });
+
+  let driver: ReturnType<typeof serializeDriverParty> = null;
+  let vehicle: { name: string; registration: string | null } | null = null;
+
+  if (booking.assigned_driver_id) {
+    const [d, photos] = await Promise.all([
+      prisma.drivers.findUnique({ where: { id: booking.assigned_driver_id } }),
+      loadDriverPhotoUrls([booking.assigned_driver_id]),
+    ]);
+    driver = serializeDriverParty(d, photos.get(String(booking.assigned_driver_id)));
+  }
+  if (booking.assigned_vehicle_id) {
+    const v = await prisma.vehicles.findUnique({ where: { id: booking.assigned_vehicle_id } });
+    if (v) vehicle = { name: v.vehicle_name, registration: v.registration_no };
+  }
+
+  return {
+    id: String(booking.id),
+    booking_reference: booking.booking_reference,
+    status: booking.status ?? "pending",
+    trip_type: booking.trip_type,
+    payment_status: booking.payment_status,
+    customer_name: booking.customer_name,
+    customer_phone: booking.customer_phone,
+    pickup_location: booking.pickup_location,
+    drop_location: booking.drop_location,
+    pickup_at: booking.pickup_at.toISOString(),
+    pickup_latitude: booking.pickup_latitude != null ? Number(booking.pickup_latitude) : null,
+    pickup_longitude: booking.pickup_longitude != null ? Number(booking.pickup_longitude) : null,
+    drop_latitude: booking.drop_latitude != null ? Number(booking.drop_latitude) : null,
+    drop_longitude: booking.drop_longitude != null ? Number(booking.drop_longitude) : null,
+    estimated_total: booking.estimated_total?.toString() ?? "0",
+    final_total: booking.final_total?.toString() ?? null,
+    estimated_distance_km: booking.estimated_distance_km != null ? Number(booking.estimated_distance_km) : null,
+    driver,
+    vehicle,
+    status_history: history.map((h) => ({
+      old_status: h.old_status,
+      new_status: h.new_status,
+      note: h.note,
+      changed_at: h.changed_at.toISOString(),
+    })),
+  };
+}
+
 export const bookingService = {
   async quote(input: QuoteFareInput) {
     const quoted = await quoteFare(input);
@@ -1128,61 +1193,53 @@ export const bookingService = {
     const booking = await prisma.bookings.findFirst({
       where: {
         booking_reference: ref,
-        OR: [
-          { customer_phone: phone },
-          { customer_phone: `91${phone}` },
-          { customer_phone: `+91${phone}` },
-        ],
+        customer_phone: { in: phoneLookupVariants(phone) },
       },
     });
     if (!booking) throw new NotFoundError("Booking not found.");
 
-    const history = await prisma.bookingStatusHistory.findMany({
-      where: { booking_id: booking.id },
-      orderBy: { changed_at: "asc" },
-    });
+    return buildTrackedPublicBooking(booking);
+  },
 
-    let driver: ReturnType<typeof serializeDriverParty> = null;
-    let vehicle: { name: string; registration: string | null } | null = null;
+  async trackPublicFlexible(input: { booking_reference?: string; customer_phone?: string }) {
+    const ref = input.booking_reference?.trim().toUpperCase() ?? "";
+    const rawPhone = input.customer_phone?.trim() ?? "";
+    const phone = rawPhone ? normalizePhone(rawPhone) : "";
 
-    if (booking.assigned_driver_id) {
-      const [d, photos] = await Promise.all([
-        prisma.drivers.findUnique({ where: { id: booking.assigned_driver_id } }),
-        loadDriverPhotoUrls([booking.assigned_driver_id]),
-      ]);
-      driver = serializeDriverParty(d, photos.get(String(booking.assigned_driver_id)));
+    if (!ref && !phone) {
+      throw new ValidationError("Enter booking reference or mobile number.");
     }
-    if (booking.assigned_vehicle_id) {
-      const v = await prisma.vehicles.findUnique({ where: { id: booking.assigned_vehicle_id } });
-      if (v) vehicle = { name: v.vehicle_name, registration: v.registration_no };
+    if (phone && phone.length < 10 && !ref) {
+      throw new ValidationError("Enter a valid 10-digit mobile number.");
+    }
+
+    if (ref && phone) {
+      const booking = await this.trackPublic(ref, phone);
+      return { mode: "detail" as const, booking };
+    }
+
+    if (ref) {
+      const row = await prisma.bookings.findFirst({ where: { booking_reference: ref } });
+      if (!row) throw new NotFoundError("Booking not found.");
+      const booking = await buildTrackedPublicBooking(row);
+      return { mode: "detail" as const, booking };
+    }
+
+    const variants = phoneLookupVariants(phone);
+    const rows = await prisma.bookings.findMany({
+      where: { customer_phone: { in: variants } },
+      orderBy: { pickup_at: "desc" },
+      take: 30,
+    });
+    if (rows.length === 0) throw new NotFoundError("No bookings found for this number.");
+    if (rows.length === 1) {
+      const booking = await buildTrackedPublicBooking(rows[0]!);
+      return { mode: "detail" as const, booking };
     }
 
     return {
-      id: String(booking.id),
-      booking_reference: booking.booking_reference,
-      status: booking.status ?? "pending",
-      trip_type: booking.trip_type,
-      payment_status: booking.payment_status,
-      customer_name: booking.customer_name,
-      customer_phone: booking.customer_phone,
-      pickup_location: booking.pickup_location,
-      drop_location: booking.drop_location,
-      pickup_at: booking.pickup_at.toISOString(),
-      pickup_latitude: booking.pickup_latitude != null ? Number(booking.pickup_latitude) : null,
-      pickup_longitude: booking.pickup_longitude != null ? Number(booking.pickup_longitude) : null,
-      drop_latitude: booking.drop_latitude != null ? Number(booking.drop_latitude) : null,
-      drop_longitude: booking.drop_longitude != null ? Number(booking.drop_longitude) : null,
-      estimated_total: booking.estimated_total?.toString() ?? "0",
-      final_total: booking.final_total?.toString() ?? null,
-      estimated_distance_km: booking.estimated_distance_km != null ? Number(booking.estimated_distance_km) : null,
-      driver,
-      vehicle,
-      status_history: history.map((h) => ({
-        old_status: h.old_status,
-        new_status: h.new_status,
-        note: h.note,
-        changed_at: h.changed_at.toISOString(),
-      })),
+      mode: "list" as const,
+      bookings: rows.map(toPublicTrackSummary),
     };
   },
 

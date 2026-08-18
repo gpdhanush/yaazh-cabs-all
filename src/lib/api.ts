@@ -228,6 +228,26 @@ export type TrackedBooking = {
   }>;
 };
 
+export type BookingTrackSummary = {
+  id: string;
+  booking_reference: string;
+  status: string;
+  trip_type: string;
+  customer_name: string;
+  pickup_location: string;
+  drop_location: string;
+  pickup_at: string;
+};
+
+export type TrackDetailResponse = { mode: "detail"; booking: TrackedBooking };
+export type TrackListResponse = { mode: "list"; bookings: BookingTrackSummary[] };
+export type TrackResponse = TrackDetailResponse | TrackListResponse;
+
+export type TrackBookingInput = {
+  booking_reference?: string;
+  customer_phone?: string;
+};
+
 export type CreateBookingPayload = {
   vehicle_category_id: string;
   trip_type: TripTypeApi;
@@ -329,11 +349,41 @@ export function createBooking(payload: CreateBookingPayload) {
   });
 }
 
-export function trackBooking(booking_reference: string, customer_phone: string) {
-  return request<TrackedBooking>("/bookings/track", {
+function isTrackedBooking(value: unknown): value is TrackedBooking {
+  if (!value || typeof value !== "object") return false;
+  const v = value as Record<string, unknown>;
+  return typeof v.id === "string" && typeof v.booking_reference === "string";
+}
+
+/** Accepts new `{ mode, booking|bookings }` and legacy flat booking payloads from older APIs. */
+export function normalizeTrackResponse(data: unknown): TrackResponse {
+  if (!data || typeof data !== "object") {
+    throw new ApiError("Unexpected tracking response.", 502);
+  }
+  const d = data as Record<string, unknown>;
+  if (d.mode === "list" && Array.isArray(d.bookings)) {
+    return { mode: "list", bookings: d.bookings as BookingTrackSummary[] };
+  }
+  if (d.mode === "detail" && isTrackedBooking(d.booking)) {
+    return { mode: "detail", booking: d.booking };
+  }
+  if (isTrackedBooking(data)) {
+    return { mode: "detail", booking: data };
+  }
+  throw new ApiError("Unexpected tracking response.", 502);
+}
+
+export async function trackBooking(input: TrackBookingInput): Promise<TrackResponse> {
+  const body: TrackBookingInput = {};
+  const ref = input.booking_reference?.trim();
+  const phone = input.customer_phone?.replace(/\D/g, "");
+  if (ref) body.booking_reference = ref;
+  if (phone) body.customer_phone = phone;
+  const raw = await request<unknown>("/bookings/track", {
     method: "POST",
-    body: JSON.stringify({ booking_reference, customer_phone }),
+    body: JSON.stringify(body),
   });
+  return normalizeTrackResponse(raw);
 }
 
 export type PublicFeedback = {

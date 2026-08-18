@@ -241,6 +241,20 @@ class _AdminDrawer extends ConsumerWidget {
                     selected: location.startsWith('/fleet'),
                     onTap: () => _open('/fleet'),
                   ),
+                  _item(
+                    context,
+                    icon: LineAwesomeIcons.layer_group_solid,
+                    label: 'Categories',
+                    selected: location.startsWith('/vehicle-categories'),
+                    onTap: () => _open('/vehicle-categories'),
+                  ),
+                  _item(
+                    context,
+                    icon: LineAwesomeIcons.file_invoice_dollar_solid,
+                    label: 'Tariffs',
+                    selected: location.startsWith('/tariffs'),
+                    onTap: () => _open('/tariffs'),
+                  ),
                   const SizedBox(height: 8),
                   _sectionLabel(context, 'Website'),
                   _item(

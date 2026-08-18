@@ -26,6 +26,8 @@ class MorePage extends ConsumerWidget {
       _MoreItem(Icons.language_rounded, 'Web settings', '/web-settings', () => context.push('/web-settings')),
       _MoreItem(Icons.badge_rounded, 'Drivers', '/drivers', () => context.push('/drivers')),
       _MoreItem(Icons.directions_car_rounded, 'Vehicles', '/fleet', () => context.push('/fleet')),
+      _MoreItem(Icons.category_rounded, 'Categories', '/vehicle-categories', () => context.push('/vehicle-categories')),
+      _MoreItem(Icons.payments_rounded, 'Tariffs', '/tariffs', () => context.push('/tariffs')),
       _MoreItem(Icons.person_rounded, 'Profile', '/profile', () => context.push('/profile')),
       _MoreItem(Icons.tune_rounded, 'App settings', '/settings', () => context.push('/settings')),
     ];
