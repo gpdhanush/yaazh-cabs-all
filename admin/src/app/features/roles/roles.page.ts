@@ -8,12 +8,12 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { AdminApiService } from '../../core/api/admin-api.service';
-import { AdminStaffUser, ApiError } from '../../core/api/api.types';
+import { AdminRole, ApiError } from '../../core/api/api.types';
 import { AuthService } from '../../core/auth/auth.service';
 import { YaModalPortalDirective } from '../../shared/ya-modal-portal.directive';
 
 @Component({
-  selector: 'app-admin-users-page',
+  selector: 'app-roles-page',
   standalone: true,
   imports: [
     FormsModule,
@@ -30,15 +30,14 @@ import { YaModalPortalDirective } from '../../shared/ya-modal-portal.directive';
     <div class="page-wrap space-y-4">
       <div class="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 class="page-title">Users</h2>
-          <p class="page-subtitle">Create staff accounts and assign a role. Set what each role can open under Roles.</p>
+          <h2 class="page-title">Roles & access</h2>
+          <p class="page-subtitle">
+            Create roles, then tick the menus and actions that role can use. Assign the role when you create a staff user.
+          </p>
         </div>
-        <div class="flex flex-wrap gap-2">
-          @if (canManage()) {
-            <a mat-stroked-button class="ya-btn-ghost" routerLink="/roles">Roles & access</a>
-            <a mat-flat-button class="ya-btn-primary" routerLink="/admin-users/new">Create user</a>
-          }
-        </div>
+        @if (canManage()) {
+          <a mat-flat-button class="ya-btn-primary" routerLink="/roles/new">Create role</a>
+        }
       </div>
 
       <div class="table-card overflow-hidden">
@@ -48,79 +47,76 @@ import { YaModalPortalDirective } from '../../shared/ya-modal-portal.directive';
             <input
               type="search"
               class="ya-input"
-              placeholder="Search name, email, phone…"
+              placeholder="Search role name…"
               [value]="search()"
               (input)="onSearch($event)"
-              aria-label="Search users"
+              aria-label="Search roles"
             />
           </div>
           <p class="ya-datatable-meta">
-            {{ filteredCount() }} user{{ filteredCount() === 1 ? '' : 's' }}
+            {{ filteredCount() }} role{{ filteredCount() === 1 ? '' : 's' }}
           </p>
         </div>
 
         <div class="overflow-x-auto">
-          <table mat-table [dataSource]="dataSource" matSort class="w-full min-w-[860px] ya-datatable">
+          <table mat-table [dataSource]="dataSource" matSort class="w-full min-w-[760px] ya-datatable">
             <ng-container matColumnDef="name">
-              <th mat-header-cell *matHeaderCellDef mat-sort-header class="ya-cell-left">Name</th>
-              <td mat-cell *matCellDef="let u" class="ya-cell-left">
-                <p class="bk-table__strong">{{ u.name }}</p>
-                <p class="bk-table__sub">{{ u.email }}</p>
+              <th mat-header-cell *matHeaderCellDef mat-sort-header class="ya-cell-left">Role</th>
+              <td mat-cell *matCellDef="let r" class="ya-cell-left">
+                <p class="bk-table__strong">{{ r.name }}</p>
+                <p class="bk-table__sub">{{ r.description || 'No description' }}</p>
               </td>
             </ng-container>
 
-            <ng-container matColumnDef="phone">
-              <th mat-header-cell *matHeaderCellDef mat-sort-header>Phone</th>
-              <td mat-cell *matCellDef="let u">{{ u.phone || '—' }}</td>
+            <ng-container matColumnDef="permission_count">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>Access</th>
+              <td mat-cell *matCellDef="let r">{{ r.permission_count ?? 0 }} permission{{ r.permission_count === 1 ? '' : 's' }}</td>
             </ng-container>
 
-            <ng-container matColumnDef="role_name">
-              <th mat-header-cell *matHeaderCellDef mat-sort-header>Role</th>
-              <td mat-cell *matCellDef="let u">{{ u.role_name || '—' }}</td>
+            <ng-container matColumnDef="user_count">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>Staff</th>
+              <td mat-cell *matCellDef="let r">{{ r.user_count ?? 0 }}</td>
             </ng-container>
 
             <ng-container matColumnDef="is_active">
               <th mat-header-cell *matHeaderCellDef mat-sort-header>Status</th>
-              <td mat-cell *matCellDef="let u">
-                <span class="chip" [class]="u.is_active ? 'tone-success' : 'tone-muted'">
-                  {{ u.is_active ? 'Active' : 'Inactive' }}
+              <td mat-cell *matCellDef="let r">
+                <span class="chip" [class]="r.is_active ? 'tone-success' : 'tone-muted'">
+                  {{ r.is_active ? 'Active' : 'Inactive' }}
                 </span>
               </td>
             </ng-container>
 
-            <ng-container matColumnDef="last_login_at">
-              <th mat-header-cell *matHeaderCellDef mat-sort-header>Last login</th>
-              <td mat-cell *matCellDef="let u">{{ formatWhen(u.last_login_at) }}</td>
-            </ng-container>
-
             <ng-container matColumnDef="actions">
               <th mat-header-cell *matHeaderCellDef class="ya-col-actions">Actions</th>
-              <td mat-cell *matCellDef="let u" class="ya-col-actions">
+              <td mat-cell *matCellDef="let r" class="ya-col-actions">
                 @if (canManage()) {
                   <div class="ya-row-actions">
-                    <a mat-stroked-button class="ya-action-btn ya-action-btn--edit" [routerLink]="['/admin-users', u.id, 'edit']">
-                      Edit
+                    <a mat-stroked-button class="ya-action-btn ya-action-btn--edit" [routerLink]="['/roles', r.id, 'edit']">
+                      {{ r.is_system ? 'View access' : 'Set access' }}
                     </a>
-                    @if (u.is_active) {
-                      <button
-                        mat-stroked-button
-                        class="ya-action-btn ya-action-btn--delete"
-                        type="button"
-                        [disabled]="busyId() === u.id || u.id === currentUserId()"
-                        (click)="askDeactivate(u)"
-                      >
-                        Deactivate
-                      </button>
-                    } @else {
-                      <button
-                        mat-stroked-button
-                        class="ya-action-btn ya-action-btn--edit"
-                        type="button"
-                        [disabled]="busyId() === u.id"
-                        (click)="activate(u)"
-                      >
-                        Activate
-                      </button>
+                    @if (!r.is_system) {
+                      @if (r.is_active) {
+                        <button
+                          mat-stroked-button
+                          class="ya-action-btn ya-action-btn--delete"
+                          type="button"
+                          [disabled]="busyId() === r.id"
+                          (click)="askDeactivate(r)"
+                        >
+                          Deactivate
+                        </button>
+                      } @else {
+                        <button
+                          mat-stroked-button
+                          class="ya-action-btn ya-action-btn--edit"
+                          type="button"
+                          [disabled]="busyId() === r.id"
+                          (click)="activate(r)"
+                        >
+                          Activate
+                        </button>
+                      }
                     }
                   </div>
                 } @else {
@@ -146,10 +142,12 @@ import { YaModalPortalDirective } from '../../shared/ya-modal-portal.directive';
       <div class="ya-modal-overlay" yaModalPortal (click)="pending.set(null)" role="presentation">
         <div class="ya-confirm" (click)="$event.stopPropagation()" role="alertdialog" aria-modal="true">
           <div class="ya-confirm__icon ya-confirm__icon--warn" aria-hidden="true">
-            <mat-icon>person_off</mat-icon>
+            <mat-icon>lock</mat-icon>
           </div>
           <h3 class="ya-confirm__title">Deactivate {{ target.name }}?</h3>
-          <p class="ya-confirm__text">They will not be able to sign in until you activate the account again.</p>
+          <p class="ya-confirm__text">
+            Staff can no longer be assigned this role. Move any active staff off it first.
+          </p>
           <div class="ya-confirm__footer">
             <button mat-stroked-button class="ya-btn-ghost" type="button" (click)="pending.set(null)">Cancel</button>
             <button
@@ -166,7 +164,7 @@ import { YaModalPortalDirective } from '../../shared/ya-modal-portal.directive';
     }
   `,
 })
-export class AdminUsersPage implements OnInit, AfterViewInit {
+export class RolesPage implements OnInit, AfterViewInit {
   private readonly api = inject(AdminApiService);
   private readonly snack = inject(MatSnackBar);
   private readonly auth = inject(AuthService);
@@ -174,18 +172,14 @@ export class AdminUsersPage implements OnInit, AfterViewInit {
   @ViewChild(MatSort) sort?: MatSort;
   @ViewChild(MatPaginator) paginator?: MatPaginator;
 
-  readonly columns = ['name', 'phone', 'role_name', 'is_active', 'last_login_at', 'actions'];
+  readonly columns = ['name', 'permission_count', 'user_count', 'is_active', 'actions'];
   readonly pageSizeOptions = [10, 25, 50];
-  readonly dataSource = new MatTableDataSource<AdminStaffUser>([]);
+  readonly dataSource = new MatTableDataSource<AdminRole>([]);
   readonly search = signal('');
   readonly filteredCount = signal(0);
   readonly busyId = signal<string | null>(null);
-  readonly pending = signal<AdminStaffUser | null>(null);
-  readonly emptyMessage = signal('Loading users…');
-
-  currentUserId(): string {
-    return this.auth.user()?.id ?? '';
-  }
+  readonly pending = signal<AdminRole | null>(null);
+  readonly emptyMessage = signal('Loading roles…');
 
   canManage(): boolean {
     return this.auth.hasPermission('admin_users.manage');
@@ -193,7 +187,7 @@ export class AdminUsersPage implements OnInit, AfterViewInit {
 
   ngOnInit(): void {
     this.dataSource.filterPredicate = (row, filter) => {
-      const hay = [row.name, row.email, row.phone, row.role_name].join(' ').toLowerCase();
+      const hay = [row.name, row.description].join(' ').toLowerCase();
       return hay.includes(filter);
     };
     this.reload();
@@ -211,33 +205,20 @@ export class AdminUsersPage implements OnInit, AfterViewInit {
     this.filteredCount.set(this.dataSource.filteredData.length);
   }
 
-  formatWhen(raw: string | null): string {
-    if (!raw) return '—';
-    const dt = new Date(raw);
-    if (Number.isNaN(dt.getTime())) return raw;
-    return dt.toLocaleString('en-IN', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  }
-
-  private permissionMessage(err: unknown): string {
+  private failMessage(err: unknown): string {
     if (err instanceof ApiError && err.status === 403) {
-      return 'Only Super Admin can manage users.';
+      return err.message || 'Only Super Admin can manage roles.';
     }
     return err instanceof Error ? err.message : 'Request failed.';
   }
 
   reload(): void {
-    this.api.listAdminUsers({ per_page: 200 }).subscribe({
-      next: (res) => {
-        this.dataSource.data = res.data ?? [];
+    this.api.listAdminRoles({ all: '1' }).subscribe({
+      next: (roles) => {
+        this.dataSource.data = roles;
         this.dataSource.filter = this.search().trim().toLowerCase();
         this.filteredCount.set(this.dataSource.filteredData.length);
-        this.emptyMessage.set('No staff users yet.');
+        this.emptyMessage.set('No roles yet. Create one to assign access.');
         queueMicrotask(() => {
           this.dataSource.sort = this.sort ?? null;
           this.dataSource.paginator = this.paginator ?? null;
@@ -246,45 +227,45 @@ export class AdminUsersPage implements OnInit, AfterViewInit {
       error: (err: unknown) => {
         this.dataSource.data = [];
         this.filteredCount.set(0);
-        this.emptyMessage.set(this.permissionMessage(err));
-        this.snack.open(this.permissionMessage(err), 'OK', { duration: 3200 });
+        this.emptyMessage.set(this.failMessage(err));
+        this.snack.open(this.failMessage(err), 'OK', { duration: 3200 });
       },
     });
   }
 
-  askDeactivate(user: AdminStaffUser): void {
-    this.pending.set(user);
+  askDeactivate(role: AdminRole): void {
+    this.pending.set(role);
   }
 
   confirmDeactivate(): void {
-    const user = this.pending();
+    const role = this.pending();
     this.pending.set(null);
-    if (!user) return;
-    this.busyId.set(user.id);
-    this.api.deactivateAdminUser(user.id).subscribe({
+    if (!role) return;
+    this.busyId.set(role.id);
+    this.api.deactivateAdminRole(role.id).subscribe({
       next: () => {
         this.busyId.set(null);
-        this.snack.open(`${user.name} deactivated`, 'OK', { duration: 2200 });
+        this.snack.open(`${role.name} deactivated`, 'OK', { duration: 2200 });
         this.reload();
       },
       error: (err: unknown) => {
         this.busyId.set(null);
-        this.snack.open(this.permissionMessage(err), 'OK', { duration: 3200 });
+        this.snack.open(this.failMessage(err), 'OK', { duration: 3200 });
       },
     });
   }
 
-  activate(user: AdminStaffUser): void {
-    this.busyId.set(user.id);
-    this.api.activateAdminUser(user.id).subscribe({
+  activate(role: AdminRole): void {
+    this.busyId.set(role.id);
+    this.api.activateAdminRole(role.id).subscribe({
       next: () => {
         this.busyId.set(null);
-        this.snack.open(`${user.name} activated`, 'OK', { duration: 2200 });
+        this.snack.open(`${role.name} activated`, 'OK', { duration: 2200 });
         this.reload();
       },
       error: (err: unknown) => {
         this.busyId.set(null);
-        this.snack.open(this.permissionMessage(err), 'OK', { duration: 3200 });
+        this.snack.open(this.failMessage(err), 'OK', { duration: 3200 });
       },
     });
   }

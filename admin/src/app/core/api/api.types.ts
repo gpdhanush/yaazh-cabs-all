@@ -39,6 +39,18 @@ export type AdminRole = {
   name: string;
   description: string | null;
   is_active: boolean;
+  is_system?: boolean;
+  permission_ids?: string[];
+  permission_count?: number;
+  user_count?: number;
+};
+
+export type AdminPermission = {
+  id: string;
+  module: string;
+  action: string;
+  key: string;
+  label: string;
 };
 
 export type AdminStaffUser = {

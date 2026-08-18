@@ -117,6 +117,10 @@ function matchPassword(control: AbstractControl): ValidationErrors | null {
               @if (showError('role_id')) {
                 <p class="ya-error">{{ errorText('role_id') }}</p>
               }
+              <p class="mt-1 text-xs text-slate-500">
+                Need a new role or different access?
+                <a routerLink="/roles" class="font-medium" [style.color]="'var(--ya-primary)'">Manage roles</a>
+              </p>
             </div>
 
             <div class="ya-field ya-field--stacked">

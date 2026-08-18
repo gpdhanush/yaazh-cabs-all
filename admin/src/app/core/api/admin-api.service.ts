@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
 import { ApiService, ApiResult } from './api.service';
 import {
+  AdminPermission,
   AdminRole,
   AdminStaffUser,
   Booking,
@@ -127,8 +128,32 @@ export class AdminApiService {
     return this.api.post<unknown>(`${ADMIN}${path}`, body);
   }
 
-  listAdminRoles(): Observable<AdminRole[]> {
-    return this.api.get<AdminRole[]>(`${ADMIN}/admin-roles`).pipe(map((r) => r.data));
+  listAdminRoles(query?: { all?: string }): Observable<AdminRole[]> {
+    return this.api.get<AdminRole[]>(`${ADMIN}/admin-roles`, query).pipe(map((r) => r.data));
+  }
+
+  getAdminRole(id: string): Observable<AdminRole> {
+    return this.api.get<AdminRole>(`${ADMIN}/admin-roles/${id}`).pipe(map((r) => r.data));
+  }
+
+  createAdminRole(body: Record<string, unknown>): Observable<AdminRole> {
+    return this.api.post<AdminRole>(`${ADMIN}/admin-roles`, body).pipe(map((r) => r.data));
+  }
+
+  updateAdminRole(id: string, body: Record<string, unknown>): Observable<AdminRole> {
+    return this.api.put<AdminRole>(`${ADMIN}/admin-roles/${id}`, body).pipe(map((r) => r.data));
+  }
+
+  activateAdminRole(id: string): Observable<AdminRole> {
+    return this.api.post<AdminRole>(`${ADMIN}/admin-roles/${id}/activate`).pipe(map((r) => r.data));
+  }
+
+  deactivateAdminRole(id: string): Observable<AdminRole> {
+    return this.api.post<AdminRole>(`${ADMIN}/admin-roles/${id}/deactivate`).pipe(map((r) => r.data));
+  }
+
+  listPermissions(): Observable<AdminPermission[]> {
+    return this.api.get<AdminPermission[]>(`${ADMIN}/permissions`).pipe(map((r) => r.data));
   }
 
   listAdminUsers(query?: { page?: number; per_page?: number; q?: string }): Observable<ApiResult<AdminStaffUser[]>> {

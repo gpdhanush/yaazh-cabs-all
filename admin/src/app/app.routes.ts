@@ -191,6 +191,23 @@ export const routes: Routes = [
           import('./features/remote-config/remote-config.page').then((m) => m.RemoteConfigPage),
       },
       {
+        path: 'roles/new',
+        canActivate: [permissionGuard('admin_users.manage')],
+        loadComponent: () =>
+          import('./features/roles/role-form.page').then((m) => m.RoleFormPage),
+      },
+      {
+        path: 'roles/:id/edit',
+        canActivate: [permissionGuard('admin_users.manage')],
+        loadComponent: () =>
+          import('./features/roles/role-form.page').then((m) => m.RoleFormPage),
+      },
+      {
+        path: 'roles',
+        canActivate: [permissionGuard('admin_users.view')],
+        loadComponent: () => import('./features/roles/roles.page').then((m) => m.RolesPage),
+      },
+      {
         path: 'admin-users/new',
         canActivate: [permissionGuard('admin_users.manage')],
         loadComponent: () =>

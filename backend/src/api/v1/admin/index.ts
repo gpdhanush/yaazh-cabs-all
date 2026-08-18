@@ -645,6 +645,67 @@ async function countActiveSuperAdmins(superRoleId: bigint, excludeId?: bigint) {
   });
 }
 
+const roleBodySchema = z.object({
+  name: z.string().min(2).max(80),
+  description: z.string().max(255).optional().nullable(),
+  permission_ids: z.array(z.union([z.string(), z.number()])).default([]),
+});
+
+function serializeRoleShell(
+  role: { id: bigint; name: string; description: string | null; is_active: boolean },
+  permissionIds: string[],
+  userCount: number,
+) {
+  return {
+    id: String(role.id),
+    name: role.name,
+    description: role.description,
+    is_active: role.is_active,
+    is_system: role.name === "Super Admin",
+    permission_ids: permissionIds,
+    permission_count: permissionIds.length,
+    user_count: userCount,
+  };
+}
+
+async function serializeRolesWithAccess(roleIds: bigint[]) {
+  const unique = [...new Set(roleIds.map(String))].map((id) => BigInt(id));
+  const map = new Map<string, ReturnType<typeof serializeRoleShell>>();
+  if (unique.length === 0) return map;
+  const [roles, grants, users] = await Promise.all([
+    prisma.adminRoles.findMany({ where: { id: { in: unique } } }),
+    prisma.rolePermissions.findMany({ where: { role_id: { in: unique } } }),
+    prisma.adminUsers.groupBy({
+      by: ["role_id"],
+      where: { role_id: { in: unique } },
+      _count: { _all: true },
+    }),
+  ]);
+  const grantsByRole = new Map<string, string[]>();
+  for (const g of grants) {
+    const key = String(g.role_id);
+    const list = grantsByRole.get(key) ?? [];
+    list.push(String(g.permission_id));
+    grantsByRole.set(key, list);
+  }
+  const usersByRole = new Map(users.map((u) => [String(u.role_id), u._count._all]));
+  for (const role of roles) {
+    map.set(
+      String(role.id),
+      serializeRoleShell(role, grantsByRole.get(String(role.id)) ?? [], usersByRole.get(String(role.id)) ?? 0),
+    );
+  }
+  return map;
+}
+
+async function resolvePermissionIds(raw: Array<string | number>) {
+  const ids = [...new Set(raw.map((id) => String(id)).filter((id) => /^\d+$/.test(id)))].map((id) => BigInt(id));
+  if (ids.length === 0) return [] as bigint[];
+  const found = await prisma.permissions.findMany({ where: { id: { in: ids } }, select: { id: true } });
+  if (found.length !== ids.length) throw new ValidationError("One or more permissions are invalid.");
+  return found.map((p) => p.id);
+}
+
 export const adminRoutes: FastifyPluginAsync = async (app) => {
   app.addHook("preHandler", requireAuth("admin"));
 
@@ -777,20 +838,135 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
     return ok(reply, { id: String(row.id) }, "Device registered.", 201);
   });
 
-  app.get("/admin-roles", { preHandler: [requirePermission("admin_users.view")] }, async (_req, reply) => {
-    const roles = await prisma.adminRoles.findMany({
-      where: { is_active: true },
-      orderBy: { id: "asc" },
-    });
+  app.get("/permissions", { preHandler: [requirePermission("admin_users.view")] }, async (_req, reply) => {
+    const rows = await prisma.permissions.findMany({ orderBy: [{ module: "asc" }, { id: "asc" }] });
     return ok(
       reply,
-      roles.map((r) => ({
-        id: String(r.id),
-        name: r.name,
-        description: r.description,
-        is_active: r.is_active,
+      rows.map((p) => ({
+        id: String(p.id),
+        module: p.module,
+        action: p.action,
+        key: `${p.module}.${p.action}`,
+        label: p.label,
       })),
     );
+  });
+
+  app.get("/admin-roles", { preHandler: [requirePermission("admin_users.view")] }, async (req, reply) => {
+    const includeInactive = String((req.query as { all?: string }).all ?? "") === "1";
+    const roles = await prisma.adminRoles.findMany({
+      where: includeInactive ? {} : { is_active: true },
+      orderBy: { id: "asc" },
+    });
+    const details = await serializeRolesWithAccess(roles.map((r) => r.id));
+    return ok(
+      reply,
+      roles.map((r) => details.get(String(r.id)) ?? serializeRoleShell(r, [], 0)),
+    );
+  });
+
+  app.get("/admin-roles/:id", { preHandler: [requirePermission("admin_users.view")] }, async (req, reply) => {
+    const id = BigInt((req.params as { id: string }).id);
+    const role = await prisma.adminRoles.findUnique({ where: { id } });
+    if (!role) throw new NotFoundError("Role not found.");
+    const details = await serializeRolesWithAccess([id]);
+    return ok(reply, details.get(String(id)) ?? serializeRoleShell(role, [], 0));
+  });
+
+  app.post("/admin-roles", { preHandler: [requirePermission("admin_users.manage")] }, async (req, reply) => {
+    const user = requireUser(req);
+    const parsed = roleBodySchema.safeParse(req.body);
+    if (!parsed.success) throw new ValidationError("Validation failed.", parsed.error.flatten());
+    const name = parsed.data.name.trim();
+    const description = parsed.data.description?.trim() || null;
+    const clash = await prisma.adminRoles.findFirst({ where: { name } });
+    if (clash) throw new ConflictError("A role with this name already exists.");
+    const permissionIds = await resolvePermissionIds(parsed.data.permission_ids);
+    const created = await prisma.adminRoles.create({
+      data: { name, description, is_active: true },
+    });
+    await prisma.rolePermissions.createMany({
+      data: permissionIds.map((permission_id) => ({ role_id: created.id, permission_id })),
+    });
+    const details = await serializeRolesWithAccess([created.id]);
+    const payload = details.get(String(created.id))!;
+    await audit(user.id, "admin_role.create", "admin_roles", String(created.id), null, payload, req);
+    return ok(reply, payload, "Role created.", 201);
+  });
+
+  app.put("/admin-roles/:id", { preHandler: [requirePermission("admin_users.manage")] }, async (req, reply) => {
+    const user = requireUser(req);
+    const id = BigInt((req.params as { id: string }).id);
+    const existing = await prisma.adminRoles.findUnique({ where: { id } });
+    if (!existing) throw new NotFoundError("Role not found.");
+    const parsed = roleBodySchema.safeParse(req.body);
+    if (!parsed.success) throw new ValidationError("Validation failed.", parsed.error.flatten());
+
+    const isSuper = existing.name === "Super Admin";
+    const name = isSuper ? existing.name : parsed.data.name.trim();
+    const description = parsed.data.description?.trim() || null;
+    if (!isSuper) {
+      const clash = await prisma.adminRoles.findFirst({ where: { name, NOT: { id } } });
+      if (clash) throw new ConflictError("A role with this name already exists.");
+    }
+
+    const allPerms = await prisma.permissions.findMany({ select: { id: true } });
+    const permissionIds = isSuper
+      ? allPerms.map((p) => p.id)
+      : await resolvePermissionIds(parsed.data.permission_ids);
+
+    const before = await serializeRolesWithAccess([id]);
+    await prisma.adminRoles.update({
+      where: { id },
+      data: { name, description },
+    });
+    await prisma.rolePermissions.deleteMany({ where: { role_id: id } });
+    if (permissionIds.length) {
+      await prisma.rolePermissions.createMany({
+        data: permissionIds.map((permission_id) => ({ role_id: id, permission_id })),
+      });
+    }
+    const details = await serializeRolesWithAccess([id]);
+    const payload = details.get(String(id))!;
+    await audit(
+      user.id,
+      "admin_role.update",
+      "admin_roles",
+      String(id),
+      before.get(String(id)) ?? null,
+      payload,
+      req,
+    );
+    return ok(reply, payload, "Role updated.");
+  });
+
+  app.post("/admin-roles/:id/deactivate", { preHandler: [requirePermission("admin_users.manage")] }, async (req, reply) => {
+    const user = requireUser(req);
+    const id = BigInt((req.params as { id: string }).id);
+    const existing = await prisma.adminRoles.findUnique({ where: { id } });
+    if (!existing) throw new NotFoundError("Role not found.");
+    if (existing.name === "Super Admin") throw new ForbiddenError("Cannot deactivate the Super Admin role.");
+    const assigned = await prisma.adminUsers.count({ where: { role_id: id, is_active: true } });
+    if (assigned > 0) {
+      throw new ForbiddenError("Reassign or deactivate staff on this role before deactivating it.");
+    }
+    await prisma.adminRoles.update({ where: { id }, data: { is_active: false } });
+    const details = await serializeRolesWithAccess([id]);
+    const payload = details.get(String(id))!;
+    await audit(user.id, "admin_role.deactivate", "admin_roles", String(id), { is_active: existing.is_active }, payload, req);
+    return ok(reply, payload, "Role deactivated.");
+  });
+
+  app.post("/admin-roles/:id/activate", { preHandler: [requirePermission("admin_users.manage")] }, async (req, reply) => {
+    const user = requireUser(req);
+    const id = BigInt((req.params as { id: string }).id);
+    const existing = await prisma.adminRoles.findUnique({ where: { id } });
+    if (!existing) throw new NotFoundError("Role not found.");
+    await prisma.adminRoles.update({ where: { id }, data: { is_active: true } });
+    const details = await serializeRolesWithAccess([id]);
+    const payload = details.get(String(id))!;
+    await audit(user.id, "admin_role.activate", "admin_roles", String(id), { is_active: existing.is_active }, payload, req);
+    return ok(reply, payload, "Role activated.");
   });
 
   app.get("/admin-users", { preHandler: [requirePermission("admin_users.view")] }, async (req, reply) => {

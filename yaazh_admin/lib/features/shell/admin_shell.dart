@@ -109,9 +109,8 @@ class AdminShell extends ConsumerWidget {
       key: adminScaffoldKey,
       drawer: _AdminDrawer(parentContext: context),
       body: navigationShell,
-      bottomNavigationBar: tabs.isEmpty
-          ? null
-          : Column(
+      bottomNavigationBar: tabs.length >= 2
+          ? Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Divider(height: 1, color: theme.dividerColor),
@@ -132,7 +131,8 @@ class AdminShell extends ConsumerWidget {
                   ],
                 ),
               ],
-            ),
+            )
+          : null,
       backgroundColor: theme.scaffoldBackgroundColor,
     );
   }
