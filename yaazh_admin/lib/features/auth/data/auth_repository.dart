@@ -33,8 +33,16 @@ class AuthRepository {
       'password': password,
     });
     await _saveTokens(response);
-    final user = _userFrom(response);
-    await _cacheUser(user);
+    var user = _userFrom(response);
+    if (user.permissions == null || user.permissions!.isEmpty) {
+      try {
+        user = await fetchProfile();
+      } catch (_) {
+        await _cacheUser(user);
+      }
+    } else {
+      await _cacheUser(user);
+    }
     // Push registration is best-effort; never block sign-in.
     try {
       await _devices.registerAfterLogin(appVersion: AppConstants.appVersion);

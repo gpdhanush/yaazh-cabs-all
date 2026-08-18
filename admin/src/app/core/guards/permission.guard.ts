@@ -1,7 +1,7 @@
 import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
 import { AuthService } from '../auth/auth.service';
-import { permissionForPath } from '../auth/permissions';
+import { permissionForPath, hasAccess } from '../auth/permissions';
 
 export function permissionGuard(...needed: string[]): CanActivateFn {
   return () => {
@@ -17,6 +17,6 @@ export const routePermissionGuard: CanActivateFn = (_route, state) => {
   const router = inject(Router);
   const path = state.url.split('?')[0];
   const needed = permissionForPath(path);
-  if (!needed || auth.hasPermission(needed)) return true;
+  if (!needed || hasAccess(auth.permissions(), needed)) return true;
   return router.createUrlTree(['/dashboard']);
 };

@@ -4,7 +4,7 @@ import { Observable, tap, catchError, throwError, map, of, switchMap } from 'rxj
 import { ApiService } from '../api/api.service';
 import { AdminUser, AuthTokens } from '../api/api.types';
 import { FirebaseService } from '../firebase/firebase.service';
-import { ADMIN_NAV_ITEMS, filterNavByPermissions } from './permissions';
+import { ADMIN_NAV_ITEMS, filterNavByPermissions, hasAccess } from './permissions';
 
 const STORAGE_KEY = 'yaazh.admin.tokens';
 
@@ -25,9 +25,7 @@ export class AuthService {
   readonly isAuthenticated = computed(() => Boolean(this.tokensSignal()?.access_token));
 
   hasPermission(key: string): boolean {
-    const perms = this.permissions();
-    if (perms === undefined) return true;
-    return perms.includes(key);
+    return hasAccess(this.permissions(), key);
   }
 
   ensurePermissionsLoaded(): Observable<AdminUser | null> {

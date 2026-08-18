@@ -36,6 +36,7 @@ const MODULE_LABELS: Record<string, string> = {
   blog: 'Blog',
   faq: 'FAQs',
   seo: 'SEO',
+  gallery: 'Gallery',
   reports: 'Reports',
   settings: 'Settings',
   audit_logs: 'Audit logs',

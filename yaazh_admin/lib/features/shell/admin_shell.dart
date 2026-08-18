@@ -255,6 +255,15 @@ class _AdminDrawer extends ConsumerWidget {
                         onTap: () => _open(item.route),
                       ),
                   ],
+                  if (operations.isEmpty && website.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Text(
+                        'No modules are assigned to your role.',
+                        style: theme.textTheme.bodyMedium,
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
                 ],
               ),
             ),

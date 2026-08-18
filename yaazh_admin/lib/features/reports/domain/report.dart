@@ -74,12 +74,16 @@ class ReportStatusCount {
 
 class ReportsPayload {
   final String period;
+  final String? from;
+  final String? to;
   final ReportCounts counts;
   final List<ReportSeriesPoint> series;
   final List<ReportStatusCount> byStatus;
 
   const ReportsPayload({
     required this.period,
+    this.from,
+    this.to,
     required this.counts,
     required this.series,
     required this.byStatus,
@@ -88,6 +92,8 @@ class ReportsPayload {
   factory ReportsPayload.fromJson(Map<String, dynamic> json) {
     return ReportsPayload(
       period: json['period']?.toString() ?? 'day',
+      from: json['from']?.toString(),
+      to: json['to']?.toString(),
       counts: ReportCounts.fromJson(
         json['counts'] is Map
             ? Map<String, dynamic>.from(json['counts'] as Map)

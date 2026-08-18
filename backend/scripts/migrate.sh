@@ -35,8 +35,8 @@ mysql_cmd < database/migrations/006_trip_events_fare_adjusted.sql
 echo "Applying gallery groups and images..."
 mysql_cmd < database/migrations/007_gallery.sql
 
-echo "Applying admin users permissions..."
-mysql_cmd < database/migrations/009_admin_users_permissions.sql
+echo "Applying gallery permissions..."
+mysql_cmd < database/migrations/010_gallery_permissions.sql
 
 echo "Generating Prisma client..."
 npx prisma generate

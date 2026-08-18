@@ -83,6 +83,15 @@ export function requirePermission(...needed: string[]) {
   };
 }
 
+export function requireAnyPermission(...needed: string[]) {
+  return async (req: FastifyRequest, _reply: FastifyReply) => {
+    if (!req.auth || req.auth.typ !== "admin") throw new ForbiddenError();
+    const perms = req.auth.permissions ?? [];
+    const ok = needed.some((n) => perms.includes(n));
+    if (!ok) throw new ForbiddenError("Missing required permission.");
+  };
+}
+
 export function requireUser(req: FastifyRequest): AuthUser {
   if (!req.auth) throw new UnauthorizedError();
   return req.auth;

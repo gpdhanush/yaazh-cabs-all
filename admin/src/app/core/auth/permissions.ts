@@ -28,7 +28,7 @@ export const ADMIN_NAV_ITEMS: NavItem[] = [
   { label: 'Tariffs', path: '/tariffs', icon: 'payments', permission: 'tariff.manage' },
   { label: 'FAQs', path: '/faqs', icon: 'help', permission: 'faq.manage' },
   { label: 'Testimonials', path: '/testimonials', icon: 'star', permission: 'reviews.approve' },
-  { label: 'Gallery', path: '/gallery', icon: 'photo_library' },
+  { label: 'Gallery', path: '/gallery', icon: 'photo_library', permission: 'gallery.manage' },
   { label: 'Enquiries', path: '/enquiries', icon: 'mail', permission: 'support.manage' },
   { label: 'Notifications', path: '/notifications', icon: 'notifications', permission: 'notifications.send' },
   { label: 'Users', path: '/admin-users', icon: 'manage_accounts', permission: 'admin_users.view' },
@@ -45,10 +45,25 @@ export function permissionForPath(path: string): string | undefined {
   return hit?.permission;
 }
 
+export function hasAccess(permissions: string[] | undefined, needed?: string): boolean {
+  if (!needed) return true;
+  if (permissions === undefined) return true;
+  if (permissions.includes(needed)) return true;
+  if (needed === 'gallery.view' || needed === 'gallery.manage') {
+    return (
+      permissions.includes('gallery.manage') ||
+      permissions.includes('cms.manage') ||
+      permissions.includes('admin_users.manage') ||
+      (needed === 'gallery.view' && permissions.includes('gallery.view'))
+    );
+  }
+  return false;
+}
+
 export function filterNavByPermissions(
   items: NavItem[],
   permissions: string[] | undefined,
 ): NavItem[] {
   if (permissions === undefined) return items;
-  return items.filter((item) => !item.permission || permissions.includes(item.permission));
+  return items.filter((item) => hasAccess(permissions, item.permission));
 }

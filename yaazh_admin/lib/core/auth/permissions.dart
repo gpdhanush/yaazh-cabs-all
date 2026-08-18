@@ -14,6 +14,10 @@ class AdminPermissions {
   static const supportManage = 'support.manage';
   static const notificationsSend = 'notifications.send';
   static const settingsManage = 'settings.manage';
+  static const galleryView = 'gallery.view';
+  static const galleryManage = 'gallery.manage';
+  static const cmsManage = 'cms.manage';
+  static const adminUsersManage = 'admin_users.manage';
 }
 
 extension AdminUserPermissions on AdminUser {
@@ -79,6 +83,7 @@ const adminWebsiteDrawerItems = [
   AdminNavItem(
     label: 'Gallery',
     route: '/gallery',
+    permission: AdminPermissions.galleryView,
   ),
   AdminNavItem(
     label: 'Reports',
@@ -132,8 +137,10 @@ List<AdminNavItem> visibleDrawerItems(AdminUser? user) {
 
 List<AdminNavItem> visibleWebsiteDrawerItems(AdminUser? user) {
   if (user?.permissionsLoaded != true) return adminWebsiteDrawerItems;
-  bool allowed(AdminNavItem item) =>
-      item.permission == null || user!.hasPermission(item.permission!);
+  bool allowed(AdminNavItem item) {
+    if (item.route == '/gallery') return canViewGallery(user);
+    return item.permission == null || user!.hasPermission(item.permission!);
+  }
   return adminWebsiteDrawerItems.where(allowed).toList();
 }
 
@@ -144,7 +151,27 @@ List<AdminShellTab> visibleShellTabs(AdminUser? user) {
   return adminShellTabs.where(allowed).toList();
 }
 
+bool canViewGallery(AdminUser? user) {
+  if (user?.permissionsLoaded != true) return true;
+  return user!.hasAnyPermission(const [
+    AdminPermissions.galleryView,
+    AdminPermissions.galleryManage,
+    AdminPermissions.cmsManage,
+    AdminPermissions.adminUsersManage,
+  ]);
+}
+
+bool canManageGallery(AdminUser? user) {
+  if (user?.permissionsLoaded != true) return true;
+  return user!.hasAnyPermission(const [
+    AdminPermissions.galleryManage,
+    AdminPermissions.cmsManage,
+    AdminPermissions.adminUsersManage,
+  ]);
+}
+
 String? permissionForRoute(String path) {
+  if (path.startsWith('/gallery')) return AdminPermissions.galleryView;
   for (final item in [...adminDrawerItems, ...adminWebsiteDrawerItems]) {
     if (path.startsWith(item.route)) return item.permission;
   }
@@ -167,6 +194,7 @@ bool canAccessRoute(AdminUser? user, String path) {
     return true;
   }
   if (user?.permissionsLoaded != true) return true;
+  if (path.startsWith('/gallery')) return canViewGallery(user);
   final needed = permissionForRoute(path);
   if (needed == null) return true;
   return user!.hasPermission(needed);

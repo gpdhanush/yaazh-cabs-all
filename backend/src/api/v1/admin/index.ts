@@ -6,7 +6,7 @@ import { randomUUID } from "node:crypto";
 import { prisma } from "../../../config/database.js";
 import { loadEnv } from "../../../config/env.js";
 import { ok } from "../../../utils/api-response.js";
-import { requireAuth, requirePermission, requireUser } from "../../../middleware/auth.js";
+import { requireAuth, requirePermission, requireAnyPermission, requireUser } from "../../../middleware/auth.js";
 import { bookingService, serializeBooking, serializeDriverParty, getBookingPaymentSummary, recordBookingPayment, setBookingPaymentStatus, applyBookingDiscount } from "../../../services/booking.service.js";
 import { saveDriverPhotoBytes, driverPhotoPublicPath } from "../../../services/driver-photo.service.js";
 import {
@@ -3684,7 +3684,7 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
     return ok(reply, { id: String(id) }, "FAQ deleted.");
   });
 
-  app.get("/gallery", { preHandler: [requireAuth("admin")] }, async (req, reply) => {
+  app.get("/gallery", { preHandler: [requireAnyPermission("gallery.view", "gallery.manage", "cms.manage", "admin_users.manage")] }, async (req, reply) => {
     try {
       const rows = await prisma.galleryGroups.findMany({
         orderBy: [{ display_order: "asc" }, { id: "asc" }],
@@ -3700,7 +3700,7 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
     }
   });
 
-  app.post("/gallery/groups", { preHandler: [requireAuth("admin")] }, async (req, reply) => {
+  app.post("/gallery/groups", { preHandler: [requireAnyPermission("gallery.manage", "cms.manage", "admin_users.manage")] }, async (req, reply) => {
     const user = requireUser(req);
     const schema = z.object({
       title: z.string().min(2).max(120),
@@ -3735,7 +3735,7 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
     }
   });
 
-  app.put("/gallery/groups/:id", { preHandler: [requireAuth("admin")] }, async (req, reply) => {
+  app.put("/gallery/groups/:id", { preHandler: [requireAnyPermission("gallery.manage", "cms.manage", "admin_users.manage")] }, async (req, reply) => {
     const user = requireUser(req);
     const id = BigInt((req.params as { id: string }).id);
     const existing = await prisma.galleryGroups.findUnique({ where: { id } });
@@ -3764,7 +3764,7 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
     return ok(reply, serialized, "Gallery group updated.");
   });
 
-  app.delete("/gallery/groups/:id", { preHandler: [requireAuth("admin")] }, async (req, reply) => {
+  app.delete("/gallery/groups/:id", { preHandler: [requireAnyPermission("gallery.manage", "cms.manage", "admin_users.manage")] }, async (req, reply) => {
     const user = requireUser(req);
     const id = BigInt((req.params as { id: string }).id);
     const existing = await prisma.galleryGroups.findUnique({ where: { id } });
@@ -3774,7 +3774,7 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
     return ok(reply, { id: String(id) }, "Gallery group deleted.");
   });
 
-  app.post("/gallery/images", { preHandler: [requireAuth("admin")] }, async (req, reply) => {
+  app.post("/gallery/images", { preHandler: [requireAnyPermission("gallery.manage", "cms.manage", "admin_users.manage")] }, async (req, reply) => {
     const user = requireUser(req);
     const schema = z.object({
       group_id: z.string().min(1),
@@ -3804,7 +3804,7 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
     return ok(reply, serialized, "Gallery image added.", 201);
   });
 
-  app.put("/gallery/images/:id", { preHandler: [requireAuth("admin")] }, async (req, reply) => {
+  app.put("/gallery/images/:id", { preHandler: [requireAnyPermission("gallery.manage", "cms.manage", "admin_users.manage")] }, async (req, reply) => {
     const user = requireUser(req);
     const id = BigInt((req.params as { id: string }).id);
     const existing = await prisma.galleryImages.findUnique({ where: { id } });
@@ -3832,7 +3832,7 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
     return ok(reply, serialized, "Gallery image updated.");
   });
 
-  app.delete("/gallery/images/:id", { preHandler: [requireAuth("admin")] }, async (req, reply) => {
+  app.delete("/gallery/images/:id", { preHandler: [requireAnyPermission("gallery.manage", "cms.manage", "admin_users.manage")] }, async (req, reply) => {
     const user = requireUser(req);
     const id = BigInt((req.params as { id: string }).id);
     const existing = await prisma.galleryImages.findUnique({ where: { id } });
@@ -4088,13 +4088,8 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
   });
 
   app.get("/reports", { preHandler: [requirePermission("reports.view")] }, async (req, reply) => {
-    const q = req.query as { period?: string };
+    const q = req.query as { period?: string; from?: string; to?: string };
     const period = q.period === "week" || q.period === "month" ? q.period : "day";
-
-    const byStatus = await prisma.bookings.groupBy({
-      by: ["status"],
-      _count: { _all: true },
-    });
 
     const now = new Date();
     const startOfDay = (d: Date) => {
@@ -4105,6 +4100,11 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
     const pad2 = (n: number) => String(n).padStart(2, "0");
     const toYmd = (d: Date) =>
       `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+    const parseYmd = (raw?: string) => {
+      if (!raw || !/^\d{4}-\d{2}-\d{2}$/.test(raw)) return null;
+      const d = new Date(`${raw}T00:00:00`);
+      return Number.isNaN(d.getTime()) ? null : startOfDay(d);
+    };
     const mondayOf = (d: Date) => {
       const x = startOfDay(d);
       const day = (x.getDay() + 6) % 7; // Mon=0
@@ -4114,14 +4114,49 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
     const monthStart = (d: Date) => new Date(d.getFullYear(), d.getMonth(), 1);
 
     let from: Date;
+    let until: Date;
     let bucketExpr: "day" | "week" | "month";
     const buckets: string[] = [];
+    const customFrom = parseYmd(q.from);
+    const customTo = parseYmd(q.to);
 
-    if (period === "week") {
+    if (customFrom && customTo) {
+      from = customFrom <= customTo ? customFrom : customTo;
+      until = customFrom <= customTo ? customTo : customFrom;
+      const maxDays = 366;
+      const span = Math.round((until.getTime() - from.getTime()) / 86_400_000) + 1;
+      if (span > maxDays) {
+        until = new Date(from);
+        until.setDate(from.getDate() + maxDays - 1);
+      }
+      bucketExpr = period;
+      if (period === "week") {
+        from = mondayOf(from);
+        const lastMonday = mondayOf(until);
+        for (let b = new Date(from); b <= lastMonday; b.setDate(b.getDate() + 7)) {
+          buckets.push(toYmd(b));
+        }
+      } else if (period === "month") {
+        from = monthStart(from);
+        const lastMonth = monthStart(until);
+        for (
+          let b = new Date(from);
+          b <= lastMonth;
+          b = new Date(b.getFullYear(), b.getMonth() + 1, 1)
+        ) {
+          buckets.push(toYmd(b));
+        }
+      } else {
+        for (let b = new Date(from); b <= until; b.setDate(b.getDate() + 1)) {
+          buckets.push(toYmd(b));
+        }
+      }
+    } else if (period === "week") {
       bucketExpr = "week";
       const thisMonday = mondayOf(now);
       from = new Date(thisMonday);
       from.setDate(from.getDate() - 7 * 11); // 12 weeks
+      until = startOfDay(now);
       for (let i = 0; i < 12; i++) {
         const b = new Date(from);
         b.setDate(from.getDate() + i * 7);
@@ -4130,6 +4165,7 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
     } else if (period === "month") {
       bucketExpr = "month";
       from = monthStart(new Date(now.getFullYear(), now.getMonth() - 11, 1));
+      until = startOfDay(now);
       for (let i = 0; i < 12; i++) {
         const b = new Date(from.getFullYear(), from.getMonth() + i, 1);
         buckets.push(toYmd(b));
@@ -4138,12 +4174,22 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
       bucketExpr = "day";
       from = startOfDay(now);
       from.setDate(from.getDate() - 13); // 14 days
+      until = startOfDay(now);
       for (let i = 0; i < 14; i++) {
         const b = new Date(from);
         b.setDate(from.getDate() + i);
         buckets.push(toYmd(b));
       }
     }
+
+    const toExclusive = new Date(until);
+    toExclusive.setDate(toExclusive.getDate() + 1);
+
+    const byStatus = await prisma.bookings.groupBy({
+      by: ["status"],
+      where: { created_at: { gte: from, lt: toExclusive } },
+      _count: { _all: true },
+    });
 
     type AggRow = {
       bucket: string | Date;
@@ -4169,7 +4215,7 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
                   ELSE 0 END
               ), 0) AS revenue
             FROM bookings
-            WHERE created_at >= ${from}
+            WHERE created_at >= ${from} AND created_at < ${toExclusive}
             GROUP BY DATE_FORMAT(DATE_SUB(created_at, INTERVAL WEEKDAY(created_at) DAY), '%Y-%m-%d')
             ORDER BY bucket ASC
           `
@@ -4187,7 +4233,7 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
                     ELSE 0 END
                 ), 0) AS revenue
               FROM bookings
-              WHERE created_at >= ${from}
+              WHERE created_at >= ${from} AND created_at < ${toExclusive}
               GROUP BY DATE_FORMAT(created_at, '%Y-%m-01')
               ORDER BY bucket ASC
             `
@@ -4204,7 +4250,7 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
                     ELSE 0 END
                 ), 0) AS revenue
               FROM bookings
-              WHERE created_at >= ${from}
+              WHERE created_at >= ${from} AND created_at < ${toExclusive}
               GROUP BY DATE_FORMAT(created_at, '%Y-%m-%d')
               ORDER BY bucket ASC
             `;
@@ -4262,7 +4308,7 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
     return ok(reply, {
       period,
       from: from.toISOString(),
-      to: now.toISOString(),
+      to: until.toISOString(),
       counts,
       series,
       bookings_by_status: byStatus.map((s) => ({ status: s.status, count: s._count._all })),

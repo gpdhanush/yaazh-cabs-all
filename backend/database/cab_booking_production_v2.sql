@@ -1483,7 +1483,9 @@ INSERT INTO permissions (module, action, label) VALUES
   ('settings', 'manage', 'Manage Settings'),
   ('audit_logs', 'view', 'View Audit Logs'),
   ('admin_users', 'view', 'View Admin Users'),
-  ('admin_users', 'manage', 'Manage Admin Users');
+  ('admin_users', 'manage', 'Manage Admin Users'),
+  ('gallery', 'view', 'View Gallery'),
+  ('gallery', 'manage', 'Manage Gallery');
 
 -- Super Admin gets everything.
 INSERT INTO role_permissions (role_id, permission_id)
@@ -1502,7 +1504,7 @@ WHERE module IN (
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT 3, id
 FROM permissions
-WHERE module IN ('dashboard','cms','blog','faq','seo','reviews');
+WHERE module IN ('dashboard','cms','blog','faq','seo','reviews','gallery');
 
 -- Operations Manager.
 INSERT INTO role_permissions (role_id, permission_id)

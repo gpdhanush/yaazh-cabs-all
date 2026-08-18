@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:yaazh_admin/core/auth/permissions.dart';
 import 'package:yaazh_admin/core/image_encode.dart';
 import 'package:yaazh_admin/core/network/api_exception.dart';
 import 'package:yaazh_admin/core/network/media_url.dart';
@@ -14,6 +15,7 @@ import 'package:yaazh_admin/core/widgets/ya_danger_button.dart';
 import 'package:yaazh_admin/core/widgets/ya_dropdown.dart';
 import 'package:yaazh_admin/core/widgets/ya_field.dart';
 import 'package:yaazh_admin/core/widgets/ya_loader.dart';
+import 'package:yaazh_admin/features/auth/presentation/auth_viewmodel.dart';
 import 'package:yaazh_admin/features/gallery/data/gallery_repository.dart';
 import 'package:yaazh_admin/features/gallery/domain/gallery.dart';
 
@@ -198,31 +200,36 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
   Widget build(BuildContext context) {
     final async = ref.watch(galleryGroupsProvider);
     final selectedId = ref.watch(selectedGalleryGroupIdProvider);
+    final user = ref.watch(authNotifierProvider).user;
+    final canManage = canManageGallery(user);
 
     return KeyboardDismiss(
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Gallery'),
           actions: [
-            IconButton(
-              tooltip: 'Add group',
-              onPressed: _createGroup,
-              icon: const Icon(Icons.create_new_folder_outlined),
-            ),
+            if (canManage)
+              IconButton(
+                tooltip: 'Add group',
+                onPressed: _createGroup,
+                icon: const Icon(Icons.create_new_folder_outlined),
+              ),
           ],
         ),
-        floatingActionButton: async.maybeWhen(
-          data: (groups) {
-            final group = _selected(groups);
-            if (group == null || _uploading) return null;
-            return FloatingActionButton.extended(
-              onPressed: () => _addPhotos(group),
-              icon: const Icon(Icons.add_photo_alternate_rounded),
-              label: const Text('Add photos'),
-            );
-          },
-          orElse: () => null,
-        ),
+        floatingActionButton: canManage
+            ? async.maybeWhen(
+                data: (groups) {
+                  final group = _selected(groups);
+                  if (group == null || _uploading) return null;
+                  return FloatingActionButton.extended(
+                    onPressed: () => _addPhotos(group),
+                    icon: const Icon(Icons.add_photo_alternate_rounded),
+                    label: const Text('Add photos'),
+                  );
+                },
+                orElse: () => null,
+              )
+            : null,
         body: async.when(
           loading: () => const Center(child: YaLoader()),
           error: (err, _) => EmptyState(
@@ -248,10 +255,12 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
                 physics: const AlwaysScrollableScrollPhysics(),
                 slivers: [
                   if (groups.isEmpty)
-                    const SliverFillRemaining(
+                    SliverFillRemaining(
                       child: EmptyState(
                         title: 'No gallery groups',
-                        subtitle: 'Create a group such as Cars — Outside, then add photos for the website.',
+                        subtitle: canManage
+                            ? 'Create a group such as Cars — Outside, then add photos for the website.'
+                            : 'No photos have been published yet.',
                         icon: Icons.photo_library_outlined,
                       ),
                     )
@@ -289,12 +298,13 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
                                   style: Theme.of(context).textTheme.bodySmall,
                                 ),
                               ),
-                              YaDangerButton(
-                                expand: false,
-                                onPressed: () => _deleteGroup(selected!),
-                                icon: Icons.delete_outline_rounded,
-                                label: 'Delete',
-                              ),
+                              if (canManage)
+                                YaDangerButton(
+                                  expand: false,
+                                  onPressed: () => _deleteGroup(selected!),
+                                  icon: Icons.delete_outline_rounded,
+                                  label: 'Delete',
+                                ),
                             ],
                           ),
                         ),
@@ -334,12 +344,14 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
                         ),
                       ),
                       if (selected.images.isEmpty)
-                        const SliverToBoxAdapter(
+                        SliverToBoxAdapter(
                           child: Padding(
-                            padding: EdgeInsets.only(top: 8),
+                            padding: const EdgeInsets.only(top: 8),
                             child: EmptyState(
                               title: 'No photos yet',
-                              subtitle: 'Tap Add photos to upload images for this group.',
+                              subtitle: canManage
+                                  ? 'Tap Add photos to upload images for this group.'
+                                  : 'Photos will appear here when they are published.',
                               icon: Icons.add_photo_alternate_outlined,
                             ),
                           ),
@@ -360,8 +372,8 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
                                 return _PhotoTile(
                                   image: image,
                                   onOpen: () => _preview(image),
-                                  onEditCaption: () => _editCaption(image),
-                                  onDelete: () => _deleteImage(image),
+                                  onEditCaption: canManage ? () => _editCaption(image) : null,
+                                  onDelete: canManage ? () => _deleteImage(image) : null,
                                 );
                               },
                               childCount: selected.images.length,
@@ -379,8 +391,8 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
                               return _PhotoListTile(
                                 image: image,
                                 onOpen: () => _preview(image),
-                                onEditCaption: () => _editCaption(image),
-                                onDelete: () => _deleteImage(image),
+                                onEditCaption: canManage ? () => _editCaption(image) : null,
+                                onDelete: canManage ? () => _deleteImage(image) : null,
                               );
                             },
                           ),
@@ -559,14 +571,14 @@ class _ViewSwitchButton extends StatelessWidget {
 class _PhotoListTile extends StatelessWidget {
   final GalleryImage image;
   final VoidCallback onOpen;
-  final VoidCallback onEditCaption;
-  final VoidCallback onDelete;
+  final VoidCallback? onEditCaption;
+  final VoidCallback? onDelete;
 
   const _PhotoListTile({
     required this.image,
     required this.onOpen,
-    required this.onEditCaption,
-    required this.onDelete,
+    this.onEditCaption,
+    this.onDelete,
   });
 
   @override
@@ -631,15 +643,17 @@ class _PhotoListTile extends StatelessWidget {
                   ],
                 ),
               ),
-              IconButton(
-                tooltip: 'Edit caption',
-                onPressed: onEditCaption,
-                icon: Icon(Icons.edit_outlined, color: theme.colorScheme.primary),
-              ),
-              YaDangerIconButton(
-                tooltip: 'Delete photo',
-                onPressed: onDelete,
-              ),
+              if (onEditCaption != null)
+                IconButton(
+                  tooltip: 'Edit caption',
+                  onPressed: onEditCaption,
+                  icon: Icon(Icons.edit_outlined, color: theme.colorScheme.primary),
+                ),
+              if (onDelete != null)
+                YaDangerIconButton(
+                  tooltip: 'Delete photo',
+                  onPressed: onDelete,
+                ),
             ],
           ),
         ),
@@ -651,14 +665,14 @@ class _PhotoListTile extends StatelessWidget {
 class _PhotoTile extends StatelessWidget {
   final GalleryImage image;
   final VoidCallback onOpen;
-  final VoidCallback onEditCaption;
-  final VoidCallback onDelete;
+  final VoidCallback? onEditCaption;
+  final VoidCallback? onDelete;
 
   const _PhotoTile({
     required this.image,
     required this.onOpen,
-    required this.onEditCaption,
-    required this.onDelete,
+    this.onEditCaption,
+    this.onDelete,
   });
 
   @override
@@ -693,48 +707,60 @@ class _PhotoTile extends StatelessWidget {
                       placeholder: (_, _) => const Center(child: YaLoader(size: 22)),
                       errorWidget: (_, _, _) => const Icon(Icons.broken_image_outlined),
                     ),
-                  Positioned(
-                    top: 8,
-                    right: 8,
-                    child: YaDangerIconButton(
-                      tooltip: 'Delete photo',
-                      onPressed: onDelete,
+                  if (onDelete != null)
+                    Positioned(
+                      top: 8,
+                      right: 8,
+                      child: YaDangerIconButton(
+                        tooltip: 'Delete photo',
+                        onPressed: onDelete,
+                      ),
                     ),
-                  ),
                 ],
               ),
             ),
           ),
-          InkWell(
-            onTap: onEditCaption,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(6, 4, 4, 6),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      image.caption?.trim().isNotEmpty == true
-                          ? image.caption!.trim()
-                          : 'No caption · optional',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.bodySmall,
+          if (onEditCaption != null)
+            InkWell(
+              onTap: onEditCaption,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(6, 4, 4, 6),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        image.caption?.trim().isNotEmpty == true
+                            ? image.caption!.trim()
+                            : 'No caption · optional',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodySmall,
+                      ),
                     ),
-                  ),
-                  IconButton(
-                    visualDensity: VisualDensity.compact,
-                    tooltip: 'Edit caption',
-                    onPressed: onEditCaption,
-                    icon: Icon(
-                      Icons.edit_outlined,
-                      size: 18,
-                      color: theme.colorScheme.primary,
+                    IconButton(
+                      visualDensity: VisualDensity.compact,
+                      tooltip: 'Edit caption',
+                      onPressed: onEditCaption,
+                      icon: Icon(
+                        Icons.edit_outlined,
+                        size: 18,
+                        color: theme.colorScheme.primary,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
+              ),
+            )
+          else if (image.caption?.trim().isNotEmpty == true)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
+              child: Text(
+                image.caption!.trim(),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.bodySmall,
               ),
             ),
-          ),
         ],
       ),
     );

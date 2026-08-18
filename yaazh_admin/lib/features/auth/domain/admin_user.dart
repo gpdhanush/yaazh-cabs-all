@@ -63,7 +63,7 @@ class AdminUser {
       phone: _emptyToNull(json['phone']?.toString()),
       avatarUrl: _emptyToNull(json['avatar_url']?.toString()),
       roleId: json['role_id']?.toString(),
-      permissions: _permissionsFrom(json),
+      permissions: _permissionsFrom(json['permissions']),
     );
   }
 
