@@ -115,7 +115,7 @@ class _EnquiryDetailPageState extends ConsumerState<EnquiryDetailPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _kv('Name', e.name),
+                      _kv('Name', titleCase(e.name)),
                       _kv('Phone', e.phone?.isNotEmpty == true ? e.phone! : '—'),
                       _kv('Email', e.email?.isNotEmpty == true ? e.email! : '—'),
                       if (e.phone?.isNotEmpty == true)

@@ -9,7 +9,6 @@ import 'package:yaazh_admin/core/widgets/coming_soon.dart';
 import 'package:yaazh_admin/core/widgets/confirm_sheet.dart';
 import 'package:yaazh_admin/core/widgets/keyboard_dismiss.dart';
 import 'package:yaazh_admin/core/widgets/status_chip.dart';
-import 'package:yaazh_admin/core/widgets/ya_danger_button.dart';
 import 'package:yaazh_admin/core/widgets/ya_loader.dart';
 import 'package:yaazh_admin/features/testimonials/data/testimonial_repository.dart';
 import 'package:yaazh_admin/features/testimonials/domain/testimonial.dart';
@@ -21,68 +20,42 @@ class TestimonialsPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return DefaultTabController(
-      length: 4,
-      child: KeyboardDismiss(
-        child: Scaffold(
-          appBar: AppBar(
-            title: const Text('Testimonials'),
-            bottom: const TabBar(
-              isScrollable: true,
-              tabAlignment: TabAlignment.start,
-              tabs: [
-                Tab(text: 'All'),
-                Tab(text: 'Pending'),
-                Tab(text: 'Approved'),
-                Tab(text: 'Rejected'),
-              ],
+    return KeyboardDismiss(
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Testimonials'),
+        ),
+        floatingActionButton: FloatingActionButton(
+          onPressed: () {
+            hideKeyboard();
+            context.push('/testimonials/new');
+          },
+          child: const Icon(Icons.add_rounded),
+        ),
+        body: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+              child: TextField(
+                textInputAction: TextInputAction.search,
+                onChanged: (value) =>
+                    ref.read(testimonialSearchProvider.notifier).state = value,
+                decoration: const InputDecoration(
+                  hintText: 'Search name, review…',
+                  prefixIcon: Icon(Icons.search_rounded),
+                ),
+              ),
             ),
-          ),
-          floatingActionButton: FloatingActionButton(
-            onPressed: () {
-              hideKeyboard();
-              context.push('/testimonials/new');
-            },
-            child: const Icon(Icons.add_rounded),
-          ),
-          body: Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-                child: TextField(
-                  textInputAction: TextInputAction.search,
-                  onChanged: (value) =>
-                      ref.read(testimonialSearchProvider.notifier).state = value,
-                  decoration: const InputDecoration(
-                    hintText: 'Search name, review…',
-                    prefixIcon: Icon(Icons.search_rounded),
-                  ),
-                ),
-              ),
-              const Expanded(
-                child: TabBarView(
-                  children: [
-                    _TestimonialList(tab: _TestimonialTab.all),
-                    _TestimonialList(tab: _TestimonialTab.pending),
-                    _TestimonialList(tab: _TestimonialTab.approved),
-                    _TestimonialList(tab: _TestimonialTab.rejected),
-                  ],
-                ),
-              ),
-            ],
-          ),
+            const Expanded(child: _TestimonialList()),
+          ],
         ),
       ),
     );
   }
 }
 
-enum _TestimonialTab { all, pending, approved, rejected }
-
 class _TestimonialList extends ConsumerWidget {
-  final _TestimonialTab tab;
-
-  const _TestimonialList({required this.tab});
+  const _TestimonialList();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -98,13 +71,6 @@ class _TestimonialList extends ConsumerWidget {
       ),
       data: (rows) {
         final filtered = rows.where((t) {
-          final inTab = switch (tab) {
-            _TestimonialTab.all => true,
-            _TestimonialTab.pending => t.approvalStatus == 'pending',
-            _TestimonialTab.approved => t.approvalStatus == 'approved',
-            _TestimonialTab.rejected => t.approvalStatus == 'rejected',
-          };
-          if (!inTab) return false;
           if (query.isEmpty) return true;
           final hay = [
             t.customerName,
@@ -251,7 +217,7 @@ class _TestimonialCard extends ConsumerWidget {
                           children: [
                             Expanded(
                               child: Text(
-                                t.customerName,
+                                titleCase(t.customerName),
                                 style: theme.textTheme.titleSmall,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
@@ -308,7 +274,7 @@ class _TestimonialCard extends ConsumerWidget {
             ),
             Divider(height: 1, color: theme.dividerColor),
             Padding(
-              padding: const EdgeInsets.fromLTRB(4, 0, 4, 0),
+              padding: const EdgeInsets.fromLTRB(8, 2, 8, 2),
               child: Row(
                 children: [
                   if (!approved && !rejected) ...[
@@ -322,25 +288,34 @@ class _TestimonialCard extends ConsumerWidget {
                           fontSize: 13,
                         ),
                       ),
-                      child: const Text('Approved'),
+                      child: const Text('Approve'),
                     ),
                     TextButton(
                       onPressed: () => _reject(context, ref),
                       style: TextButton.styleFrom(
-                        foregroundColor: AppColors.salmon,
+                        foregroundColor: AppColors.warning,
                         visualDensity: VisualDensity.compact,
                         textStyle: const TextStyle(
                           fontWeight: FontWeight.w600,
                           fontSize: 13,
                         ),
                       ),
-                      child: const Text('Rejected'),
+                      child: const Text('Reject'),
                     ),
                   ],
                   const Spacer(),
-                  YaDangerIconButton(
-                    tooltip: 'Delete',
+                  TextButton.icon(
                     onPressed: () => _delete(context, ref),
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppColors.salmon,
+                      visualDensity: VisualDensity.compact,
+                      textStyle: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                      ),
+                    ),
+                    icon: const Icon(Icons.delete_outline_rounded, size: 18),
+                    label: const Text('Delete'),
                   ),
                 ],
               ),

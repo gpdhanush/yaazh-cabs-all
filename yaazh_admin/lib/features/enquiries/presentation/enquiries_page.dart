@@ -18,62 +18,36 @@ class EnquiriesPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return DefaultTabController(
-      length: 4,
-      child: KeyboardDismiss(
-        child: Scaffold(
-          appBar: AppBar(
-            leading: const YaDrawerButton(),
-            title: const Text('Enquiries'),
-            bottom: const TabBar(
-              isScrollable: true,
-              tabAlignment: TabAlignment.start,
-              tabs: [
-                Tab(text: 'All'),
-                Tab(text: 'New'),
-                Tab(text: 'In progress'),
-                Tab(text: 'Closed'),
-              ],
+    return KeyboardDismiss(
+      child: Scaffold(
+        appBar: AppBar(
+          leading: const YaDrawerButton(),
+          title: const Text('Enquiries'),
+        ),
+        body: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+              child: TextField(
+                textInputAction: TextInputAction.search,
+                onChanged: (value) =>
+                    ref.read(enquirySearchProvider.notifier).state = value,
+                decoration: const InputDecoration(
+                  hintText: 'Search name, phone, subject…',
+                  prefixIcon: Icon(Icons.search_rounded),
+                ),
+              ),
             ),
-          ),
-          body: Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-                child: TextField(
-                  textInputAction: TextInputAction.search,
-                  onChanged: (value) =>
-                      ref.read(enquirySearchProvider.notifier).state = value,
-                  decoration: const InputDecoration(
-                    hintText: 'Search name, phone, subject…',
-                    prefixIcon: Icon(Icons.search_rounded),
-                  ),
-                ),
-              ),
-              const Expanded(
-                child: TabBarView(
-                  children: [
-                    _EnquiryList(tab: _EnquiryTab.all),
-                    _EnquiryList(tab: _EnquiryTab.fresh),
-                    _EnquiryList(tab: _EnquiryTab.inProgress),
-                    _EnquiryList(tab: _EnquiryTab.closed),
-                  ],
-                ),
-              ),
-            ],
-          ),
+            const Expanded(child: _EnquiryList()),
+          ],
         ),
       ),
     );
   }
 }
 
-enum _EnquiryTab { all, fresh, inProgress, closed }
-
 class _EnquiryList extends ConsumerWidget {
-  final _EnquiryTab tab;
-
-  const _EnquiryList({required this.tab});
+  const _EnquiryList();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -89,13 +63,6 @@ class _EnquiryList extends ConsumerWidget {
       ),
       data: (rows) {
         final filtered = rows.where((e) {
-          final inTab = switch (tab) {
-            _EnquiryTab.all => true,
-            _EnquiryTab.fresh => e.status == 'new',
-            _EnquiryTab.inProgress => e.status == 'in_progress',
-            _EnquiryTab.closed => e.status == 'closed' || e.status == 'spam',
-          };
-          if (!inTab) return false;
           if (query.isEmpty) return true;
           final hay = [
             e.name,
@@ -128,7 +95,7 @@ class _EnquiryList extends ConsumerWidget {
               : ListView.separated(
                   padding: const EdgeInsets.fromLTRB(16, 4, 16, 28),
                   itemCount: filtered.length,
-                  separatorBuilder: (_, _) => const SizedBox(height: 10),
+                  separatorBuilder: (_, _) => const SizedBox(height: 8),
                   itemBuilder: (context, index) {
                     return _EnquiryCard(enquiry: filtered[index]);
                   },
@@ -148,18 +115,25 @@ class _EnquiryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final e = enquiry;
+    final subject =
+        e.subject?.isNotEmpty == true ? e.subject! : 'General enquiry';
+    final contact = [
+      if (e.phone?.isNotEmpty == true) e.phone,
+      if (e.email?.isNotEmpty == true) e.email,
+    ].join(' · ');
 
     return Material(
       color: theme.colorScheme.surface,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppConstants.radiusL),
-        side: BorderSide(color: theme.dividerColor),
-      ),
+      borderRadius: BorderRadius.circular(AppConstants.radiusField),
       child: InkWell(
-        borderRadius: BorderRadius.circular(AppConstants.radiusL),
+        borderRadius: BorderRadius.circular(AppConstants.radiusField),
         onTap: () => context.push('/enquiries/${e.id}'),
-        child: Padding(
-          padding: const EdgeInsets.all(14),
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(AppConstants.radiusField),
+            border: Border.all(color: theme.dividerColor, width: 1),
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -167,7 +141,7 @@ class _EnquiryCard extends StatelessWidget {
                 children: [
                   Expanded(
                     child: Text(
-                      e.subject?.isNotEmpty == true ? e.subject! : 'No subject',
+                      titleCase(e.name),
                       style: theme.textTheme.titleSmall,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -181,25 +155,22 @@ class _EnquiryCard extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 6),
-              Text(e.name, style: theme.textTheme.bodyMedium),
-              const SizedBox(height: 2),
               Text(
-                [
-                  if (e.phone?.isNotEmpty == true) e.phone,
-                  if (e.email?.isNotEmpty == true) e.email,
-                ].join(' · '),
-                style: theme.textTheme.bodySmall,
+                subject,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.bodyMedium,
               ),
-              const SizedBox(height: 8),
-              Text(
-                e.message,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.bodySmall,
-              ),
-              const SizedBox(height: 8),
+              if (contact.isNotEmpty) ...[
+                const SizedBox(height: 2),
+                Text(
+                  contact,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodySmall,
+                ),
+              ],
+              const SizedBox(height: 6),
               Text(
                 formatDateTime(e.createdAt),
                 style: theme.textTheme.bodySmall,

@@ -29,58 +29,36 @@ class BookingsPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return DefaultTabController(
-      length: 4,
-      child: KeyboardDismiss(
-        child: Scaffold(
-          appBar: AppBar(
-            leading: const YaDrawerButton(),
-            title: const Text('Bookings'),
-            bottom: const TabBar(
-              isScrollable: true,
-              tabAlignment: TabAlignment.start,
-              tabs: [
-                Tab(text: 'All'),
-                Tab(text: 'Pending'),
-                Tab(text: 'Active'),
-                Tab(text: 'History'),
-              ],
-            ),
-          ),
-          body: Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        textInputAction: TextInputAction.search,
-                        onChanged: (value) =>
-                            ref.read(bookingSearchProvider.notifier).state = value,
-                        decoration: const InputDecoration(
-                          hintText: 'Search reference, customer, route…',
-                          prefixIcon: Icon(Icons.search_rounded),
-                        ),
+    return KeyboardDismiss(
+      child: Scaffold(
+        appBar: AppBar(
+          leading: const YaDrawerButton(),
+          title: const Text('Bookings'),
+        ),
+        body: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      textInputAction: TextInputAction.search,
+                      onChanged: (value) =>
+                          ref.read(bookingSearchProvider.notifier).state = value,
+                      decoration: const InputDecoration(
+                        hintText: 'Search reference, customer, route…',
+                        prefixIcon: Icon(Icons.search_rounded),
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    const _MonthDropdown(),
-                  ],
-                ),
+                  ),
+                  const SizedBox(width: 8),
+                  const _MonthDropdown(),
+                ],
               ),
-              const Expanded(
-                child: TabBarView(
-                  children: [
-                    _BookingList(tab: _BookingTab.all),
-                    _BookingList(tab: _BookingTab.pending),
-                    _BookingList(tab: _BookingTab.active),
-                    _BookingList(tab: _BookingTab.history),
-                  ],
-                ),
-              ),
-            ],
-          ),
+            ),
+            const Expanded(child: _BookingList()),
+          ],
         ),
       ),
     );
@@ -130,12 +108,8 @@ class _MonthDropdown extends ConsumerWidget {
   }
 }
 
-enum _BookingTab { all, pending, active, history }
-
 class _BookingList extends ConsumerWidget {
-  final _BookingTab tab;
-
-  const _BookingList({required this.tab});
+  const _BookingList();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -152,13 +126,6 @@ class _BookingList extends ConsumerWidget {
       ),
       data: (rows) {
         final filtered = rows.where((b) {
-          final inTab = switch (tab) {
-            _BookingTab.all => true,
-            _BookingTab.pending => b.status == BookingStatus.pending,
-            _BookingTab.active => BookingStatus.active.contains(b.status),
-            _BookingTab.history => BookingStatus.history.contains(b.status),
-          };
-          if (!inTab) return false;
           if (month != 'all') {
             final dt = DateTime.tryParse(b.pickupAt)?.toLocal();
             if (dt == null || _monthKey(dt) != month) return false;

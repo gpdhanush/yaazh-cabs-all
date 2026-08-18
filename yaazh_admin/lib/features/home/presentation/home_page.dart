@@ -81,11 +81,8 @@ class HomePage extends ConsumerWidget {
                   message: err.toString(),
                   onRetry: () => ref.invalidate(dashboardStatsProvider),
                 ),
-                data: (data) => _DashboardBody(
-                  data: data,
-                  isTablet: isTablet,
-                  user: user,
-                ),
+                data: (data) =>
+                    _DashboardBody(data: data, isTablet: isTablet, user: user),
               ),
             ],
           ),
@@ -115,7 +112,6 @@ class _DashboardBody extends StatelessWidget {
       if (_can(AdminPermissions.bookingsView)) ...[
         _Metric(
           label: 'Today',
-          hint: 'Booked today',
           value: '${data.bookingsToday}',
           icon: Icons.calendar_today_rounded,
           color: AppColors.primary,
@@ -123,7 +119,6 @@ class _DashboardBody extends StatelessWidget {
         ),
         _Metric(
           label: 'Pending',
-          hint: 'Need action',
           value: '${data.pendingBookings}',
           icon: Icons.schedule_rounded,
           color: AppColors.warning,
@@ -131,7 +126,6 @@ class _DashboardBody extends StatelessWidget {
         ),
         _Metric(
           label: 'Bookings',
-          hint: 'All time',
           value: '${data.totalBookings}',
           icon: Icons.local_taxi_rounded,
           color: AppColors.supportBlue,
@@ -141,7 +135,6 @@ class _DashboardBody extends StatelessWidget {
       if (_can(AdminPermissions.driversView))
         _Metric(
           label: 'Drivers',
-          hint: 'Active now',
           value: '${data.activeDrivers}',
           icon: Icons.badge_rounded,
           color: AppColors.success,
@@ -150,7 +143,6 @@ class _DashboardBody extends StatelessWidget {
       if (_can(AdminPermissions.customersView))
         _Metric(
           label: 'Customers',
-          hint: 'Registered',
           value: '${data.customers}',
           icon: Icons.groups_rounded,
           color: AppColors.supportPurple,
@@ -159,7 +151,6 @@ class _DashboardBody extends StatelessWidget {
       if (_can(AdminPermissions.supportManage))
         _Metric(
           label: 'Enquiries',
-          hint: 'Website form',
           value: '${data.enquiries}',
           icon: Icons.mail_outline_rounded,
           color: AppColors.salmon,
@@ -180,18 +171,6 @@ class _DashboardBody extends StatelessWidget {
           icon: Icons.insights_rounded,
           onTap: () => context.push('/reports'),
         ),
-      if (_can(AdminPermissions.driversView))
-        _QuickAction(
-          label: 'Drivers',
-          icon: Icons.badge_rounded,
-          onTap: () => context.push('/drivers'),
-        ),
-      if (_can(AdminPermissions.customersView))
-        _QuickAction(
-          label: 'Customers',
-          icon: Icons.groups_rounded,
-          onTap: () => context.push('/customers'),
-        ),
     ];
 
     if (metrics.isEmpty && actions.isEmpty) {
@@ -208,7 +187,8 @@ class _DashboardBody extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (_can(AdminPermissions.bookingsView) && data.pendingBookings > 0) ...[
+        if (_can(AdminPermissions.bookingsView) &&
+            data.pendingBookings > 0) ...[
           _AttentionBanner(count: data.pendingBookings),
           const SizedBox(height: 18),
         ],
@@ -219,12 +199,10 @@ class _DashboardBody extends StatelessWidget {
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             crossAxisCount: isTablet ? 3 : 2,
-            mainAxisSpacing: 12,
-            crossAxisSpacing: 12,
-            childAspectRatio: isTablet ? 1.7 : 1.38,
-            children: [
-              for (final metric in metrics) _StatCard(metric: metric),
-            ],
+            mainAxisSpacing: 10,
+            crossAxisSpacing: 10,
+            childAspectRatio: isTablet ? 2.8 : 2.45,
+            children: [for (final metric in metrics) _StatCard(metric: metric)],
           ),
         ],
         if (actions.isNotEmpty) ...[
@@ -243,7 +221,6 @@ class _DashboardBody extends StatelessWidget {
 
 class _Metric {
   final String label;
-  final String hint;
   final String value;
   final IconData icon;
   final Color color;
@@ -251,7 +228,6 @@ class _Metric {
 
   const _Metric({
     required this.label,
-    required this.hint,
     required this.value,
     required this.icon,
     required this.color,
@@ -343,44 +319,55 @@ class _StatCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Material(
-      color: theme.colorScheme.surface,
+      color: metric.color.withValues(alpha: 0.14),
       clipBehavior: Clip.antiAlias,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(22),
-        side: BorderSide(color: theme.dividerColor.withValues(alpha: 0.7)),
+        borderRadius: BorderRadius.circular(AppConstants.radiusField),
+        side: BorderSide(color: metric.color.withValues(alpha: 0.38)),
       ),
       child: InkWell(
         onTap: metric.onTap,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+          child: Row(
             children: [
               Container(
-                width: 34,
-                height: 34,
+                width: 36,
+                height: 36,
                 decoration: BoxDecoration(
-                  color: metric.color.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(11),
+                  color: metric.color,
+                  borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(metric.icon, size: 18, color: metric.color),
+                child: Icon(metric.icon, size: 18, color: Colors.white),
               ),
-              const Spacer(),
-              Text(
-                metric.value,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: -0.4,
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      metric.value,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        color: metric.color,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.4,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      metric.label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 2),
-              Text(
-                metric.label,
-                style: theme.textTheme.titleSmall,
-              ),
-              Text(metric.hint, style: theme.textTheme.bodySmall),
             ],
           ),
         ),
