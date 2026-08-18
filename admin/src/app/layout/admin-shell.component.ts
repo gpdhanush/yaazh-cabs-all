@@ -10,8 +10,6 @@ import { ThemeService } from '../core/theme/theme.service';
 import { environment } from '../../environments/environment';
 import { YaModalPortalDirective } from '../shared/ya-modal-portal.directive';
 
-type NavItem = { label: string; path: string; icon: string };
-
 @Component({
   selector: 'app-admin-shell',
   standalone: true,
@@ -49,7 +47,7 @@ type NavItem = { label: string; path: string; icon: string };
         </div>
 
         <nav class="shell-aside__nav">
-          @for (item of navItems; track item.path) {
+          @for (item of auth.visibleNavItems(); track item.path) {
             <a
               class="nav-item"
               [routerLink]="item.path"
@@ -171,36 +169,17 @@ export class AdminShellComponent {
   readonly currentUrl = signal(this.router.url);
   readonly now = new Date();
 
-  readonly navItems: NavItem[] = [
-    { label: 'Dashboard', path: '/dashboard', icon: 'dashboard' },
-    { label: 'Bookings', path: '/bookings', icon: 'local_taxi' },
-    { label: 'Customers', path: '/customers', icon: 'group' },
-    { label: 'Drivers', path: '/drivers', icon: 'badge' },
-    { label: 'Reports', path: '/reports', icon: 'insights' },
-    { label: 'Vehicles', path: '/vehicles', icon: 'directions_car' },
-    { label: 'Assignments', path: '/driver-assignments', icon: 'link' },
-    { label: 'Categories', path: '/vehicle-categories', icon: 'category' },
-    { label: 'Routes', path: '/routes', icon: 'alt_route' },
-    { label: 'Tariffs', path: '/tariffs', icon: 'payments' },
-    { label: 'FAQs', path: '/faqs', icon: 'help' },
-    { label: 'Testimonials', path: '/testimonials', icon: 'star' },
-    { label: 'Gallery', path: '/gallery', icon: 'photo_library' },
-    { label: 'Enquiries', path: '/enquiries', icon: 'mail' },
-    { label: 'Notifications', path: '/notifications', icon: 'notifications' },
-    { label: 'Users', path: '/admin-users', icon: 'manage_accounts' },
-    { label: 'Remote config', path: '/remote-config', icon: 'tune' },
-    { label: 'Settings', path: '/settings', icon: 'settings' },
-    { label: 'Appearance', path: '/appearance', icon: 'palette' },
-  ];
-
   constructor() {
+    if (this.auth.isAuthenticated() && this.auth.permissions() === undefined) {
+      this.auth.ensurePermissionsLoaded().subscribe({ error: () => undefined });
+    }
     this.router.events.pipe(filter((e): e is NavigationEnd => e instanceof NavigationEnd)).subscribe((e) => {
       this.currentUrl.set(e.urlAfterRedirects);
     });
   }
 
   pageTitle(): string {
-    const hit = this.navItems.find((i) => this.currentUrl().startsWith(i.path));
+    const hit = this.auth.visibleNavItems().find((i) => this.currentUrl().startsWith(i.path));
     return hit?.label || this.appName;
   }
 

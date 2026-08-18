@@ -2,6 +2,7 @@ import type { FastifyReply, FastifyRequest } from "fastify";
 import { verifyJwt, type JwtPayload } from "../utils/jwt.js";
 import { UnauthorizedError, ForbiddenError } from "../errors/app-error.js";
 import { prisma } from "../config/database.js";
+import { loadRolePermissions } from "../services/admin-permissions.service.js";
 
 export type AuthUser = {
   id: bigint;
@@ -49,13 +50,7 @@ export async function authenticate(
       where: { id, is_active: true },
     });
     if (!admin) throw new UnauthorizedError("Admin account inactive.");
-    const perms = await prisma.$queryRaw<Array<{ module: string; action: string }>>`
-      SELECT p.module, p.action
-      FROM role_permissions rp
-      INNER JOIN permissions p ON p.id = rp.permission_id
-      WHERE rp.role_id = ${admin.role_id}
-    `;
-    auth.permissions = perms.map((p) => `${p.module}.${p.action}`);
+    auth.permissions = await loadRolePermissions(admin.role_id);
   }
 
   if (payload.typ === "customer") {

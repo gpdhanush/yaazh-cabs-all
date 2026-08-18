@@ -1,9 +1,10 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
-import { Observable, tap, catchError, throwError, map } from 'rxjs';
+import { Observable, tap, catchError, throwError, map, of, switchMap } from 'rxjs';
 import { ApiService } from '../api/api.service';
 import { AdminUser, AuthTokens } from '../api/api.types';
 import { FirebaseService } from '../firebase/firebase.service';
+import { ADMIN_NAV_ITEMS, filterNavByPermissions } from './permissions';
 
 const STORAGE_KEY = 'yaazh.admin.tokens';
 
@@ -16,15 +17,43 @@ export class AuthService {
   private readonly tokensSignal = signal<AuthTokens | null>(this.readStorage());
   readonly tokens = this.tokensSignal.asReadonly();
   readonly user = computed(() => this.tokensSignal()?.user ?? null);
+  readonly permissions = computed(() => this.user()?.permissions);
+
+  readonly visibleNavItems = computed(() =>
+    filterNavByPermissions(ADMIN_NAV_ITEMS, this.permissions()),
+  );
   readonly isAuthenticated = computed(() => Boolean(this.tokensSignal()?.access_token));
+
+  hasPermission(key: string): boolean {
+    const perms = this.permissions();
+    if (perms === undefined) return true;
+    return perms.includes(key);
+  }
+
+  ensurePermissionsLoaded(): Observable<AdminUser | null> {
+    if (!this.isAuthenticated()) return of(null);
+    if (this.permissions() !== undefined) return of(this.user());
+    return this.fetchProfile();
+  }
+
+  fetchProfile(): Observable<AdminUser> {
+    return this.api.get<AdminUser>('/api/v1/admin/profile').pipe(
+      map((r) => r.data),
+      tap((user) => this.setUser(user)),
+    );
+  }
 
   login(email: string, password: string): Observable<AuthTokens> {
     return this.api.post<AuthTokens>('/api/v1/auth/admin/login', { email, password }).pipe(
       map((r) => r.data),
-      tap((data) => {
+      switchMap((data) => {
         this.persist(data);
-        void this.firebase.start();
+        if (data.user?.permissions !== undefined) {
+          return of(data);
+        }
+        return this.fetchProfile().pipe(map((user) => ({ ...data, user })));
       }),
+      tap(() => void this.firebase.start()),
     );
   }
 

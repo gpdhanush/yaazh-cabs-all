@@ -5,6 +5,7 @@ class AdminUser {
   final String? phone;
   final String? avatarUrl;
   final String? roleId;
+  final List<String>? permissions;
 
   const AdminUser({
     required this.id,
@@ -13,6 +14,7 @@ class AdminUser {
     this.phone,
     this.avatarUrl,
     this.roleId,
+    this.permissions,
   });
 
   String get initials {
@@ -40,6 +42,7 @@ class AdminUser {
     String? phone,
     String? avatarUrl,
     String? roleId,
+    List<String>? permissions,
   }) {
     return AdminUser(
       id: id ?? this.id,
@@ -48,6 +51,7 @@ class AdminUser {
       phone: phone ?? this.phone,
       avatarUrl: avatarUrl ?? this.avatarUrl,
       roleId: roleId ?? this.roleId,
+      permissions: permissions ?? this.permissions,
     );
   }
 
@@ -59,7 +63,14 @@ class AdminUser {
       phone: _emptyToNull(json['phone']?.toString()),
       avatarUrl: _emptyToNull(json['avatar_url']?.toString()),
       roleId: json['role_id']?.toString(),
+      permissions: _permissionsFrom(json),
     );
+  }
+
+  static List<String>? _permissionsFrom(dynamic raw) {
+    if (raw == null) return null;
+    if (raw is! List) return const [];
+    return raw.map((e) => e.toString()).where((e) => e.isNotEmpty).toList();
   }
 
   static String? _emptyToNull(String? value) {
@@ -76,5 +87,6 @@ class AdminUser {
         'phone': phone,
         'avatar_url': avatarUrl,
         'role_id': roleId,
+        'permissions': permissions,
       };
 }

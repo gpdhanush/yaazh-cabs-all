@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { authGuard, guestGuard } from './core/guards/auth.guard';
+import { permissionGuard, routePermissionGuard } from './core/guards/permission.guard';
 import {
   customersResource,
   driversResource,
@@ -25,6 +26,7 @@ export const routes: Routes = [
   {
     path: '',
     canActivate: [authGuard],
+    canActivateChild: [routePermissionGuard],
     loadComponent: () => import('./layout/admin-shell.component').then((m) => m.AdminShellComponent),
     children: [
       { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
@@ -190,16 +192,19 @@ export const routes: Routes = [
       },
       {
         path: 'admin-users/new',
+        canActivate: [permissionGuard('admin_users.manage')],
         loadComponent: () =>
           import('./features/admin-users/admin-user-form.page').then((m) => m.AdminUserFormPage),
       },
       {
         path: 'admin-users/:id/edit',
+        canActivate: [permissionGuard('admin_users.manage')],
         loadComponent: () =>
           import('./features/admin-users/admin-user-form.page').then((m) => m.AdminUserFormPage),
       },
       {
         path: 'admin-users',
+        canActivate: [permissionGuard('admin_users.view')],
         loadComponent: () =>
           import('./features/admin-users/admin-users.page').then((m) => m.AdminUsersPage),
       },

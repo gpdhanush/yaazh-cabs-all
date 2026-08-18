@@ -33,7 +33,9 @@ import { YaModalPortalDirective } from '../../shared/ya-modal-portal.directive';
           <h2 class="page-title">Users</h2>
           <p class="page-subtitle">Create staff accounts and assign roles such as Booking Manager or Super Admin.</p>
         </div>
-        <a mat-flat-button class="ya-btn-primary" routerLink="/admin-users/new">Create user</a>
+        @if (canManage()) {
+          <a mat-flat-button class="ya-btn-primary" routerLink="/admin-users/new">Create user</a>
+        }
       </div>
 
       <div class="table-card overflow-hidden">
@@ -91,32 +93,36 @@ import { YaModalPortalDirective } from '../../shared/ya-modal-portal.directive';
             <ng-container matColumnDef="actions">
               <th mat-header-cell *matHeaderCellDef class="ya-col-actions">Actions</th>
               <td mat-cell *matCellDef="let u" class="ya-col-actions">
-                <div class="ya-row-actions">
-                  <a mat-stroked-button class="ya-action-btn ya-action-btn--edit" [routerLink]="['/admin-users', u.id, 'edit']">
-                    Edit
-                  </a>
-                  @if (u.is_active) {
-                    <button
-                      mat-stroked-button
-                      class="ya-action-btn ya-action-btn--delete"
-                      type="button"
-                      [disabled]="busyId() === u.id || u.id === currentUserId()"
-                      (click)="askDeactivate(u)"
-                    >
-                      Deactivate
-                    </button>
-                  } @else {
-                    <button
-                      mat-stroked-button
-                      class="ya-action-btn ya-action-btn--edit"
-                      type="button"
-                      [disabled]="busyId() === u.id"
-                      (click)="activate(u)"
-                    >
-                      Activate
-                    </button>
-                  }
-                </div>
+                @if (canManage()) {
+                  <div class="ya-row-actions">
+                    <a mat-stroked-button class="ya-action-btn ya-action-btn--edit" [routerLink]="['/admin-users', u.id, 'edit']">
+                      Edit
+                    </a>
+                    @if (u.is_active) {
+                      <button
+                        mat-stroked-button
+                        class="ya-action-btn ya-action-btn--delete"
+                        type="button"
+                        [disabled]="busyId() === u.id || u.id === currentUserId()"
+                        (click)="askDeactivate(u)"
+                      >
+                        Deactivate
+                      </button>
+                    } @else {
+                      <button
+                        mat-stroked-button
+                        class="ya-action-btn ya-action-btn--edit"
+                        type="button"
+                        [disabled]="busyId() === u.id"
+                        (click)="activate(u)"
+                      >
+                        Activate
+                      </button>
+                    }
+                  </div>
+                } @else {
+                  <span class="text-sm text-slate-500">View only</span>
+                }
               </td>
             </ng-container>
 
@@ -176,6 +182,10 @@ export class AdminUsersPage implements OnInit, AfterViewInit {
 
   currentUserId(): string {
     return this.auth.user()?.id ?? '';
+  }
+
+  canManage(): boolean {
+    return this.auth.hasPermission('admin_users.manage');
   }
 
   ngOnInit(): void {

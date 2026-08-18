@@ -31,6 +31,7 @@ import type { TripType } from "@prisma/client";
 import { hashPassword } from "../../../utils/crypto.js";
 import { absolutePublicUrl, publicInvoiceApiPath, toStoredMediaPath } from "../../../utils/public-url.js";
 import { persistPublicFile } from "../../../services/stored-media.service.js";
+import { loadRolePermissions } from "../../../services/admin-permissions.service.js";
 
 function haversineKm(
   a: { lat: number; lng: number },
@@ -574,7 +575,7 @@ function serializeVehicle(
   };
 }
 
-function serializeAdminProfile(a: {
+async function serializeAdminProfile(a: {
   id: bigint;
   name: string;
   email: string;
@@ -589,6 +590,7 @@ function serializeAdminProfile(a: {
     phone: a.phone,
     avatar_url: a.avatar_url ? adminPhotoPublicPath(a.id) : null,
     role_id: String(a.role_id),
+    permissions: await loadRolePermissions(a.role_id),
   };
 }
 
@@ -650,7 +652,7 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
     const user = requireUser(req);
     const admin = await prisma.adminUsers.findUnique({ where: { id: user.id } });
     if (!admin) throw new NotFoundError("Admin not found.");
-    return ok(reply, serializeAdminProfile(admin));
+    return ok(reply, await serializeAdminProfile(admin));
   });
 
   app.put("/profile", async (req, reply) => {
@@ -694,11 +696,11 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
       "admin.profile.update",
       "admin_users",
       String(user.id),
-      serializeAdminProfile(existing),
-      serializeAdminProfile(updated),
+      await serializeAdminProfile(existing),
+      await serializeAdminProfile(updated),
       req,
     );
-    return ok(reply, serializeAdminProfile(updated), "Profile updated.");
+    return ok(reply, await serializeAdminProfile(updated), "Profile updated.");
   });
 
   app.post("/profile/photo", async (req, reply) => {
@@ -727,7 +729,7 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
       data: { avatar_url: saved.publicPath },
     });
     await audit(user.id, "admin.profile.photo", "admin_users", String(user.id), null, { avatar_url: saved.publicPath }, req);
-    return ok(reply, serializeAdminProfile(updated), "Profile photo updated.");
+    return ok(reply, await serializeAdminProfile(updated), "Profile photo updated.");
   });
 
   app.delete("/profile/photo", async (req, reply) => {
@@ -740,7 +742,7 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
       data: { avatar_url: null },
     });
     await audit(user.id, "admin.profile.photo.remove", "admin_users", String(user.id), { avatar_url: existing.avatar_url }, { avatar_url: null }, req);
-    return ok(reply, serializeAdminProfile(updated), "Profile photo removed.");
+    return ok(reply, await serializeAdminProfile(updated), "Profile photo removed.");
   });
 
   app.post("/devices", async (req, reply) => {

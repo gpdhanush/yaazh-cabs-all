@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:yaazh_admin/app/page_transitions.dart';
+import 'package:yaazh_admin/core/auth/permissions.dart';
 import 'package:yaazh_admin/core/firebase/analytics_service.dart';
 import 'package:yaazh_admin/core/network/session_invalid.dart';
 import 'package:yaazh_admin/core/notifications/push_notification_service.dart';
@@ -115,6 +116,12 @@ final routerProvider = Provider<GoRouter>((ref) {
         if (pending != null && pending.isNotEmpty && loc != pending) {
           ref.read(pendingNotificationLocationProvider.notifier).state = null;
           return pending;
+        }
+
+        final user = ref.read(authNotifierProvider).user;
+        if (!canAccessRoute(user, loc)) {
+          final fallback = visibleShellTabs(user).firstOrNull?.route ?? '/settings';
+          return fallback;
         }
       }
 

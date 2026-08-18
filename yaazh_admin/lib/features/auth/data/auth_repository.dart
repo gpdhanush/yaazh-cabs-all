@@ -35,7 +35,10 @@ class AuthRepository {
     await _saveTokens(response);
     final user = _userFrom(response);
     await _cacheUser(user);
-    await _devices.registerAfterLogin(appVersion: AppConstants.appVersion);
+    // Push registration is best-effort; never block sign-in.
+    try {
+      await _devices.registerAfterLogin(appVersion: AppConstants.appVersion);
+    } catch (_) {}
     return user;
   }
 

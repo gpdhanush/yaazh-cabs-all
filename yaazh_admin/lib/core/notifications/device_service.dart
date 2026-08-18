@@ -20,9 +20,13 @@ class DeviceService {
   DeviceService(this._apiClient);
 
   Future<void> registerAfterLogin({String? appVersion}) async {
-    final token = await resolveFcmToken();
-    if (token == null || token.isEmpty) return;
-    await registerToken(token, appVersion: appVersion);
+    try {
+      final token = await resolveFcmToken();
+      if (token == null || token.isEmpty) return;
+      await registerToken(token, appVersion: appVersion);
+    } catch (e) {
+      debugPrint('Device registration after login skipped: $e');
+    }
   }
 
   Future<void> registerToken(String fcmToken, {String? appVersion}) async {
@@ -46,7 +50,8 @@ class DeviceService {
   Future<String?> resolveFcmToken() async {
     try {
       if (Firebase.apps.isEmpty) return null;
-      return FirebaseMessaging.instance.getToken();
+      // Must await so FCM failures are caught here, not propagated to login.
+      return await FirebaseMessaging.instance.getToken();
     } catch (e) {
       debugPrint('FCM token skipped: $e');
       return null;

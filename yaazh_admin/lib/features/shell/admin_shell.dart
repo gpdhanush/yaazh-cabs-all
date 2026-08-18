@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:line_awesome_flutter/line_awesome_flutter.dart';
 import 'package:yaazh_admin/app/constants.dart';
 import 'package:yaazh_admin/app/theme.dart';
+import 'package:yaazh_admin/core/auth/permissions.dart';
 import 'package:yaazh_admin/core/widgets/app_logo.dart';
 import 'package:yaazh_admin/core/widgets/coming_soon.dart';
 import 'package:yaazh_admin/core/widgets/confirm_sheet.dart';
@@ -98,46 +99,55 @@ class AdminShell extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final user = ref.watch(authNotifierProvider).user;
+    final tabs = visibleShellTabs(user);
+    final selectedIndex = tabs.indexWhere(
+      (tab) => tab.branchIndex == navigationShell.currentIndex,
+    );
 
     return Scaffold(
       key: adminScaffoldKey,
       drawer: _AdminDrawer(parentContext: context),
       body: navigationShell,
-      bottomNavigationBar: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Divider(height: 1, color: theme.dividerColor),
-          NavigationBar(
-            selectedIndex: navigationShell.currentIndex,
-            onDestinationSelected: _onTap,
-            labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-            destinations: const [
-              NavigationDestination(
-                icon: Icon(LineAwesomeIcons.home_solid),
-                selectedIcon: Icon(LineAwesomeIcons.home_solid),
-                label: 'Home',
-              ),
-              NavigationDestination(
-                icon: Icon(LineAwesomeIcons.taxi_solid),
-                selectedIcon: Icon(LineAwesomeIcons.taxi_solid),
-                label: 'Bookings',
-              ),
-              NavigationDestination(
-                icon: Icon(LineAwesomeIcons.envelope),
-                selectedIcon: Icon(LineAwesomeIcons.envelope),
-                label: 'Enquiries',
-              ),
-              NavigationDestination(
-                icon: Icon(LineAwesomeIcons.cog_solid),
-                selectedIcon: Icon(LineAwesomeIcons.cog_solid),
-                label: 'Settings',
-              ),
-            ],
-          ),
-        ],
-      ),
+      bottomNavigationBar: tabs.isEmpty
+          ? null
+          : Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Divider(height: 1, color: theme.dividerColor),
+                NavigationBar(
+                  selectedIndex: selectedIndex < 0 ? 0 : selectedIndex,
+                  onDestinationSelected: (index) {
+                    if (index < 0 || index >= tabs.length) return;
+                    _onTap(tabs[index].branchIndex);
+                  },
+                  labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+                  destinations: [
+                    for (final tab in tabs)
+                      NavigationDestination(
+                        icon: Icon(_tabIcon(tab.route)),
+                        selectedIcon: Icon(_tabIcon(tab.route)),
+                        label: tab.label,
+                      ),
+                  ],
+                ),
+              ],
+            ),
       backgroundColor: theme.scaffoldBackgroundColor,
     );
+  }
+
+  IconData _tabIcon(String route) {
+    switch (route) {
+      case '/bookings':
+        return LineAwesomeIcons.taxi_solid;
+      case '/enquiries':
+        return LineAwesomeIcons.envelope;
+      case '/settings':
+        return LineAwesomeIcons.cog_solid;
+      default:
+        return LineAwesomeIcons.home_solid;
+    }
   }
 }
 
@@ -174,6 +184,9 @@ class _AdminDrawer extends ConsumerWidget {
     final theme = Theme.of(context);
     final onHeader = AppTheme.onPrimaryOf(theme.colorScheme.primary);
     final location = GoRouterState.of(context).uri.path;
+    final user = ref.watch(authNotifierProvider).user;
+    final operations = visibleDrawerItems(user);
+    final website = visibleWebsiteDrawerItems(user);
 
     return Drawer(
       child: SafeArea(
@@ -219,65 +232,29 @@ class _AdminDrawer extends ConsumerWidget {
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
                 children: [
-                  _sectionLabel(context, 'Operations'),
-                  _item(
-                    context,
-                    icon: LineAwesomeIcons.id_card,
-                    label: 'Drivers',
-                    selected: location.startsWith('/drivers'),
-                    onTap: () => _open('/drivers'),
-                  ),
-                  _item(
-                    context,
-                    icon: LineAwesomeIcons.user,
-                    label: 'Customers',
-                    selected: location.startsWith('/customers'),
-                    onTap: () => _open('/customers'),
-                  ),
-                  _item(
-                    context,
-                    icon: LineAwesomeIcons.car_solid,
-                    label: 'Vehicles',
-                    selected: location.startsWith('/fleet'),
-                    onTap: () => _open('/fleet'),
-                  ),
-                  _item(
-                    context,
-                    icon: LineAwesomeIcons.layer_group_solid,
-                    label: 'Categories',
-                    selected: location.startsWith('/vehicle-categories'),
-                    onTap: () => _open('/vehicle-categories'),
-                  ),
-                  _item(
-                    context,
-                    icon: LineAwesomeIcons.file_invoice_dollar_solid,
-                    label: 'Tariffs',
-                    selected: location.startsWith('/tariffs'),
-                    onTap: () => _open('/tariffs'),
-                  ),
-                  const SizedBox(height: 8),
-                  _sectionLabel(context, 'Website'),
-                  _item(
-                    context,
-                    icon: LineAwesomeIcons.star,
-                    label: 'Testimonials',
-                    selected: location.startsWith('/testimonials'),
-                    onTap: () => _open('/testimonials'),
-                  ),
-                  _item(
-                    context,
-                    icon: LineAwesomeIcons.images,
-                    label: 'Gallery',
-                    selected: location.startsWith('/gallery'),
-                    onTap: () => _open('/gallery'),
-                  ),
-                  _item(
-                    context,
-                    icon: LineAwesomeIcons.chart_bar,
-                    label: 'Reports',
-                    selected: location.startsWith('/reports'),
-                    onTap: () => _open('/reports'),
-                  ),
+                  if (operations.isNotEmpty) ...[
+                    _sectionLabel(context, 'Operations'),
+                    for (final item in operations)
+                      _item(
+                        context,
+                        icon: _drawerIcon(item.route),
+                        label: item.label,
+                        selected: location.startsWith(item.route),
+                        onTap: () => _open(item.route),
+                      ),
+                  ],
+                  if (website.isNotEmpty) ...[
+                    if (operations.isNotEmpty) const SizedBox(height: 8),
+                    _sectionLabel(context, 'Website'),
+                    for (final item in website)
+                      _item(
+                        context,
+                        icon: _drawerIcon(item.route),
+                        label: item.label,
+                        selected: location.startsWith(item.route),
+                        onTap: () => _open(item.route),
+                      ),
+                  ],
                 ],
               ),
             ),
@@ -299,6 +276,29 @@ class _AdminDrawer extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  IconData _drawerIcon(String route) {
+    switch (route) {
+      case '/drivers':
+        return LineAwesomeIcons.id_card;
+      case '/customers':
+        return LineAwesomeIcons.user;
+      case '/fleet':
+        return LineAwesomeIcons.car_solid;
+      case '/vehicle-categories':
+        return LineAwesomeIcons.layer_group_solid;
+      case '/tariffs':
+        return LineAwesomeIcons.file_invoice_dollar_solid;
+      case '/testimonials':
+        return LineAwesomeIcons.star;
+      case '/gallery':
+        return LineAwesomeIcons.images;
+      case '/reports':
+        return LineAwesomeIcons.chart_bar;
+      default:
+        return LineAwesomeIcons.circle;
+    }
   }
 
   Widget _sectionLabel(BuildContext context, String text) {

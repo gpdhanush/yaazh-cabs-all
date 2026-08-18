@@ -4,6 +4,7 @@ import { sha256, randomToken, hashPassword, verifyPassword } from "../utils/cryp
 import { signJwt } from "../utils/jwt.js";
 import { normalizePhone, phoneLookupVariants } from "../utils/phone.js";
 import { adminPhotoPublicPath } from "./admin-photo.service.js";
+import { loadRolePermissions } from "./admin-permissions.service.js";
 import { notifyAdmins } from "./fcm.service.js";
 import {
   AppError,
@@ -222,6 +223,8 @@ export const authService = {
       userAgent: input.userAgent,
     });
 
+    const permissions = await loadRolePermissions(admin.role_id);
+
     return {
       user: {
         id: String(admin.id),
@@ -230,6 +233,7 @@ export const authService = {
         phone: admin.phone,
         avatar_url: admin.avatar_url ? adminPhotoPublicPath(admin.id) : null,
         role_id: String(admin.role_id),
+        permissions,
       },
       ...tokens,
     };

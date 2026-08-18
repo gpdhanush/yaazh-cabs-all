@@ -4,10 +4,12 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:line_awesome_flutter/line_awesome_flutter.dart';
 import 'package:yaazh_admin/app/constants.dart';
+import 'package:yaazh_admin/core/auth/permissions.dart';
 import 'package:yaazh_admin/core/widgets/admin_avatar.dart';
 import 'package:yaazh_admin/core/widgets/keyboard_dismiss.dart';
 import 'package:yaazh_admin/core/widgets/ya_loader.dart';
 import 'package:yaazh_admin/features/auth/presentation/auth_viewmodel.dart';
+import 'package:yaazh_admin/features/auth/domain/admin_user.dart';
 import 'package:yaazh_admin/features/home/data/dashboard_repository.dart';
 import 'package:yaazh_admin/features/home/domain/dashboard_stats.dart';
 import 'package:yaazh_admin/features/shell/admin_shell.dart';
@@ -37,11 +39,12 @@ class HomePage extends ConsumerWidget {
           leading: const YaDrawerButton(),
           automaticallyImplyLeading: false,
           actions: [
-            IconButton(
-              tooltip: 'Notifications',
-              onPressed: () => context.push('/notifications'),
-              icon: const Icon(LineAwesomeIcons.bell),
-            ),
+            if (user?.hasPermission(AdminPermissions.notificationsSend) == true)
+              IconButton(
+                tooltip: 'Notifications',
+                onPressed: () => context.push('/notifications'),
+                icon: const Icon(LineAwesomeIcons.bell),
+              ),
             Padding(
               padding: const EdgeInsets.only(right: 12),
               child: GestureDetector(
@@ -78,7 +81,11 @@ class HomePage extends ConsumerWidget {
                   message: err.toString(),
                   onRetry: () => ref.invalidate(dashboardStatsProvider),
                 ),
-                data: (data) => _DashboardBody(data: data, isTablet: isTablet),
+                data: (data) => _DashboardBody(
+                  data: data,
+                  isTablet: isTablet,
+                  user: user,
+                ),
               ),
             ],
           ),
@@ -91,61 +98,84 @@ class HomePage extends ConsumerWidget {
 class _DashboardBody extends StatelessWidget {
   final DashboardStats data;
   final bool isTablet;
+  final AdminUser? user;
 
-  const _DashboardBody({required this.data, required this.isTablet});
+  const _DashboardBody({
+    required this.data,
+    required this.isTablet,
+    required this.user,
+  });
+
+  bool _can(String permission) => user?.hasPermission(permission) == true;
 
   @override
   Widget build(BuildContext context) {
     final metrics = <_Metric>[
-      _Metric(
-        label: 'Today',
-        hint: 'Trips booked today',
-        value: '${data.bookingsToday}',
-        icon: LineAwesomeIcons.calendar,
-        color: AppColors.primary,
-        onTap: () => context.go('/bookings'),
-      ),
-      _Metric(
-        label: 'Pending',
-        hint: 'Need action',
-        value: '${data.pendingBookings}',
-        icon: LineAwesomeIcons.clock,
-        color: AppColors.warning,
-        onTap: () => context.go('/bookings'),
-      ),
-      _Metric(
-        label: 'Bookings',
-        hint: 'All time',
-        value: '${data.totalBookings}',
-        icon: LineAwesomeIcons.taxi_solid,
-        color: AppColors.supportBlue,
-        onTap: () => context.go('/bookings'),
-      ),
-      _Metric(
-        label: 'Drivers',
-        hint: 'Active now',
-        value: '${data.activeDrivers}',
-        icon: LineAwesomeIcons.id_card,
-        color: AppColors.success,
-        onTap: () => context.push('/drivers'),
-      ),
-      _Metric(
-        label: 'Customers',
-        hint: 'Registered',
-        value: '${data.customers}',
-        icon: LineAwesomeIcons.users_solid,
-        color: AppColors.supportPurple,
-        onTap: () => context.push('/customers'),
-      ),
-      _Metric(
-        label: 'Enquiries',
-        hint: 'Website form',
-        value: '${data.enquiries}',
-        icon: LineAwesomeIcons.envelope,
-        color: AppColors.salmon,
-        onTap: () => context.go('/enquiries'),
-      ),
+      if (_can(AdminPermissions.bookingsView)) ...[
+        _Metric(
+          label: 'Today',
+          hint: 'Trips booked today',
+          value: '${data.bookingsToday}',
+          icon: LineAwesomeIcons.calendar,
+          color: AppColors.primary,
+          onTap: () => context.go('/bookings'),
+        ),
+        _Metric(
+          label: 'Pending',
+          hint: 'Need action',
+          value: '${data.pendingBookings}',
+          icon: LineAwesomeIcons.clock,
+          color: AppColors.warning,
+          onTap: () => context.go('/bookings'),
+        ),
+        _Metric(
+          label: 'Bookings',
+          hint: 'All time',
+          value: '${data.totalBookings}',
+          icon: LineAwesomeIcons.taxi_solid,
+          color: AppColors.supportBlue,
+          onTap: () => context.go('/bookings'),
+        ),
+      ],
+      if (_can(AdminPermissions.driversView))
+        _Metric(
+          label: 'Drivers',
+          hint: 'Active now',
+          value: '${data.activeDrivers}',
+          icon: LineAwesomeIcons.id_card,
+          color: AppColors.success,
+          onTap: () => context.push('/drivers'),
+        ),
+      if (_can(AdminPermissions.customersView))
+        _Metric(
+          label: 'Customers',
+          hint: 'Registered',
+          value: '${data.customers}',
+          icon: LineAwesomeIcons.users_solid,
+          color: AppColors.supportPurple,
+          onTap: () => context.push('/customers'),
+        ),
+      if (_can(AdminPermissions.supportManage))
+        _Metric(
+          label: 'Enquiries',
+          hint: 'Website form',
+          value: '${data.enquiries}',
+          icon: LineAwesomeIcons.envelope,
+          color: AppColors.salmon,
+          onTap: () => context.go('/enquiries'),
+        ),
     ];
+
+    if (metrics.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 24),
+        child: Text(
+          'No dashboard modules are assigned to your role yet.',
+          style: Theme.of(context).textTheme.bodyMedium,
+          textAlign: TextAlign.center,
+        ),
+      );
+    }
 
     return GridView.count(
       shrinkWrap: true,
