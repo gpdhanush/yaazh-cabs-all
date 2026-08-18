@@ -92,8 +92,8 @@ class _LiveTrackingPageState extends ConsumerState<LiveTrackingPage> {
 
     if (!_hasDriverGps(trip)) {
       return [
-        if (pickup != null) pickup,
-        if (drop != null) drop,
+        ?pickup,
+        ?drop,
       ];
     }
 
@@ -101,13 +101,13 @@ class _LiveTrackingPageState extends ConsumerState<LiveTrackingPage> {
     if (_rideStarted(trip)) {
       return [
         driver,
-        if (drop != null) drop,
+        ?drop,
       ];
     }
     return [
       driver,
-      if (pickup != null) pickup,
-      if (drop != null) drop,
+      ?pickup,
+      ?drop,
     ];
   }
 

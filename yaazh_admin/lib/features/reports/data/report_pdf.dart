@@ -7,6 +7,7 @@ import 'package:open_filex/open_filex.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
+import 'package:yaazh_admin/core/format.dart';
 import 'package:yaazh_admin/core/widgets/status_chip.dart';
 import 'package:yaazh_admin/features/reports/data/report_repository.dart';
 import 'package:yaazh_admin/features/reports/domain/report.dart';
@@ -39,19 +40,19 @@ String _place(String value) {
       .map((part) => part.trim())
       .where((part) => part.isNotEmpty)
       .toList();
-  if (parts.isEmpty) return text;
+  if (parts.isEmpty) return titleCase(text);
   final skip = RegExp(
     r'^(tamil nadu|india|tn|\d+|pin\s*\d+)$',
     caseSensitive: false,
   );
   final cities = parts.where((part) => !skip.hasMatch(part)).toList();
-  final city = (cities.isNotEmpty ? cities.first : parts.first);
+  final city = titleCase(cities.isNotEmpty ? cities.first : parts.first);
   if (city.length <= 36) return city;
   return '${city.substring(0, 34)}...';
 }
 
 String _route(ReportBooking booking) {
-  return '${_place(booking.pickup)} to ${_place(booking.drop)}';
+  return '${_place(booking.pickup)} To ${_place(booking.drop)}';
 }
 
 String _km(double? km) {
@@ -75,54 +76,109 @@ PdfColor _statusColor(String status) {
   }
 }
 
-pw.Widget _cell(
+pw.Widget _routeCell(ReportBooking booking) {
+  final customer = titleCase(booking.customerName);
+  final driver = titleCase(booking.driverName);
+  final id = booking.reference.trim();
+  final detail = [
+    if (customer.isNotEmpty) customer,
+    if (driver.isNotEmpty) driver,
+    if (id.isNotEmpty) id,
+  ].join(' - ');
+
+  return pw.Column(
+    mainAxisSize: pw.MainAxisSize.min,
+    crossAxisAlignment: pw.CrossAxisAlignment.start,
+    children: [
+      pw.Text(
+        _route(booking),
+        textAlign: pw.TextAlign.left,
+        style: pw.TextStyle(
+          fontSize: 9,
+          fontWeight: pw.FontWeight.bold,
+          color: _ink,
+        ),
+      ),
+      if (detail.isNotEmpty) ...[
+        pw.SizedBox(height: 2),
+        pw.Text(
+          detail,
+          textAlign: pw.TextAlign.left,
+          style: pw.TextStyle(fontSize: 8, color: _muted),
+        ),
+      ],
+    ],
+  );
+}
+
+pw.Widget _cellText(
   String text, {
   PdfColor? color,
   bool bold = false,
-  pw.Alignment align = pw.Alignment.centerLeft,
+  double size = 9,
+  pw.TextAlign align = pw.TextAlign.center,
 }) {
-  return pw.Padding(
-    padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 7),
-    child: pw.Align(
-      alignment: align,
-      child: pw.Text(
-        text,
-        style: pw.TextStyle(
-          fontSize: 9,
-          fontWeight: bold ? pw.FontWeight.bold : pw.FontWeight.normal,
-          color: color ?? _ink,
-        ),
-      ),
+  return pw.Text(
+    text,
+    textAlign: align,
+    style: pw.TextStyle(
+      fontSize: size,
+      fontWeight: bold ? pw.FontWeight.bold : pw.FontWeight.normal,
+      color: color ?? _ink,
     ),
   );
 }
 
-pw.Widget _routeCell(ReportBooking booking) {
-  final name = booking.customerName.trim();
-  return pw.Padding(
-    padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 7),
-    child: pw.Column(
-      crossAxisAlignment: pw.CrossAxisAlignment.start,
+pw.Widget _gridCell(
+  pw.Widget child, {
+  int flex = 1,
+  bool last = false,
+  pw.Alignment align = pw.Alignment.center,
+}) {
+  return pw.Expanded(
+    flex: flex,
+    child: pw.Container(
+      padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+      alignment: align,
+      decoration: last
+          ? null
+          : pw.BoxDecoration(
+              border: pw.Border(
+                right: pw.BorderSide(color: _line, width: 0.6),
+              ),
+            ),
+      child: child,
+    ),
+  );
+}
+
+pw.Widget _gridRow({
+  required List<pw.Widget> cells,
+  required List<int> flex,
+  List<pw.Alignment>? alignments,
+  PdfColor? color,
+  bool top = false,
+}) {
+  return pw.Container(
+    decoration: pw.BoxDecoration(
+      color: color,
+      border: pw.Border(
+        left: pw.BorderSide(color: _line, width: 0.6),
+        right: pw.BorderSide(color: _line, width: 0.6),
+        bottom: pw.BorderSide(color: _line, width: 0.6),
+        top: pw.BorderSide(color: _line, width: top ? 0.6 : 0),
+      ),
+    ),
+    child: pw.Row(
+      crossAxisAlignment: pw.CrossAxisAlignment.center,
       children: [
-        pw.Text(
-          _route(booking),
-          style: pw.TextStyle(
-            fontSize: 9,
-            fontWeight: pw.FontWeight.bold,
-            color: _ink,
+        for (var i = 0; i < cells.length; i++)
+          _gridCell(
+            cells[i],
+            flex: flex[i],
+            last: i == cells.length - 1,
+            align: alignments?[i] ?? pw.Alignment.center,
           ),
-        ),
-        if (name.isNotEmpty) ...[
-          pw.SizedBox(height: 2),
-          pw.Text(name, style: pw.TextStyle(fontSize: 8, color: _muted)),
-        ],
-        if (booking.reference.isNotEmpty) ...[
-          pw.SizedBox(height: 1),
-          pw.Text(
-            booking.reference,
-            style: pw.TextStyle(fontSize: 8, color: _muted),
-          ),
-        ],
       ],
     ),
   );
@@ -203,59 +259,56 @@ Future<String> exportReportPdf({
           ),
         ),
         pw.SizedBox(height: 8),
-        pw.Table(
-          border: pw.TableBorder.all(color: _line, width: 0.6),
-          children: [
-            pw.TableRow(
-              decoration: pw.BoxDecoration(color: _headerBg),
-              children: [
-                _cell('Bookings', bold: true, align: pw.Alignment.center),
-                _cell(
-                  'Completed',
-                  bold: true,
-                  color: _completed,
-                  align: pw.Alignment.center,
-                ),
-                _cell(
-                  'Pending',
-                  bold: true,
-                  color: _pending,
-                  align: pw.Alignment.center,
-                ),
-                _cell(
-                  'Cancelled',
-                  bold: true,
-                  color: _cancelled,
-                  align: pw.Alignment.center,
-                ),
-                _cell('Revenue', bold: true, align: pw.Alignment.center),
-              ],
-            ),
-            pw.TableRow(
-              children: [
-                _cell('${counts.bookings}', bold: true, align: pw.Alignment.center),
-                _cell(
-                  '${counts.completed}',
-                  bold: true,
-                  color: _completed,
-                  align: pw.Alignment.center,
-                ),
-                _cell(
-                  '${counts.pending}',
-                  bold: true,
-                  color: _pending,
-                  align: pw.Alignment.center,
-                ),
-                _cell(
-                  '${counts.cancelled}',
-                  bold: true,
-                  color: _cancelled,
-                  align: pw.Alignment.center,
-                ),
-                _cell(_money(counts.revenue), bold: true, align: pw.Alignment.center),
-              ],
-            ),
+        _gridRow(
+          top: true,
+          color: _headerBg,
+          flex: const [1, 1, 1, 1, 1],
+          cells: [
+            _cellText('Bookings', bold: true),
+            _cellText('Completed', bold: true, color: _completed),
+            _cellText('Pending', bold: true, color: _pending),
+            _cellText('Cancelled', bold: true, color: _cancelled),
+            _cellText('Revenue', bold: true),
           ],
+        ),
+        _gridRow(
+          flex: const [1, 1, 1, 1, 1],
+          cells: [
+            _cellText('${counts.bookings}', bold: true, size: 11),
+            _cellText('${counts.completed}', bold: true, size: 11, color: _completed),
+            _cellText('${counts.pending}', bold: true, size: 11, color: _pending),
+            _cellText('${counts.cancelled}', bold: true, size: 11, color: _cancelled),
+            _cellText(_money(counts.revenue), bold: true, size: 11),
+          ],
+        ),
+        pw.Container(
+          width: double.infinity,
+          padding: const pw.EdgeInsets.fromLTRB(8, 8, 8, 8),
+          decoration: pw.BoxDecoration(
+            border: pw.Border(
+              left: pw.BorderSide(color: _line, width: 0.6),
+              right: pw.BorderSide(color: _line, width: 0.6),
+              bottom: pw.BorderSide(color: _line, width: 0.6),
+            ),
+          ),
+          child: pw.RichText(
+            text: pw.TextSpan(
+              children: [
+                pw.TextSpan(
+                  text: 'Revenue in words: ',
+                  style: pw.TextStyle(
+                    fontSize: 9,
+                    fontWeight: pw.FontWeight.bold,
+                    color: _ink,
+                  ),
+                ),
+                pw.TextSpan(
+                  text: amountInWords(counts.revenue),
+                  style: pw.TextStyle(fontSize: 9, color: _muted),
+                ),
+              ],
+            ),
+          ),
         ),
         pw.SizedBox(height: 18),
         pw.Text(
@@ -272,46 +325,45 @@ Future<String> exportReportPdf({
             'No bookings in this date range.',
             style: pw.TextStyle(fontSize: 10, color: _muted),
           )
-        else
-          pw.Table(
-            border: pw.TableBorder.all(color: _line, width: 0.6),
-            columnWidths: {
-              0: const pw.FlexColumnWidth(3.2),
-              1: const pw.FlexColumnWidth(1.4),
-              2: const pw.FlexColumnWidth(1.3),
-              3: const pw.FlexColumnWidth(1),
-            },
-            children: [
-              pw.TableRow(
-                decoration: pw.BoxDecoration(color: _headerBg),
-                children: [
-                  _cell('Route', bold: true),
-                  _cell('Status', bold: true),
-                  _cell('Amount', bold: true, align: pw.Alignment.centerRight),
-                  _cell('KM', bold: true, align: pw.Alignment.centerRight),
-                ],
-              ),
-              for (final booking in bookings)
-                pw.TableRow(
-                  children: [
-                    _routeCell(booking),
-                    _cell(
-                      BookingStatus.label(booking.status),
-                      bold: true,
-                      color: _statusColor(booking.status),
-                    ),
-                    _cell(
-                      _money(booking.amount),
-                      align: pw.Alignment.centerRight,
-                    ),
-                    _cell(
-                      _km(booking.km),
-                      align: pw.Alignment.centerRight,
-                    ),
-                  ],
-                ),
+        else ...[
+          _gridRow(
+            top: true,
+            color: _headerBg,
+            flex: const [32, 14, 13, 10],
+            cells: [
+              _cellText('Route', bold: true, size: 10),
+              _cellText('Status', bold: true, size: 10),
+              _cellText('Amount', bold: true, size: 10),
+              _cellText('KM', bold: true, size: 10),
             ],
           ),
+          for (final booking in bookings)
+            _gridRow(
+              flex: const [32, 14, 13, 10],
+              alignments: const [
+                pw.Alignment.centerLeft,
+                pw.Alignment.center,
+                pw.Alignment.centerRight,
+                pw.Alignment.centerRight,
+              ],
+              cells: [
+                _routeCell(booking),
+                _cellText(
+                  BookingStatus.label(booking.status),
+                  bold: true,
+                  color: _statusColor(booking.status),
+                ),
+                _cellText(
+                  _money(booking.amount),
+                  align: pw.TextAlign.right,
+                ),
+                _cellText(
+                  _km(booking.km),
+                  align: pw.TextAlign.right,
+                ),
+              ],
+            ),
+        ],
       ],
     ),
   );

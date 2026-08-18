@@ -26,29 +26,35 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
 
   Future<void> _pickRange() async {
     final current = ref.read(reportDateRangeProvider);
-    final picked = await showDateRangePicker(
+    final from = await showDatePicker(
       context: context,
       firstDate: DateTime(2020),
       lastDate: DateTime.now(),
-      initialDateRange: DateTimeRange(start: current.from, end: current.to),
-      helpText: 'From date – To date',
-      saveText: 'Apply',
-      fieldStartLabelText: 'From date',
-      fieldEndLabelText: 'To date',
-      fieldStartHintText: 'From date',
-      fieldEndHintText: 'To date',
-      builder: (context, child) {
-        return Localizations.override(
-          context: context,
-          delegates: const [_FromToDateLocalizationsDelegate()],
-          child: child!,
-        );
-      },
+      initialDate: current.from,
+      helpText: 'From date',
+      cancelText: 'Cancel',
+      confirmText: 'Next',
+      fieldLabelText: 'From date',
+      fieldHintText: 'From date',
     );
-    if (picked == null) return;
+    if (from == null || !mounted) return;
+
+    final to = await showDatePicker(
+      context: context,
+      firstDate: from,
+      lastDate: DateTime.now(),
+      initialDate: current.to.isBefore(from) ? from : current.to,
+      helpText: 'To date',
+      cancelText: 'Cancel',
+      confirmText: 'Apply',
+      fieldLabelText: 'To date',
+      fieldHintText: 'To date',
+    );
+    if (to == null) return;
+
     ref.read(reportDateRangeProvider.notifier).state = ReportDateRange(
-      from: DateTime(picked.start.year, picked.start.month, picked.start.day),
-      to: DateTime(picked.end.year, picked.end.month, picked.end.day),
+      from: DateTime(from.year, from.month, from.day),
+      to: DateTime(to.year, to.month, to.day),
     );
   }
 
@@ -250,19 +256,26 @@ class _DateFilterBar extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(height: 10),
-        Row(
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 6,
+          runSpacing: 6,
           children: [
-            for (final days in [7, 14, 30]) ...[
-              if (days != 7) const SizedBox(width: 8),
-              Expanded(
-                child: _PresetChip(
-                  label: '$days d',
-                  selected: _activePreset == days,
-                  onTap: () => onPreset(days),
-                ),
-              ),
-            ],
+            _PresetChip(
+              label: '1 week',
+              selected: _activePreset == 7,
+              onTap: () => onPreset(7),
+            ),
+            _PresetChip(
+              label: '2 weeks',
+              selected: _activePreset == 14,
+              onTap: () => onPreset(14),
+            ),
+            _PresetChip(
+              label: '1 month',
+              selected: _activePreset == 30,
+              onTap: () => onPreset(30),
+            ),
           ],
         ),
       ],
@@ -304,52 +317,6 @@ class _DateHeader extends StatelessWidget {
   }
 }
 
-class _FromToDateLocalizationsDelegate
-    extends LocalizationsDelegate<MaterialLocalizations> {
-  const _FromToDateLocalizationsDelegate();
-
-  @override
-  bool isSupported(Locale locale) => true;
-
-  @override
-  Future<MaterialLocalizations> load(Locale locale) async {
-    return const _FromToDateLocalizations();
-  }
-
-  @override
-  bool shouldReload(_FromToDateLocalizationsDelegate old) => false;
-}
-
-class _FromToDateLocalizations extends DefaultMaterialLocalizations {
-  const _FromToDateLocalizations();
-
-  @override
-  String get dateRangePickerHelpText => 'From date – To date';
-
-  @override
-  String get dateRangeStartLabel => 'From date';
-
-  @override
-  String get dateRangeEndLabel => 'To date';
-
-  @override
-  String dateRangeStartDateSemanticLabel(String formattedDate) =>
-      'From date $formattedDate';
-
-  @override
-  String dateRangeEndDateSemanticLabel(String formattedDate) =>
-      'To date $formattedDate';
-
-  @override
-  String get unspecifiedDateRange => 'From date – To date';
-
-  @override
-  String get inputDateModeButtonLabel => 'Enter dates';
-
-  @override
-  String get calendarModeButtonLabel => 'Calendar';
-}
-
 class _PresetChip extends StatelessWidget {
   final String label;
   final bool selected;
@@ -373,8 +340,7 @@ class _PresetChip extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(99),
         child: Container(
-          height: 36,
-          alignment: Alignment.center,
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(99),
             border: Border.all(
@@ -385,7 +351,7 @@ class _PresetChip extends StatelessWidget {
           ),
           child: Text(
             label,
-            style: theme.textTheme.labelLarge?.copyWith(
+            style: theme.textTheme.labelSmall?.copyWith(
               fontWeight: FontWeight.w700,
               color: selected
                   ? theme.colorScheme.onPrimary

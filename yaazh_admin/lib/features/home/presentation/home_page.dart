@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-import 'package:line_awesome_flutter/line_awesome_flutter.dart';
 import 'package:yaazh_admin/app/constants.dart';
 import 'package:yaazh_admin/core/auth/permissions.dart';
 import 'package:yaazh_admin/core/widgets/admin_avatar.dart';
@@ -36,6 +35,7 @@ class HomePage extends ConsumerWidget {
     return KeyboardDismiss(
       child: Scaffold(
         appBar: AppBar(
+          title: const Text('Home'),
           leading: const YaDrawerButton(),
           automaticallyImplyLeading: false,
           actions: [
@@ -43,7 +43,7 @@ class HomePage extends ConsumerWidget {
               IconButton(
                 tooltip: 'Notifications',
                 onPressed: () => context.push('/notifications'),
-                icon: const Icon(LineAwesomeIcons.bell),
+                icon: const Icon(Icons.notifications_none_rounded),
               ),
             Padding(
               padding: const EdgeInsets.only(right: 12),
@@ -61,7 +61,7 @@ class HomePage extends ConsumerWidget {
           },
           child: ListView(
             physics: const AlwaysScrollableScrollPhysics(),
-            padding: EdgeInsets.fromLTRB(pad, 16, pad, 28),
+            padding: EdgeInsets.fromLTRB(pad, 16, pad, 32),
             children: [
               Text(_greeting(), style: theme.textTheme.headlineSmall),
               const SizedBox(height: 4),
@@ -74,7 +74,7 @@ class HomePage extends ConsumerWidget {
               const SizedBox(height: 20),
               stats.when(
                 loading: () => const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 48),
+                  padding: EdgeInsets.symmetric(vertical: 64),
                   child: Center(child: YaLoader()),
                 ),
                 error: (err, _) => _ErrorBanner(
@@ -110,13 +110,14 @@ class _DashboardBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final metrics = <_Metric>[
       if (_can(AdminPermissions.bookingsView)) ...[
         _Metric(
           label: 'Today',
-          hint: 'Trips booked today',
+          hint: 'Booked today',
           value: '${data.bookingsToday}',
-          icon: LineAwesomeIcons.calendar,
+          icon: Icons.calendar_today_rounded,
           color: AppColors.primary,
           onTap: () => context.go('/bookings'),
         ),
@@ -124,7 +125,7 @@ class _DashboardBody extends StatelessWidget {
           label: 'Pending',
           hint: 'Need action',
           value: '${data.pendingBookings}',
-          icon: LineAwesomeIcons.clock,
+          icon: Icons.schedule_rounded,
           color: AppColors.warning,
           onTap: () => context.go('/bookings'),
         ),
@@ -132,7 +133,7 @@ class _DashboardBody extends StatelessWidget {
           label: 'Bookings',
           hint: 'All time',
           value: '${data.totalBookings}',
-          icon: LineAwesomeIcons.taxi_solid,
+          icon: Icons.local_taxi_rounded,
           color: AppColors.supportBlue,
           onTap: () => context.go('/bookings'),
         ),
@@ -142,7 +143,7 @@ class _DashboardBody extends StatelessWidget {
           label: 'Drivers',
           hint: 'Active now',
           value: '${data.activeDrivers}',
-          icon: LineAwesomeIcons.id_card,
+          icon: Icons.badge_rounded,
           color: AppColors.success,
           onTap: () => context.push('/drivers'),
         ),
@@ -151,7 +152,7 @@ class _DashboardBody extends StatelessWidget {
           label: 'Customers',
           hint: 'Registered',
           value: '${data.customers}',
-          icon: LineAwesomeIcons.users_solid,
+          icon: Icons.groups_rounded,
           color: AppColors.supportPurple,
           onTap: () => context.push('/customers'),
         ),
@@ -160,32 +161,81 @@ class _DashboardBody extends StatelessWidget {
           label: 'Enquiries',
           hint: 'Website form',
           value: '${data.enquiries}',
-          icon: LineAwesomeIcons.envelope,
+          icon: Icons.mail_outline_rounded,
           color: AppColors.salmon,
           onTap: () => context.go('/enquiries'),
         ),
     ];
 
-    if (metrics.isEmpty) {
+    final actions = <_QuickAction>[
+      if (_can(AdminPermissions.bookingsView))
+        _QuickAction(
+          label: 'Bookings',
+          icon: Icons.local_taxi_rounded,
+          onTap: () => context.go('/bookings'),
+        ),
+      if (_can(AdminPermissions.reportsView))
+        _QuickAction(
+          label: 'Reports',
+          icon: Icons.insights_rounded,
+          onTap: () => context.push('/reports'),
+        ),
+      if (_can(AdminPermissions.driversView))
+        _QuickAction(
+          label: 'Drivers',
+          icon: Icons.badge_rounded,
+          onTap: () => context.push('/drivers'),
+        ),
+      if (_can(AdminPermissions.customersView))
+        _QuickAction(
+          label: 'Customers',
+          icon: Icons.groups_rounded,
+          onTap: () => context.push('/customers'),
+        ),
+    ];
+
+    if (metrics.isEmpty && actions.isEmpty) {
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 24),
         child: Text(
           'No dashboard modules are assigned to your role yet.',
-          style: Theme.of(context).textTheme.bodyMedium,
+          style: theme.textTheme.bodyMedium,
           textAlign: TextAlign.center,
         ),
       );
     }
 
-    return GridView.count(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      crossAxisCount: isTablet ? 3 : 2,
-      mainAxisSpacing: 12,
-      crossAxisSpacing: 12,
-      childAspectRatio: isTablet ? 1.7 : 1.35,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        for (final metric in metrics) _StatCard(metric: metric),
+        if (_can(AdminPermissions.bookingsView) && data.pendingBookings > 0) ...[
+          _AttentionBanner(count: data.pendingBookings),
+          const SizedBox(height: 18),
+        ],
+        if (metrics.isNotEmpty) ...[
+          Text('Overview', style: theme.textTheme.titleMedium),
+          const SizedBox(height: 10),
+          GridView.count(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            crossAxisCount: isTablet ? 3 : 2,
+            mainAxisSpacing: 12,
+            crossAxisSpacing: 12,
+            childAspectRatio: isTablet ? 1.7 : 1.38,
+            children: [
+              for (final metric in metrics) _StatCard(metric: metric),
+            ],
+          ),
+        ],
+        if (actions.isNotEmpty) ...[
+          const SizedBox(height: 22),
+          Text('Quick actions', style: theme.textTheme.titleMedium),
+          const SizedBox(height: 10),
+          for (final action in actions) ...[
+            _ActionRow(action: action),
+            const SizedBox(height: 8),
+          ],
+        ],
       ],
     );
   }
@@ -209,6 +259,81 @@ class _Metric {
   });
 }
 
+class _QuickAction {
+  final String label;
+  final IconData icon;
+  final VoidCallback onTap;
+
+  const _QuickAction({
+    required this.label,
+    required this.icon,
+    required this.onTap,
+  });
+}
+
+class _AttentionBanner extends StatelessWidget {
+  final int count;
+
+  const _AttentionBanner({required this.count});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Material(
+      color: AppColors.warning.withValues(alpha: 0.12),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(18),
+        side: BorderSide(color: AppColors.warning.withValues(alpha: 0.28)),
+      ),
+      child: InkWell(
+        onTap: () => context.go('/bookings'),
+        borderRadius: BorderRadius.circular(18),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: AppColors.warning.withValues(alpha: 0.18),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.priority_high_rounded,
+                  color: AppColors.warning,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '$count pending booking${count == 1 ? '' : 's'}',
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    Text(
+                      'Needs confirmation or assignment',
+                      style: theme.textTheme.bodySmall,
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.chevron_right_rounded,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _StatCard extends StatelessWidget {
   final _Metric metric;
 
@@ -221,35 +346,96 @@ class _StatCard extends StatelessWidget {
       color: theme.colorScheme.surface,
       clipBehavior: Clip.antiAlias,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: theme.dividerColor),
+        borderRadius: BorderRadius.circular(22),
+        side: BorderSide(color: theme.dividerColor.withValues(alpha: 0.7)),
       ),
       child: InkWell(
         onTap: metric.onTap,
         child: Padding(
-          padding: const EdgeInsets.all(14),
+          padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                width: 36,
-                height: 36,
+                width: 34,
+                height: 34,
                 decoration: BoxDecoration(
-                  color: metric.color.withValues(alpha: 0.14),
-                  borderRadius: BorderRadius.circular(10),
+                  color: metric.color.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(11),
                 ),
-                child: Icon(metric.icon, size: 20, color: metric.color),
+                child: Icon(metric.icon, size: 18, color: metric.color),
               ),
               const Spacer(),
               Text(
                 metric.value,
-                style: theme.textTheme.headlineSmall?.copyWith(
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.w800,
+                  letterSpacing: -0.4,
                 ),
               ),
               const SizedBox(height: 2),
-              Text(metric.label, style: theme.textTheme.titleSmall),
+              Text(
+                metric.label,
+                style: theme.textTheme.titleSmall,
+              ),
               Text(metric.hint, style: theme.textTheme.bodySmall),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ActionRow extends StatelessWidget {
+  final _QuickAction action;
+
+  const _ActionRow({required this.action});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Material(
+      color: theme.colorScheme.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(18),
+        side: BorderSide(color: theme.dividerColor.withValues(alpha: 0.7)),
+      ),
+      child: InkWell(
+        onTap: action.onTap,
+        borderRadius: BorderRadius.circular(18),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(14, 12, 10, 12),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.primary.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  action.icon,
+                  color: theme.colorScheme.primary,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  action.label,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              Icon(
+                Icons.chevron_right_rounded,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
             ],
           ),
         ),
@@ -270,7 +456,7 @@ class _ErrorBanner extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppColors.salmon.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(18),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
