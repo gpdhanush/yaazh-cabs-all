@@ -1481,7 +1481,9 @@ INSERT INTO permissions (module, action, label) VALUES
   ('seo', 'manage', 'Manage SEO'),
   ('reports', 'view', 'View Reports'),
   ('settings', 'manage', 'Manage Settings'),
-  ('audit_logs', 'view', 'View Audit Logs');
+  ('audit_logs', 'view', 'View Audit Logs'),
+  ('admin_users', 'view', 'View Admin Users'),
+  ('admin_users', 'manage', 'Manage Admin Users');
 
 -- Super Admin gets everything.
 INSERT INTO role_permissions (role_id, permission_id)

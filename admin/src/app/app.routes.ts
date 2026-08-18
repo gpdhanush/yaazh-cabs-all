@@ -189,6 +189,21 @@ export const routes: Routes = [
           import('./features/remote-config/remote-config.page').then((m) => m.RemoteConfigPage),
       },
       {
+        path: 'admin-users/new',
+        loadComponent: () =>
+          import('./features/admin-users/admin-user-form.page').then((m) => m.AdminUserFormPage),
+      },
+      {
+        path: 'admin-users/:id/edit',
+        loadComponent: () =>
+          import('./features/admin-users/admin-user-form.page').then((m) => m.AdminUserFormPage),
+      },
+      {
+        path: 'admin-users',
+        loadComponent: () =>
+          import('./features/admin-users/admin-users.page').then((m) => m.AdminUsersPage),
+      },
+      {
         path: 'settings',
         loadComponent: () => import('./features/settings/settings.page').then((m) => m.SettingsPage),
       },

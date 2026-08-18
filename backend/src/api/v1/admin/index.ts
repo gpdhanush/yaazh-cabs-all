@@ -21,7 +21,7 @@ import {
   upsertBookingInvoice,
 } from "../../../services/invoice.service.js";
 import { feedbackPageUrl, whatsappUrl } from "../../../services/feedback.service.js";
-import { NotFoundError, ValidationError, ConflictError, ServiceUnavailableError } from "../../../errors/app-error.js";
+import { NotFoundError, ValidationError, ConflictError, ForbiddenError, ServiceUnavailableError } from "../../../errors/app-error.js";
 import {
   deliverAdminNotification,
   deliverBookingNotification,
@@ -592,6 +592,57 @@ function serializeAdminProfile(a: {
   };
 }
 
+function serializeStaffUser(
+  a: {
+    id: bigint;
+    name: string;
+    email: string;
+    phone: string | null;
+    avatar_url: string | null;
+    role_id: bigint;
+    is_active: boolean;
+    last_login_at: Date | null;
+    created_at: Date;
+  },
+  roleName: string | null,
+) {
+  return {
+    id: String(a.id),
+    name: a.name,
+    email: a.email,
+    phone: a.phone,
+    is_active: a.is_active,
+    role_id: String(a.role_id),
+    role_name: roleName,
+    avatar_url: a.avatar_url ? adminPhotoPublicPath(a.id) : null,
+    last_login_at: a.last_login_at?.toISOString() ?? null,
+    created_at: a.created_at.toISOString(),
+  };
+}
+
+async function roleNameMap(roleIds: bigint[]) {
+  const unique = [...new Set(roleIds.map(String))].map((id) => BigInt(id));
+  if (unique.length === 0) return new Map<string, string>();
+  const roles = await prisma.adminRoles.findMany({ where: { id: { in: unique } } });
+  return new Map(roles.map((r) => [String(r.id), r.name]));
+}
+
+async function superAdminRoleId() {
+  const role = await prisma.adminRoles.findFirst({ where: { name: "Super Admin" } });
+  if (!role) throw new ValidationError("Super Admin role is not configured.");
+  return role.id;
+}
+
+async function countActiveSuperAdmins(superRoleId: bigint, excludeId?: bigint) {
+  return prisma.adminUsers.count({
+    where: {
+      role_id: superRoleId,
+      is_active: true,
+      ...(excludeId ? { NOT: { id: excludeId } } : {}),
+    },
+  });
+}
+
 export const adminRoutes: FastifyPluginAsync = async (app) => {
   app.addHook("preHandler", requireAuth("admin"));
 
@@ -722,6 +773,219 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
       },
     });
     return ok(reply, { id: String(row.id) }, "Device registered.", 201);
+  });
+
+  app.get("/admin-roles", { preHandler: [requirePermission("admin_users.view")] }, async (_req, reply) => {
+    const roles = await prisma.adminRoles.findMany({
+      where: { is_active: true },
+      orderBy: { id: "asc" },
+    });
+    return ok(
+      reply,
+      roles.map((r) => ({
+        id: String(r.id),
+        name: r.name,
+        description: r.description,
+        is_active: r.is_active,
+      })),
+    );
+  });
+
+  app.get("/admin-users", { preHandler: [requirePermission("admin_users.view")] }, async (req, reply) => {
+    const q = req.query as { page?: string; per_page?: string; q?: string };
+    const page = Math.max(1, Number(q.page ?? 1) || 1);
+    const perPage = Math.min(500, Math.max(1, Number(q.per_page ?? 50) || 50));
+    const search = q.q?.trim();
+    const where = search
+      ? {
+          OR: [
+            { name: { contains: search } },
+            { email: { contains: search } },
+            { phone: { contains: search } },
+          ],
+        }
+      : {};
+    const [total, rows] = await Promise.all([
+      prisma.adminUsers.count({ where }),
+      prisma.adminUsers.findMany({
+        where,
+        orderBy: { created_at: "desc" },
+        skip: (page - 1) * perPage,
+        take: perPage,
+      }),
+    ]);
+    const names = await roleNameMap(rows.map((r) => r.role_id));
+    return ok(
+      reply,
+      rows.map((r) => serializeStaffUser(r, names.get(String(r.role_id)) ?? null)),
+      "OK",
+      200,
+      { page, per_page: perPage, total, total_pages: Math.ceil(total / perPage) },
+    );
+  });
+
+  app.get("/admin-users/:id", { preHandler: [requirePermission("admin_users.view")] }, async (req, reply) => {
+    const id = BigInt((req.params as { id: string }).id);
+    const row = await prisma.adminUsers.findUnique({ where: { id } });
+    if (!row) throw new NotFoundError("User not found.");
+    const names = await roleNameMap([row.role_id]);
+    return ok(reply, serializeStaffUser(row, names.get(String(row.role_id)) ?? null));
+  });
+
+  app.post("/admin-users", { preHandler: [requirePermission("admin_users.manage")] }, async (req, reply) => {
+    const user = requireUser(req);
+    const schema = z.object({
+      name: z.string().min(2).max(120),
+      email: z.string().email().max(150),
+      phone: z.string().regex(/^\d{10}$/, "Phone must be a 10-digit number").optional().nullable(),
+      role_id: z.union([z.string(), z.number()]),
+      password: z.string().min(8).max(120),
+    });
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) throw new ValidationError("Validation failed.", parsed.error.flatten());
+    const d = parsed.data;
+    const email = d.email.trim().toLowerCase();
+    const phone = d.phone?.trim() || null;
+    const roleId = BigInt(d.role_id);
+
+    const role = await prisma.adminRoles.findFirst({ where: { id: roleId, is_active: true } });
+    if (!role) throw new ValidationError("Select a valid role.");
+
+    const emailClash = await prisma.adminUsers.findFirst({ where: { email } });
+    if (emailClash) throw new ConflictError("Email already in use.");
+    if (phone) {
+      const phoneClash = await prisma.adminUsers.findFirst({ where: { phone } });
+      if (phoneClash) throw new ConflictError("Phone already in use.");
+    }
+
+    const created = await prisma.adminUsers.create({
+      data: {
+        name: d.name.trim(),
+        email,
+        phone,
+        role_id: roleId,
+        password_hash: await hashPassword(d.password),
+        is_active: true,
+      },
+    });
+    const payload = serializeStaffUser(created, role.name);
+    await audit(user.id, "admin_user.create", "admin_users", String(created.id), null, payload, req);
+    return ok(reply, payload, "User created.", 201);
+  });
+
+  app.put("/admin-users/:id", { preHandler: [requirePermission("admin_users.manage")] }, async (req, reply) => {
+    const user = requireUser(req);
+    const id = BigInt((req.params as { id: string }).id);
+    const existing = await prisma.adminUsers.findUnique({ where: { id } });
+    if (!existing) throw new NotFoundError("User not found.");
+
+    const schema = z.object({
+      name: z.string().min(2).max(120).optional(),
+      email: z.string().email().max(150).optional(),
+      phone: z.string().regex(/^\d{10}$/, "Phone must be a 10-digit number").optional().nullable(),
+      role_id: z.union([z.string(), z.number()]).optional(),
+      password: z.string().min(8).max(120).optional().nullable(),
+      is_active: z.boolean().optional(),
+    });
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) throw new ValidationError("Validation failed.", parsed.error.flatten());
+    const d = parsed.data;
+
+    const nextRoleId = d.role_id != null ? BigInt(d.role_id) : existing.role_id;
+    const nextActive = d.is_active ?? existing.is_active;
+    const superRoleId = await superAdminRoleId();
+
+    if (d.role_id != null) {
+      const role = await prisma.adminRoles.findFirst({ where: { id: nextRoleId, is_active: true } });
+      if (!role) throw new ValidationError("Select a valid role.");
+    }
+
+    const demotingLastSuper =
+      existing.role_id === superRoleId &&
+      existing.is_active &&
+      (nextRoleId !== superRoleId || nextActive === false);
+    if (demotingLastSuper) {
+      const remaining = await countActiveSuperAdmins(superRoleId, id);
+      if (remaining < 1) throw new ForbiddenError("Cannot demote or deactivate the last Super Admin.");
+    }
+
+    if (d.is_active === false && id === user.id) {
+      throw new ForbiddenError("You cannot deactivate your own account.");
+    }
+
+    const email = d.email?.trim().toLowerCase();
+    if (email) {
+      const emailClash = await prisma.adminUsers.findFirst({ where: { email, NOT: { id } } });
+      if (emailClash) throw new ConflictError("Email already in use.");
+    }
+    if (d.phone !== undefined) {
+      const phone = d.phone?.trim() || null;
+      if (phone) {
+        const phoneClash = await prisma.adminUsers.findFirst({ where: { phone, NOT: { id } } });
+        if (phoneClash) throw new ConflictError("Phone already in use.");
+      }
+    }
+
+    const names = await roleNameMap([existing.role_id]);
+    const updated = await prisma.adminUsers.update({
+      where: { id },
+      data: {
+        ...(d.name != null ? { name: d.name.trim() } : {}),
+        ...(email ? { email } : {}),
+        ...(d.phone !== undefined ? { phone: d.phone?.trim() || null } : {}),
+        ...(d.role_id != null ? { role_id: nextRoleId } : {}),
+        ...(d.is_active != null ? { is_active: d.is_active } : {}),
+        ...(d.password ? { password_hash: await hashPassword(d.password) } : {}),
+      },
+    });
+    const nextNames = await roleNameMap([updated.role_id]);
+    const payload = serializeStaffUser(updated, nextNames.get(String(updated.role_id)) ?? null);
+    await audit(
+      user.id,
+      "admin_user.update",
+      "admin_users",
+      String(id),
+      serializeStaffUser(existing, names.get(String(existing.role_id)) ?? null),
+      payload,
+      req,
+    );
+    return ok(reply, payload, "User updated.");
+  });
+
+  app.post("/admin-users/:id/deactivate", { preHandler: [requirePermission("admin_users.manage")] }, async (req, reply) => {
+    const user = requireUser(req);
+    const id = BigInt((req.params as { id: string }).id);
+    if (id === user.id) throw new ForbiddenError("You cannot deactivate your own account.");
+    const existing = await prisma.adminUsers.findUnique({ where: { id } });
+    if (!existing) throw new NotFoundError("User not found.");
+    const superRoleId = await superAdminRoleId();
+    if (existing.role_id === superRoleId && existing.is_active) {
+      const remaining = await countActiveSuperAdmins(superRoleId, id);
+      if (remaining < 1) throw new ForbiddenError("Cannot deactivate the last Super Admin.");
+    }
+    const updated = await prisma.adminUsers.update({
+      where: { id },
+      data: { is_active: false },
+    });
+    const names = await roleNameMap([updated.role_id]);
+    const payload = serializeStaffUser(updated, names.get(String(updated.role_id)) ?? null);
+    await audit(user.id, "admin_user.deactivate", "admin_users", String(id), { is_active: existing.is_active }, payload, req);
+    return ok(reply, payload, "User deactivated.");
+  });
+
+  app.post("/admin-users/:id/activate", { preHandler: [requirePermission("admin_users.manage")] }, async (req, reply) => {
+    const user = requireUser(req);
+    const id = BigInt((req.params as { id: string }).id);
+    const existing = await prisma.adminUsers.findUnique({ where: { id } });
+    if (!existing) throw new NotFoundError("User not found.");
+    const updated = await prisma.adminUsers.update({
+      where: { id },
+      data: { is_active: true },
+    });
+    const names = await roleNameMap([updated.role_id]);
+    const payload = serializeStaffUser(updated, names.get(String(updated.role_id)) ?? null);
+    await audit(user.id, "admin_user.activate", "admin_users", String(id), { is_active: existing.is_active }, payload, req);
+    return ok(reply, payload, "User activated.");
   });
 
   app.get(

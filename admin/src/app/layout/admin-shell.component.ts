@@ -187,6 +187,7 @@ export class AdminShellComponent {
     { label: 'Gallery', path: '/gallery', icon: 'photo_library' },
     { label: 'Enquiries', path: '/enquiries', icon: 'mail' },
     { label: 'Notifications', path: '/notifications', icon: 'notifications' },
+    { label: 'Users', path: '/admin-users', icon: 'manage_accounts' },
     { label: 'Remote config', path: '/remote-config', icon: 'tune' },
     { label: 'Settings', path: '/settings', icon: 'settings' },
     { label: 'Appearance', path: '/appearance', icon: 'palette' },

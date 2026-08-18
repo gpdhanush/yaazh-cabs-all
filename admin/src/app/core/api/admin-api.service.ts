@@ -1,7 +1,15 @@
 import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
 import { ApiService, ApiResult } from './api.service';
-import { Booking, BookingInvoice, BookingPayment, DashboardStats, LiveTrackingTrip } from './api.types';
+import {
+  AdminRole,
+  AdminStaffUser,
+  Booking,
+  BookingInvoice,
+  BookingPayment,
+  DashboardStats,
+  LiveTrackingTrip,
+} from './api.types';
 
 const ADMIN = '/api/v1/admin';
 
@@ -117,5 +125,33 @@ export class AdminApiService {
 
   action(path: string, body?: unknown) {
     return this.api.post<unknown>(`${ADMIN}${path}`, body);
+  }
+
+  listAdminRoles(): Observable<AdminRole[]> {
+    return this.api.get<AdminRole[]>(`${ADMIN}/admin-roles`).pipe(map((r) => r.data));
+  }
+
+  listAdminUsers(query?: { page?: number; per_page?: number; q?: string }): Observable<ApiResult<AdminStaffUser[]>> {
+    return this.api.get<AdminStaffUser[]>(`${ADMIN}/admin-users`, query);
+  }
+
+  getAdminUser(id: string): Observable<AdminStaffUser> {
+    return this.api.get<AdminStaffUser>(`${ADMIN}/admin-users/${id}`).pipe(map((r) => r.data));
+  }
+
+  createAdminUser(body: Record<string, unknown>): Observable<AdminStaffUser> {
+    return this.api.post<AdminStaffUser>(`${ADMIN}/admin-users`, body).pipe(map((r) => r.data));
+  }
+
+  updateAdminUser(id: string, body: Record<string, unknown>): Observable<AdminStaffUser> {
+    return this.api.put<AdminStaffUser>(`${ADMIN}/admin-users/${id}`, body).pipe(map((r) => r.data));
+  }
+
+  activateAdminUser(id: string): Observable<AdminStaffUser> {
+    return this.api.post<AdminStaffUser>(`${ADMIN}/admin-users/${id}/activate`).pipe(map((r) => r.data));
+  }
+
+  deactivateAdminUser(id: string): Observable<AdminStaffUser> {
+    return this.api.post<AdminStaffUser>(`${ADMIN}/admin-users/${id}/deactivate`).pipe(map((r) => r.data));
   }
 }

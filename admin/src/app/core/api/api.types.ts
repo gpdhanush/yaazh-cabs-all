@@ -33,6 +33,26 @@ export type AdminUser = {
   role_id?: string;
 };
 
+export type AdminRole = {
+  id: string;
+  name: string;
+  description: string | null;
+  is_active: boolean;
+};
+
+export type AdminStaffUser = {
+  id: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  is_active: boolean;
+  role_id: string;
+  role_name: string | null;
+  avatar_url: string | null;
+  last_login_at: string | null;
+  created_at: string;
+};
+
 export type AuthTokens = {
   access_token: string;
   refresh_token: string;

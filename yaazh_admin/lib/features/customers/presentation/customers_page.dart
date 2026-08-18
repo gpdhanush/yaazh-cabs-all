@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:yaazh_admin/app/constants.dart';
+import 'package:yaazh_admin/core/format.dart';
 import 'package:yaazh_admin/core/widgets/coming_soon.dart';
 import 'package:yaazh_admin/core/widgets/keyboard_dismiss.dart';
 import 'package:yaazh_admin/core/widgets/status_chip.dart';
@@ -16,59 +17,33 @@ class CustomersPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return DefaultTabController(
-      length: 3,
-      child: KeyboardDismiss(
-        child: Scaffold(
-          appBar: AppBar(
-            title: const Text('Customers'),
-            bottom: const TabBar(
-              isScrollable: true,
-              tabAlignment: TabAlignment.start,
-              tabs: [
-                Tab(text: 'All'),
-                Tab(text: 'Active'),
-                Tab(text: 'Blocked'),
-              ],
+    return KeyboardDismiss(
+      child: Scaffold(
+        appBar: AppBar(title: const Text('Customers')),
+        body: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+              child: TextField(
+                textInputAction: TextInputAction.search,
+                onChanged: (value) =>
+                    ref.read(customerSearchProvider.notifier).state = value,
+                decoration: const InputDecoration(
+                  hintText: 'Search name, phone, city…',
+                  prefixIcon: Icon(Icons.search_rounded),
+                ),
+              ),
             ),
-          ),
-          body: Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-                child: TextField(
-                  textInputAction: TextInputAction.search,
-                  onChanged: (value) =>
-                      ref.read(customerSearchProvider.notifier).state = value,
-                  decoration: const InputDecoration(
-                    hintText: 'Search name, phone, email…',
-                    prefixIcon: Icon(Icons.search_rounded),
-                  ),
-                ),
-              ),
-              const Expanded(
-                child: TabBarView(
-                  children: [
-                    _CustomerList(tab: _CustomerTab.all),
-                    _CustomerList(tab: _CustomerTab.active),
-                    _CustomerList(tab: _CustomerTab.blocked),
-                  ],
-                ),
-              ),
-            ],
-          ),
+            const Expanded(child: _CustomerList()),
+          ],
         ),
       ),
     );
   }
 }
 
-enum _CustomerTab { all, active, blocked }
-
 class _CustomerList extends ConsumerWidget {
-  final _CustomerTab tab;
-
-  const _CustomerList({required this.tab});
+  const _CustomerList();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -84,12 +59,6 @@ class _CustomerList extends ConsumerWidget {
       ),
       data: (rows) {
         final filtered = rows.where((c) {
-          final inTab = switch (tab) {
-            _CustomerTab.all => true,
-            _CustomerTab.active => c.appStatus == 'active',
-            _CustomerTab.blocked => c.appStatus == 'blocked',
-          };
-          if (!inTab) return false;
           if (query.isEmpty) return true;
           final hay = [
             c.name,
@@ -156,6 +125,8 @@ class _CustomerCard extends StatelessWidget {
     final c = customer;
     final blocked = c.appStatus == 'blocked';
     final bookings = c.bookingCount;
+    final displayName =
+        c.name.isNotEmpty ? capitalizeWords(c.name) : 'Customer';
 
     return Material(
       color: theme.colorScheme.surface,
@@ -189,22 +160,13 @@ class _CustomerCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      c.name.isNotEmpty ? c.name : 'Customer',
+                      displayName,
                       style: theme.textTheme.titleSmall,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 4),
                     Text(c.phone, style: theme.textTheme.bodySmall),
-                    if (c.email != null && c.email!.trim().isNotEmpty) ...[
-                      const SizedBox(height: 2),
-                      Text(
-                        c.email!,
-                        style: theme.textTheme.bodySmall,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
                     if ((c.city != null && c.city!.isNotEmpty) ||
                         bookings != null) ...[
                       const SizedBox(height: 2),

@@ -17,68 +17,40 @@ class DriversPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return DefaultTabController(
-      length: 4,
-      child: KeyboardDismiss(
-        child: Scaffold(
-          appBar: AppBar(
-            title: const Text('Drivers'),
-            bottom: const TabBar(
-              isScrollable: true,
-              tabAlignment: TabAlignment.start,
-              tabs: [
-                Tab(text: 'All'),
-                Tab(text: 'Available'),
-                Tab(text: 'On ride'),
-                Tab(text: 'Leave'),
-              ],
+    return KeyboardDismiss(
+      child: Scaffold(
+        appBar: AppBar(title: const Text('Drivers')),
+        floatingActionButton: FloatingActionButton(
+          onPressed: () {
+            hideKeyboard();
+            context.push('/drivers/new');
+          },
+          child: const Icon(Icons.person_add_alt_1_rounded),
+        ),
+        body: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+              child: TextField(
+                textInputAction: TextInputAction.search,
+                onChanged: (value) =>
+                    ref.read(driverSearchProvider.notifier).state = value,
+                decoration: const InputDecoration(
+                  hintText: 'Search name, phone, license…',
+                  prefixIcon: Icon(Icons.search_rounded),
+                ),
+              ),
             ),
-          ),
-          floatingActionButton: FloatingActionButton(
-            onPressed: () {
-              hideKeyboard();
-              context.push('/drivers/new');
-            },
-            child: const Icon(Icons.person_add_alt_1_rounded),
-          ),
-          body: Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-                child: TextField(
-                  textInputAction: TextInputAction.search,
-                  onChanged: (value) =>
-                      ref.read(driverSearchProvider.notifier).state = value,
-                  decoration: const InputDecoration(
-                    hintText: 'Search name, phone, license…',
-                    prefixIcon: Icon(Icons.search_rounded),
-                  ),
-                ),
-              ),
-              const Expanded(
-                child: TabBarView(
-                  children: [
-                    _DriverList(tab: _DriverTab.all),
-                    _DriverList(tab: _DriverTab.available),
-                    _DriverList(tab: _DriverTab.onTrip),
-                    _DriverList(tab: _DriverTab.leave),
-                  ],
-                ),
-              ),
-            ],
-          ),
+            const Expanded(child: _DriverList()),
+          ],
         ),
       ),
     );
   }
 }
 
-enum _DriverTab { all, available, onTrip, leave }
-
 class _DriverList extends ConsumerWidget {
-  final _DriverTab tab;
-
-  const _DriverList({required this.tab});
+  const _DriverList();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -94,14 +66,6 @@ class _DriverList extends ConsumerWidget {
       ),
       data: (rows) {
         final filtered = rows.where((d) {
-          final inTab = switch (tab) {
-            _DriverTab.all => true,
-            _DriverTab.available => d.availabilityStatus == 'available',
-            _DriverTab.onTrip => d.availabilityStatus == 'on_trip',
-            _DriverTab.leave =>
-              d.availabilityStatus == 'on_leave' || d.availabilityStatus == 'suspended',
-          };
-          if (!inTab) return false;
           if (query.isEmpty) return true;
           final hay = [
             d.name,
