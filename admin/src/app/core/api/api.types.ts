@@ -228,3 +228,18 @@ export type ReportsPayload = {
   series: ReportSeriesPoint[];
   bookings_by_status: Array<{ status: string; count: number }>;
 };
+
+export type AuditLog = {
+  id: string;
+  action: string;
+  entity_type: string | null;
+  entity_id: string | null;
+  admin_user_id: string | null;
+  admin_name: string | null;
+  admin_email: string | null;
+  ip_address: string | null;
+  user_agent?: string | null;
+  old_values?: unknown;
+  new_values?: unknown;
+  created_at: string;
+};

@@ -43,6 +43,6 @@ Ensure backend `CORS_ORIGINS` includes `http://localhost:4200`.
 **Fleet:** Vehicles, Routes, Tariffs  
 **Website:** FAQs, Testimonials, Contact enquiries, Settings  
 **Apps:** Notifications (group or individual push to customers / drivers), Remote config (feature flags for customer + driver apps)  
-**System:** Appearance (browser theme only)
+**System:** Users, Roles, Audit logs, Appearance (browser theme only)
 
-Intentionally hidden for now (empty / unused by the current website, or broken against DB): coupons, payments, invoices, wallet, payouts, CMS, blog, SEO, support tickets, app-versions, audit logs.
+Intentionally hidden for now (empty / unused by the current website, or broken against DB): coupons, payments, invoices, wallet, payouts, CMS, blog, SEO, support tickets, app-versions.

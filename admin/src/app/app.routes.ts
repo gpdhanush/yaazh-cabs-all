@@ -238,6 +238,11 @@ export const routes: Routes = [
         path: 'reports',
         loadComponent: () => import('./features/reports/reports.page').then((m) => m.ReportsPage),
       },
+      {
+        path: 'audit-logs',
+        loadComponent: () =>
+          import('./features/audit-logs/audit-logs.page').then((m) => m.AuditLogsPage),
+      },
     ],
   },
   { path: '**', redirectTo: 'dashboard' },

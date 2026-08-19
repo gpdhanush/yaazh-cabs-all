@@ -4071,29 +4071,93 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
   });
 
   app.get("/audit-logs", { preHandler: [requirePermission("audit_logs.view")] }, async (req, reply) => {
-    const page = Math.max(1, Number((req.query as { page?: string }).page ?? 1) || 1);
-    const perPage = 50;
+    const q = req.query as {
+      page?: string;
+      per_page?: string;
+      action?: string;
+      entity_type?: string;
+      q?: string;
+    };
+    const page = Math.max(1, Number(q.page ?? 1) || 1);
+    const perPage = Math.min(100, Math.max(10, Number(q.per_page ?? 50) || 50));
+    const search = q.q?.trim();
+    const where: Prisma.AuditLogsWhereInput = {};
+    if (q.action?.trim()) where.action = { contains: q.action.trim() };
+    if (q.entity_type?.trim()) where.entity_type = q.entity_type.trim();
+    if (search) {
+      where.OR = [
+        { action: { contains: search } },
+        { entity_type: { contains: search } },
+        ...( /^\d+$/.test(search) ? [{ entity_id: BigInt(search) }] : []),
+      ];
+    }
     const [total, rows] = await Promise.all([
-      prisma.auditLogs.count(),
+      prisma.auditLogs.count({ where }),
       prisma.auditLogs.findMany({
+        where,
         orderBy: { created_at: "desc" },
         skip: (page - 1) * perPage,
         take: perPage,
       }),
     ]);
+    const adminIds = [
+      ...new Set(rows.map((r) => r.admin_user_id).filter((id): id is bigint => id != null)),
+    ];
+    const admins =
+      adminIds.length > 0
+        ? await prisma.adminUsers.findMany({
+            where: { id: { in: adminIds } },
+            select: { id: true, name: true, email: true },
+          })
+        : [];
+    const adminById = new Map(admins.map((a) => [String(a.id), a]));
     return ok(
       reply,
-      rows.map((a) => ({
-        id: String(a.id),
-        action: a.action,
-        entity_type: a.entity_type,
-        entity_id: a.entity_id,
-        created_at: a.created_at,
-      })),
+      rows.map((a) => {
+        const admin = a.admin_user_id != null ? adminById.get(String(a.admin_user_id)) : null;
+        return {
+          id: String(a.id),
+          action: a.action,
+          entity_type: a.entity_type,
+          entity_id: a.entity_id != null ? String(a.entity_id) : null,
+          admin_user_id: a.admin_user_id != null ? String(a.admin_user_id) : null,
+          admin_name: admin?.name ?? null,
+          admin_email: admin?.email ?? null,
+          ip_address: a.ip_address,
+          created_at: a.created_at,
+        };
+      }),
       "OK",
       200,
       { page, per_page: perPage, total, total_pages: Math.ceil(total / perPage) },
     );
+  });
+
+  app.get("/audit-logs/:id", { preHandler: [requirePermission("audit_logs.view")] }, async (req, reply) => {
+    const id = BigInt((req.params as { id: string }).id);
+    const row = await prisma.auditLogs.findUnique({ where: { id } });
+    if (!row) throw new NotFoundError("Audit log not found.");
+    const admin =
+      row.admin_user_id != null
+        ? await prisma.adminUsers.findUnique({
+            where: { id: row.admin_user_id },
+            select: { id: true, name: true, email: true },
+          })
+        : null;
+    return ok(reply, {
+      id: String(row.id),
+      action: row.action,
+      entity_type: row.entity_type,
+      entity_id: row.entity_id != null ? String(row.entity_id) : null,
+      admin_user_id: row.admin_user_id != null ? String(row.admin_user_id) : null,
+      admin_name: admin?.name ?? null,
+      admin_email: admin?.email ?? null,
+      old_values: row.old_values,
+      new_values: row.new_values,
+      ip_address: row.ip_address,
+      user_agent: row.user_agent,
+      created_at: row.created_at,
+    });
   });
 
   app.get("/reports", { preHandler: [requirePermission("reports.view")] }, async (req, reply) => {

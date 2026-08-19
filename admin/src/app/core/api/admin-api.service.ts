@@ -5,6 +5,7 @@ import {
   AdminPermission,
   AdminRole,
   AdminStaffUser,
+  AuditLog,
   Booking,
   BookingInvoice,
   BookingPayment,
@@ -178,5 +179,19 @@ export class AdminApiService {
 
   deactivateAdminUser(id: string): Observable<AdminStaffUser> {
     return this.api.post<AdminStaffUser>(`${ADMIN}/admin-users/${id}/deactivate`).pipe(map((r) => r.data));
+  }
+
+  listAuditLogs(query?: {
+    page?: number;
+    per_page?: number;
+    q?: string;
+    action?: string;
+    entity_type?: string;
+  }): Observable<ApiResult<AuditLog[]>> {
+    return this.api.get<AuditLog[]>(`${ADMIN}/audit-logs`, query);
+  }
+
+  getAuditLog(id: string): Observable<AuditLog> {
+    return this.api.get<AuditLog>(`${ADMIN}/audit-logs/${id}`).pipe(map((r) => r.data));
   }
 }

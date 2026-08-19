@@ -559,17 +559,3 @@ export const appVersionsResource: ResourceConfig = {
     { key: 'update_message', label: 'Update message', type: 'textarea', nullable: true },
   ],
 };
-
-export const auditLogsResource: ResourceConfig = {
-  title: 'Audit logs',
-  path: '/audit-logs',
-  paginated: true,
-  columns: [
-    { key: 'id', label: 'ID' },
-    { key: 'action', label: 'Action' },
-    { key: 'entity_type', label: 'Entity' },
-    { key: 'entity_id', label: 'Entity ID' },
-    { key: 'admin_user_id', label: 'Admin' },
-    { key: 'created_at', label: 'When' },
-  ],
-};
