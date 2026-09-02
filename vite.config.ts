@@ -1,31 +1,20 @@
 import { defineConfig } from "vite";
-import { tanstackStart } from "@tanstack/react-start/plugin/vite";
-import viteReact from "@vitejs/plugin-react";
+import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
-import { nitro } from "nitro/vite";
 
 export default defineConfig({
+  base: "./",
   server: {
     port: 4000,
+    host: true,
+  },
+  preview: {
+    port: 4173,
+    host: true,
   },
   resolve: {
     tsconfigPaths: true,
     dedupe: ["react", "react-dom", "@tanstack/react-router", "@tanstack/react-query"],
   },
-  plugins: [
-    tanstackStart({
-      // Redirect TanStack Start's bundled server entry to src/server.ts
-      server: { entry: "server" },
-      // SPA shell for cPanel shared hosting (static Apache, no Node for the website)
-      spa: {
-        enabled: true,
-      },
-    }),
-    viteReact(),
-    tailwindcss(),
-    nitro({
-      // Static-friendly public assets; API stays on backend subdomain
-      preset: "node-server",
-    }),
-  ],
+  plugins: [react(), tailwindcss()],
 });

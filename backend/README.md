@@ -2,14 +2,14 @@
 
 Production Node.js REST API for Yaazh Cabs. Built for **cPanel shared hosting** (Node.js + MySQL only).
 
-No Docker or Redis required in production.
+Designed for cPanel shared hosting with MySQL.
 
 ## Stack
 
 - Node.js 20+ / TypeScript / Fastify
 - MySQL 8 + Prisma
 - JWT + Argon2id + MySQL `auth_sessions`
-- MySQL `job_queue` (cPanel Cron worker)
+- MySQL via Prisma
 - FCM / SMTP optional
 - Haversine route estimate by default (OSRM optional URL)
 
@@ -22,7 +22,7 @@ No Docker or Redis required in production.
 | FCM | FREE WITH PROVIDER LIMITS (Google no-cost product; account required) |
 | Public Nominatim / demo OSRM | FREE WITH PROVIDER LIMITS (usage caps; not for production SLA) |
 
-Disabled by default: Redis, Docker, SMS, WhatsApp, online payment gateways, WebSockets.
+Disabled by default: Redis, SMS, WhatsApp, online payment gateways, WebSockets.
 
 ## Quick start (local)
 
@@ -118,8 +118,13 @@ Summary:
 3. Configure Node.js app (Passenger / Node Selector) entry: `dist/server.js`  
 4. Set `.env` with production `DATABASE_URL` + `JWT_SECRET`  
 5. Run migrate + `npm ci && npx prisma generate && npm run build`  
-6. Cron every minute: `cd ~/path/to/backend && bash scripts/worker.sh`  
-7. Ensure `storage/` is writable  
+6. Ensure `storage/` is writable
+```
+npm ci
+bash scripts/migrate.sh
+bash scripts/seed.sh
+npm run build
+```
 
 ## Scripts
 
@@ -128,7 +133,6 @@ Summary:
 | `build.sh` | CI-style build |
 | `scripts/migrate.sh` | Apply SQL + infra |
 | `scripts/seed.sh` | Ensure super admin |
-| `scripts/worker.sh` | Process job queue |
 | `scripts/backup-db.sh` | mysqldump |
 | `scripts/health-check.sh` | Hit /health and /ready |
 

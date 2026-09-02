@@ -66,7 +66,7 @@ const envSchema = z
     // Optional full URL override
     DATABASE_URL: z.string().optional(),
 
-    JWT_SECRET: z.string().min(16),
+    JWT_SECRET: z.string().min(16).default("development-only-secret-change-me"),
     JWT_ACCESS_TTL: z.coerce.number().int().positive().default(900),
     JWT_REFRESH_TTL: z.coerce.number().int().positive().default(2_592_000),
     REDIS_ENABLED: z.string().optional(),
@@ -102,8 +102,10 @@ const envSchema = z
     FEATURE_LIVE_TRACKING: z.string().optional(),
     FEATURE_WEBSOCKET: z.string().optional(),
     FEATURE_ONLINE_PAYMENT: z.string().optional(),
-    RATE_LIMIT_MAX: z.coerce.number().int().positive().default(200),
-    RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60_000),
+    DB_CONNECTION_LIMIT: z.coerce.number().int().positive().max(50).default(5),
+    DB_POOL_TIMEOUT: z.coerce.number().int().positive().max(300).default(10),
+    DB_CONNECT_TIMEOUT: z.coerce.number().int().positive().max(60).default(10),
+    DB_AUTO_UTF8MB4: z.string().optional(),
   })
   .transform((data) => {
     const DATABASE_URL =
@@ -133,6 +135,7 @@ export type Env = z.output<typeof envSchema> & {
   featureLiveTracking: boolean;
   featureWebsocket: boolean;
   featureOnlinePayment: boolean;
+  dbAutoUtf8mb4: boolean;
   corsOrigins: string[];
 };
 
@@ -182,6 +185,9 @@ export function loadEnv(raw?: NodeJS.ProcessEnv): Env {
   const source = raw ?? process.env;
   applyEmailAliases(source);
   const parsed = envSchema.parse(source);
+  if (parsed.NODE_ENV === "production" && !source.JWT_SECRET?.trim()) {
+    throw new Error("JWT_SECRET must be configured in production");
+  }
 
   // Prisma reads process.env.DATABASE_URL
   process.env.DATABASE_URL = parsed.DATABASE_URL;
@@ -201,6 +207,7 @@ export function loadEnv(raw?: NodeJS.ProcessEnv): Env {
     featureLiveTracking: bool(parsed.FEATURE_LIVE_TRACKING, true),
     featureWebsocket: bool(parsed.FEATURE_WEBSOCKET, false),
     featureOnlinePayment: bool(parsed.FEATURE_ONLINE_PAYMENT, false),
+    dbAutoUtf8mb4: bool(parsed.DB_AUTO_UTF8MB4, false),
     corsOrigins: parsed.CORS_ORIGINS.split(",")
       .map((s) => s.trim())
       .filter(Boolean),

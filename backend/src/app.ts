@@ -1,7 +1,6 @@
 import Fastify from "fastify";
 import cors from "@fastify/cors";
 import helmet from "@fastify/helmet";
-import rateLimit from "@fastify/rate-limit";
 import multipart from "@fastify/multipart";
 import swagger from "@fastify/swagger";
 import swaggerUi from "@fastify/swagger-ui";
@@ -43,10 +42,6 @@ export async function buildApp() {
     credentials: true,
     methods: ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization", "X-Request-Id", "Idempotency-Key"],
-  });
-  await app.register(rateLimit, {
-    max: env.RATE_LIMIT_MAX,
-    timeWindow: env.RATE_LIMIT_WINDOW_MS,
   });
   await app.register(multipart, {
     limits: { fileSize: 8 * 1024 * 1024 },
@@ -98,10 +93,116 @@ export async function buildApp() {
   });
   await app.register(swaggerUi, { routePrefix: "/docs" });
 
-  app.get("/health", async (_req, reply) => ok(reply, { status: "ok" }, "Healthy"));
+  app.get("/health", async (_req, reply) => {
+    const env = loadEnv();
+    const appUrl = (() => {
+      try {
+        return new URL(env.APP_URL);
+      } catch {
+        return null;
+      }
+    })();
+
+    const databaseCheck = async () => {
+      await prisma.$queryRaw`SELECT 1`;
+      return {
+        connected: true,
+        host: env.DB_HOST,
+        port: env.DB_PORT,
+        database_name: env.DB_NAME,
+        username: env.DB_USER,
+        error: null as string | null,
+      };
+    };
+
+    let dbStatus = {
+      connected: false,
+      host: env.DB_HOST,
+      port: env.DB_PORT,
+      database_name: env.DB_NAME,
+      username: env.DB_USER,
+      error: null as string | null,
+    };
+
+    try {
+      dbStatus = await Promise.race([
+        databaseCheck(),
+        new Promise<{
+          connected: false;
+          host: string;
+          port: number;
+          database_name: string;
+          username: string;
+          error: string;
+        }>((resolve) => {
+          setTimeout(() => {
+            resolve({
+              connected: false,
+              host: env.DB_HOST,
+              port: env.DB_PORT,
+              database_name: env.DB_NAME,
+              username: env.DB_USER,
+              error: "MySQL health check timed out after 2s",
+            });
+          }, 2000);
+        }),
+      ]);
+    } catch (error) {
+      dbStatus.error = error instanceof Error ? error.message : String(error);
+    }
+
+    const health = {
+      status: dbStatus.connected ? "ok" : "degraded",
+      app_name: env.APP_NAME,
+      node_env: env.NODE_ENV,
+      host: env.HOST,
+      port: env.PORT,
+      pid: process.pid,
+      uptime_seconds: Math.round(process.uptime()),
+      domain: appUrl?.hostname ?? env.APP_URL,
+      app_url: env.APP_URL,
+      public_web_url: env.PUBLIC_WEB_URL,
+      api_prefix: env.API_PREFIX,
+      database: dbStatus,
+      runtime: {
+        platform: process.platform,
+        arch: process.arch,
+        node_version: process.version,
+      },
+    };
+
+    return ok(reply, health, dbStatus.connected ? "Healthy" : "Healthy but MySQL is unavailable");
+  });
+
   app.get("/ready", async (_req, reply) => {
-    await prisma.$queryRaw`SELECT 1`;
-    return ok(reply, { status: "ready", mysql: true, redis: false }, "Ready");
+    let mysqlConnected = false;
+    let mysqlError: string | null = null;
+
+    try {
+      await prisma.$queryRaw`SELECT 1`;
+      mysqlConnected = true;
+    } catch (error) {
+      mysqlError = error instanceof Error ? error.message : String(error);
+    }
+
+    return ok(
+      reply,
+      {
+        status: "ready",
+        mysql: mysqlConnected,
+        redis: false,
+        database: {
+          connected: mysqlConnected,
+          host: env.DB_HOST,
+          port: env.DB_PORT,
+          database_name: env.DB_NAME,
+          username: env.DB_USER,
+          error: mysqlError,
+        },
+      },
+      mysqlConnected ? "Ready" : "Database not ready",
+      mysqlConnected ? 200 : 503,
+    );
   });
 
   const prefix = `${env.API_PREFIX}/v1`;

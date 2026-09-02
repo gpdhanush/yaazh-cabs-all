@@ -2,7 +2,7 @@ openapi: 3.0.3
 info:
   title: Yaazh Cab Booking API
   version: 1.0.0
-  description: Production REST API v1 for customer website, admin panel, and future Flutter apps. Designed for cPanel shared hosting (MySQL only, no Redis/Docker required).
+  description: Production REST API v1 for customer website, admin panel, and future Flutter apps. Designed for cPanel shared hosting with MySQL.
 servers:
   - url: http://localhost:3000
 paths:

@@ -3,12 +3,6 @@ set -Eeuo pipefail
 
 echo "Building Cab Booking API..."
 
-if [[ ! -f ".env" ]]; then
-  echo "ERROR: .env file not found."
-  echo "Create it from .env.example."
-  exit 1
-fi
-
 echo "Installing dependencies..."
 npm ci
 

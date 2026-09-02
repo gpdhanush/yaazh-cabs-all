@@ -69,7 +69,7 @@ export const Route = createFileRoute("/")({
   component: Index,
 });
 
-function Index() {
+export function Index() {
   return (
     <main id="top" className="relative">
       <SiteNav />
