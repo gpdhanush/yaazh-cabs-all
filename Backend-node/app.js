@@ -15,7 +15,7 @@ const adminRoutes = require('./routes/admin.routes');
 const driverRoutes = require('./routes/driver.routes');
 
 const app = express();
-const configuredOrigins = (process.env.CORS_ORIGIN || '')
+const configuredOrigins = (process.env.CORS_ORIGIN || process.env.CORS_ORIGINS || '')
   .split(',')
   .map((origin) => origin.trim())
   .filter(Boolean);

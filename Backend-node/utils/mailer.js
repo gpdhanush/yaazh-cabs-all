@@ -30,4 +30,15 @@ async function sendAdminPasswordReset({ to, name, resetUrl }) {
   });
 }
 
-module.exports = { enabled, sendAdminPasswordReset };
+async function sendBookingInvoice({ to, name, bookingReference, pdf }) {
+  const fromName = process.env.MAIL_FROM_NAME || 'Yaazh Cabs';
+  return transporter().sendMail({
+    from: `"${fromName}" <${process.env.MAIL_FROM_ADDRESS}>`,
+    to,
+    subject: `Yaazh Cabs invoice ${bookingReference}`,
+    text: `Hello ${name || 'Customer'},\n\nPlease find your Yaazh Cabs invoice attached.`,
+    attachments: [{ filename: `invoice-${bookingReference}.pdf`, content: pdf, contentType: 'application/pdf' }],
+  });
+}
+
+module.exports = { enabled, sendAdminPasswordReset, sendBookingInvoice };

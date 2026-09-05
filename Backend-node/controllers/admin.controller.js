@@ -1,6 +1,8 @@
 const pool = require('../config/database');
 const { success } = require('../utils/response');
 const bcrypt = require('bcryptjs');
+const { createInvoicePdf } = require('../utils/invoice-pdf');
+const { sendBookingInvoice } = require('../utils/mailer');
 
 function adminId(req) {
   return Number(req.user.sub);
@@ -184,6 +186,35 @@ async function getBooking(req, res) {
     payment: { booking_id: String(id), fare_due: fareDue, estimated_total: Number(row.estimated_total), final_total: row.final_total == null ? null : Number(row.final_total), amount_paid: amountPaid, balance_due: Math.max(0, fareDue - amountPaid), payment_status: row.payment_status, currency: 'INR', payments },
     history
   });
+}
+
+async function invoiceData(bookingId) {
+  const [bookings] = await pool.execute(
+    `SELECT id, booking_reference, customer_name, customer_phone, customer_email,
+      pickup_location, drop_location, pickup_at, estimated_total, final_total
+     FROM bookings WHERE id = ? LIMIT 1`, [bookingId],
+  );
+  if (!bookings[0]) { const error = new Error('Booking not found.'); error.statusCode = 404; throw error; }
+  const [invoices] = await pool.execute('SELECT * FROM booking_invoices WHERE booking_id = ? LIMIT 1', [bookingId]);
+  return { booking: bookings[0], invoice: invoices[0] || null };
+}
+
+async function downloadBookingInvoice(req, res) {
+  const id = positiveId(req.params.bookingId, 'bookingId');
+  const data = await invoiceData(id);
+  const pdf = await createInvoicePdf(data);
+  res.set({ 'Content-Type': 'application/pdf', 'Content-Disposition': `attachment; filename="invoice-${data.booking.booking_reference}.pdf"`, 'Content-Length': pdf.length });
+  return res.send(pdf);
+}
+
+async function resendBookingInvoice(req, res) {
+  const id = positiveId(req.params.bookingId, 'bookingId');
+  const data = await invoiceData(id);
+  const email = String(req.body.email || data.booking.customer_email || '').trim().toLowerCase();
+  if (!email) { const error = new Error('Customer email is required to send the invoice.'); error.statusCode = 422; throw error; }
+  const pdf = await createInvoicePdf(data);
+  await sendBookingInvoice({ to: email, name: data.booking.customer_name, bookingReference: data.booking.booking_reference, pdf });
+  return success(res, { email, booking_reference: data.booking.booking_reference }, 'Invoice sent.');
 }
 
 async function transitionBooking(req, res, nextStatus, message, reason = null) {
@@ -909,4 +940,4 @@ async function endAssignment(req, res) {
   return success(res, { id: String(id), is_current: false }, 'Assignment ended.');
 }
 
-module.exports = { profile, updateProfile, settings, updateSetting, dashboard, listBookings, getBooking, confirmBooking, rejectBooking, cancelBooking, assignDriver, listCustomers, getCustomer, listDrivers, getDriver, saveDriver, deleteDriver, listVehicleCategories, getVehicleCategory, saveVehicleCategory, deleteVehicleCategory, registerAdminDevice, reports, listReviews, listEnquiries, getEnquiry, updateEnquiry, listNotifications, deleteNotification, listAdminUsers, getAdminUser, saveAdminUser, activateAdminUser, deactivateAdminUser, uploadMedia, uploadDriverPhoto, listRemoteConfig, createRemoteConfig, updateRemoteConfig, listAuditLogs, getAuditLog, listAdminRoles, getAdminRole, listPermissions, listRoutes, listAdminCities, getRoute, saveRoute, deleteRoute, listTariffs, getTariff, saveTariff, deleteTariff, listFaqs, getFaq, saveFaq, deleteFaq, listGallery, createGalleryGroup, createGalleryImage, updateGalleryImage, deleteGalleryRecord, listReviewsAdmin, saveReview, getReview, moderateReview, deleteReview, listVehicles, getVehicle, saveVehicle, deleteVehicle, listAssignments, createAssignment, endAssignment };
+module.exports = { profile, updateProfile, settings, updateSetting, dashboard, listBookings, getBooking, downloadBookingInvoice, resendBookingInvoice, confirmBooking, rejectBooking, cancelBooking, assignDriver, listCustomers, getCustomer, listDrivers, getDriver, saveDriver, deleteDriver, listVehicleCategories, getVehicleCategory, saveVehicleCategory, deleteVehicleCategory, registerAdminDevice, reports, listReviews, listEnquiries, getEnquiry, updateEnquiry, listNotifications, deleteNotification, listAdminUsers, getAdminUser, saveAdminUser, activateAdminUser, deactivateAdminUser, uploadMedia, uploadDriverPhoto, listRemoteConfig, createRemoteConfig, updateRemoteConfig, listAuditLogs, getAuditLog, listAdminRoles, getAdminRole, listPermissions, listRoutes, listAdminCities, getRoute, saveRoute, deleteRoute, listTariffs, getTariff, saveTariff, deleteTariff, listFaqs, getFaq, saveFaq, deleteFaq, listGallery, createGalleryGroup, createGalleryImage, updateGalleryImage, deleteGalleryRecord, listReviewsAdmin, saveReview, getReview, moderateReview, deleteReview, listVehicles, getVehicle, saveVehicle, deleteVehicle, listAssignments, createAssignment, endAssignment };
