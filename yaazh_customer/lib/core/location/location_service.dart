@@ -40,7 +40,7 @@ class LocationService {
 
       if (permission == LocationPermission.deniedForever) return null;
 
-      return Geolocator.getCurrentPosition(
+      return await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.best,
         timeLimit: const Duration(seconds: 12),
       );

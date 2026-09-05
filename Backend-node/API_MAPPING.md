@@ -30,6 +30,10 @@ The collection contains 135 requests. All JSON endpoints use the response envelo
 | `POST /api/v1/public/route/estimate` | public router | public controller | in-process Haversine estimate |
 | `GET /api/v1/public/route/estimate` | public router | public controller | in-process Haversine estimate |
 
+## Implemented Customer Coverage
+
+The customer router now covers the customer requests in the collection: profile, saved-place CRUD, authenticated booking creation/list/detail/cancel, invoice, live location, rating, notifications, device registration/deletion, and support ticket/message flows. Customer-owned queries enforce `customer_id` predicates.
+
 ## Remaining Collection Coverage
 
 The following exact Postman requests remain to be implemented in subsequent slices. Every request uses the bearer token variable shown by its folder unless marked public.
@@ -37,12 +41,6 @@ The following exact Postman requests remain to be implemented in subsequent slic
 ### Public and Customer
 
 - `POST /api/v1/public/bookings` (`bookings`, `booking_charges`, `booking_status_history`; public guest booking)
-- Customer profile: `GET|PUT /api/v1/customer/profile` (`customers`)
-- Saved places: `GET|POST /api/v1/customer/saved-places`, `PUT|DELETE /api/v1/customer/saved-places/:savedPlaceId` (`customer_saved_places`)
-- Bookings: `GET|POST /api/v1/customer/bookings`, `GET /api/v1/customer/bookings/:bookingId` (`bookings` and related tables)
-- Booking actions: `POST /api/v1/customer/bookings/:bookingId/cancel`, `GET /api/v1/customer/bookings/:bookingId/invoice`, `GET /api/v1/customer/bookings/:bookingId/location`, `POST /api/v1/customer/bookings/:bookingId/rating`
-- Customer notifications/devices: `GET /api/v1/customer/notifications`, `POST /api/v1/customer/devices`, `DELETE /api/v1/customer/devices/:deviceId`
-- Customer support: `GET|POST /api/v1/customer/support`, `GET /api/v1/customer/support/:supportId`, `POST /api/v1/customer/support/:supportId/messages`
 
 ### Driver
 

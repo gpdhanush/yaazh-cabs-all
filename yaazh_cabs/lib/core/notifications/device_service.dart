@@ -42,7 +42,7 @@ class DeviceService {
   Future<String?> resolveFcmToken() async {
     try {
       if (Firebase.apps.isEmpty) return null;
-      return FirebaseMessaging.instance.getToken();
+      return await FirebaseMessaging.instance.getToken();
     } catch (e) {
       debugPrint('FCM token skipped: $e');
       return null;

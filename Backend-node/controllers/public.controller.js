@@ -162,6 +162,16 @@ async function routeEstimate(req, res) {
 }
 
 async function createGuestBooking(req, res) {
+  if (req.user?.typ === 'customer') {
+    const [customers] = await pool.execute(
+      `SELECT name, phone, email FROM customers WHERE id = ? AND is_active = 1 AND app_status = 'active' LIMIT 1`,
+      [Number(req.user.sub)]
+    );
+    if (!customers[0]) { const error = new Error('Customer not found.'); error.statusCode = 404; throw error; }
+    req.body.customer_name = req.body.customer_name || customers[0].name;
+    req.body.customer_phone = req.body.customer_phone || customers[0].phone;
+    req.body.customer_email = req.body.customer_email || customers[0].email;
+  }
   const requiredFields = ['vehicle_category_id', 'trip_type', 'customer_name', 'customer_phone', 'pickup_location', 'drop_location', 'pickup_at'];
   for (const field of requiredFields) {
     if (req.body[field] === undefined || req.body[field] === null || req.body[field] === '') {
@@ -193,12 +203,13 @@ async function createGuestBooking(req, res) {
     const baseFare = Number((distance * rate + Number(category.driver_batta)).toFixed(2));
     const reference = `CAB${Date.now().toString(36).toUpperCase()}${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`.slice(0, 30);
     const [result] = await connection.execute(
-      `INSERT INTO bookings (booking_reference, vehicle_category_id, route_id, trip_type, booking_source,
+      `INSERT INTO bookings (booking_reference, customer_id, vehicle_category_id, route_id, trip_type, booking_source,
        customer_name, customer_phone, customer_email, pickup_location, drop_location, pickup_city, drop_city,
        pickup_at, return_at, passenger_count, special_note, estimated_distance_km, estimated_duration_minutes,
        rate_per_km, driver_batta, base_fare, estimated_total)
-       VALUES (?, ?, ?, ?, 'website', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [reference, vehicleCategoryId, route?.id || null, req.body.trip_type, req.body.customer_name, req.body.customer_phone,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [reference, req.user?.typ === 'customer' ? Number(req.user.sub) : null, vehicleCategoryId, route?.id || null,
+        req.body.trip_type, req.user?.typ === 'customer' ? 'customer_app' : 'website', req.body.customer_name, req.body.customer_phone,
         req.body.customer_email || null, req.body.pickup_location, req.body.drop_location, req.body.pickup_city || null,
         req.body.drop_city || null, new Date(req.body.pickup_at), req.body.return_at ? new Date(req.body.return_at) : null,
         req.body.passenger_count || null, req.body.special_note || null, distance, route?.duration_minutes || null,
