@@ -89,11 +89,17 @@ async function loadAdminPermissions(userId) {
 }
 
 async function updateAdminPassword(userId, passwordHash) {
+  return updatePassword('admin', userId, passwordHash);
+}
+
+async function updatePassword(type, userId, passwordHash) {
+  const table = { customer: 'customers', driver: 'drivers', admin: 'admin_users' }[type];
+  if (!table) throw new Error(`Unsupported user type: ${type}`);
   const [result] = await pool.execute(
-    'UPDATE admin_users SET password_hash = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND is_active = 1',
+    `UPDATE ${table} SET password_hash = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND is_active = 1`,
     [passwordHash, userId]
   );
   return result.affectedRows > 0;
 }
 
-module.exports = { findUser, findUserById, createCustomer, updateLastLogin, createSession, findSession, revokeSession, revokeSessionByHash, revokeAllSessions, loadAdminPermissions, updateAdminPassword };
+module.exports = { findUser, findUserById, createCustomer, updateLastLogin, createSession, findSession, revokeSession, revokeSessionByHash, revokeAllSessions, loadAdminPermissions, updateAdminPassword, updatePassword };

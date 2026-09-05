@@ -50,7 +50,7 @@ The dump contains 47 InnoDB tables. All tables use unsigned bigint auto-incremen
 ## Authentication and Security
 
 - Customers authenticate by unique `customers.phone`; admins by unique `admin_users.email`; drivers by unique `drivers.phone`.
-- Password columns are `varchar(255)` and the supplied seed values use the `$argon2id$` format. `bcryptjs` cannot verify those values. The implementation must either add an explicitly approved Argon2 compatibility dependency or migrate existing hashes under a controlled process. It must never treat Argon2 strings as bcrypt or overwrite them blindly.
+- Password columns are `varchar(255)` and the supplied seed values use the `$argon2id$` format. The implementation verifies Argon2id hashes with the approved `argon2` dependency and upgrades them to bcrypt after a successful login. It never treats Argon2 strings as bcrypt or overwrites them before verification.
 - Refresh tokens are not stored in plaintext. `auth_sessions.refresh_token_hash` is indexed and includes user/expiry/revocation fields.
 - Admin access must use `role_permissions` and `permissions`; a valid admin token alone is insufficient for module operations.
 - Polymorphic ownership columns are coordinated by enum fields such as `user_type`, `recipient_type`, and `changed_by_type`; the database does not enforce every combination with a CHECK constraint. Services must enforce these combinations.

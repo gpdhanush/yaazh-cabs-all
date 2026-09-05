@@ -1,4 +1,5 @@
 const bcrypt = require('bcryptjs');
+const argon2 = require('argon2');
 const repository = require('../repositories/auth.repository');
 const { randomToken, sha256 } = require('../utils/crypto');
 const { signAccessToken } = require('../utils/jwt');
@@ -12,10 +13,25 @@ function publicUser(user, type) {
   return result;
 }
 
+function passwordHashType(hash) {
+  if (hash && hash.startsWith('$2')) return 'bcrypt';
+  if (hash && hash.startsWith('$argon2')) return 'argon2';
+  return null;
+}
+
 function ensurePasswordHashSupported(hash) {
-  if (!hash || !hash.startsWith('$2')) {
+  if (!passwordHashType(hash)) {
     throw Object.assign(new Error('Stored password requires migration to bcrypt before this account can log in.'), { statusCode: 503 });
   }
+}
+
+async function verifyPassword(password, hash) {
+  const type = passwordHashType(hash);
+  const valid = type === 'argon2'
+    ? await argon2.verify(hash, password)
+    : await bcrypt.compare(password, hash);
+
+  return { valid, type };
 }
 
 async function issueTokens(type, user, request) {
@@ -40,8 +56,12 @@ async function login(type, identifier, password, request) {
     throw Object.assign(new Error('Invalid credentials.'), { statusCode: 401 });
   }
   ensurePasswordHashSupported(user.password_hash);
-  if (!(await bcrypt.compare(password, user.password_hash))) {
+  const verification = await verifyPassword(password, user.password_hash);
+  if (!verification.valid) {
     throw Object.assign(new Error('Invalid credentials.'), { statusCode: 401 });
+  }
+  if (verification.type === 'argon2') {
+    await repository.updatePassword(type, user.id, await bcrypt.hash(password, 12));
   }
   await repository.updateLastLogin(type, user.id);
   return issueTokens(type, user, request);

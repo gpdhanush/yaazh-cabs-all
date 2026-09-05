@@ -43,7 +43,7 @@ async function logoutAll(req, res) {
   return success(res, {}, 'All sessions logged out.');
 }
 
-function password(value, field) {
+function password(value, field = 'new_password') {
   const result = required(value, field);
   if (result.length < 8) { const error = new Error(`${field} must be at least 8 characters.`); error.statusCode = 422; throw error; }
   return result;
