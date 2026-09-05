@@ -87,6 +87,8 @@ router.get('/customers', requirePermission('customers.view'), asyncHandler(contr
 router.get('/customers/:customerId', requirePermission('customers.view'), asyncHandler(controller.getCustomer));
 router.get('/drivers', requirePermission('drivers.view'), asyncHandler(controller.listDrivers));
 router.get('/drivers/:driverId', requirePermission('drivers.view'), asyncHandler(controller.getDriver));
+router.post('/drivers', requirePermission('drivers.manage'), asyncHandler(controller.saveDriver));
+router.put('/drivers/:driverId', requirePermission('drivers.manage'), asyncHandler(controller.saveDriver));
 router.post('/drivers/:driverId/photo', requirePermission('drivers.manage'), imageUpload.single('file'), asyncHandler(controller.uploadDriverPhoto));
 router.delete('/drivers/:driverId', requirePermission('drivers.manage'), asyncHandler(controller.deleteDriver));
 

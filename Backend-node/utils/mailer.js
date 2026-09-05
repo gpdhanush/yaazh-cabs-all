@@ -1,11 +1,15 @@
-const nodemailer = require('nodemailer');
-
 function enabled() {
   return Boolean(process.env.MAIL_HOST && process.env.MAIL_USERNAME && process.env.MAIL_PASSWORD && process.env.MAIL_FROM_ADDRESS);
 }
 
 function transporter() {
   if (!enabled()) throw new Error('SMTP mail settings are not configured.');
+  let nodemailer;
+  try {
+    nodemailer = require('nodemailer');
+  } catch (_error) {
+    throw Object.assign(new Error('SMTP dependency is missing. Run npm ci in Backend-node.'), { code: 'MAIL_DEPENDENCY_MISSING' });
+  }
   return nodemailer.createTransport({
     host: process.env.MAIL_HOST,
     port: Number(process.env.MAIL_PORT || 465),

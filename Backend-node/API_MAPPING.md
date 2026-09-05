@@ -94,3 +94,5 @@ For initial setup, `POST /api/v1/auth/admin/bootstrap` accepts the same user fie
 The API also accepts `password` as an input alias. It directly replaces the authenticated admin password with a bcrypt hash. No old password, email delivery, OTP, or reset code is required.
 
 `POST /api/v1/auth/admin/reset-password` accepts `{ "email": "admin@example.com" }` and emails a reset link using the configured SMTP settings. The link expires in 15 minutes and is completed with `POST /api/v1/auth/admin/complete-reset-password` using `{ "token": "...", "new_password": "..." }`.
+
+On cPanel/Node Selector, deploy `package.json` and `package-lock.json`, then run `npm ci --omit=dev` from `Backend-node` and restart the Node application. This installs `nodemailer` and `multer`, which are required by the live upload and password-reset endpoints.

@@ -316,6 +316,45 @@ async function getDriver(req, res) {
   return success(res, { ...rows[0], id: String(rows[0].id), rating_avg: Number(rows[0].rating_avg) });
 }
 
+async function saveDriver(req, res) {
+  const name = String(req.body.name || '').trim();
+  const phone = String(req.body.phone || '').trim();
+  if (!name || !phone) { const error = new Error('name and phone are required.'); error.statusCode = 422; throw error; }
+  const id = req.params.driverId ? positiveId(req.params.driverId, 'driverId') : null;
+  const fields = ['name', 'phone', 'email', 'license_no', 'license_expiry_date', 'address', 'verification_status', 'availability_status', 'online_status', 'is_active'];
+  const allowed = {
+    verification_status: ['pending', 'approved', 'rejected', 'blocked'],
+    availability_status: ['available', 'on_trip', 'on_leave', 'suspended'],
+    online_status: ['offline', 'online', 'busy'],
+  };
+  for (const field of Object.keys(allowed)) {
+    if (req.body[field] != null && !allowed[field].includes(req.body[field])) {
+      const error = new Error(`Invalid ${field}.`); error.statusCode = 422; throw error;
+    }
+  }
+  const values = [name, phone, req.body.email ? String(req.body.email).trim().toLowerCase() : null, req.body.license_no || null, req.body.license_expiry_date || null, req.body.address || null, req.body.verification_status || 'pending', req.body.availability_status || 'available', req.body.online_status || 'offline', req.body.is_active === false ? 0 : 1];
+  try {
+    if (id) {
+      const updates = fields.map((field) => `${field} = ?`);
+      if (req.body.password) { updates.push('password_hash = ?'); values.push(await bcrypt.hash(String(req.body.password), 12)); }
+      values.push(id);
+      const [result] = await pool.execute(`UPDATE drivers SET ${updates.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, values);
+      if (!result.affectedRows) { const error = new Error('Driver not found.'); error.statusCode = 404; throw error; }
+      return getDriver(req, res);
+    }
+    if (!req.body.password || String(req.body.password).length < 8) { const error = new Error('password must be at least 8 characters.'); error.statusCode = 422; throw error; }
+    const [result] = await pool.execute(
+      `INSERT INTO drivers (${fields.join(', ')}, password_hash) VALUES (${fields.map(() => '?').join(', ')}, ?)`,
+      [...values, await bcrypt.hash(String(req.body.password), 12)],
+    );
+    req.params.driverId = result.insertId;
+    return getDriver(req, res);
+  } catch (error) {
+    if (error.code === 'ER_DUP_ENTRY') { error.statusCode = 409; error.message = 'Driver phone or email already exists.'; }
+    throw error;
+  }
+}
+
 async function deleteDriver(req, res) {
   const id = positiveId(req.params.driverId, 'driverId');
   const [result] = await pool.execute('UPDATE drivers SET is_active = 0 WHERE id = ?', [id]);
@@ -863,4 +902,4 @@ async function endAssignment(req, res) {
   return success(res, { id: String(id), is_current: false }, 'Assignment ended.');
 }
 
-module.exports = { profile, updateProfile, settings, updateSetting, dashboard, listBookings, getBooking, confirmBooking, rejectBooking, cancelBooking, assignDriver, listCustomers, getCustomer, listDrivers, getDriver, deleteDriver, listVehicleCategories, getVehicleCategory, saveVehicleCategory, deleteVehicleCategory, registerAdminDevice, reports, listReviews, listEnquiries, getEnquiry, updateEnquiry, listNotifications, deleteNotification, listAdminUsers, getAdminUser, saveAdminUser, activateAdminUser, deactivateAdminUser, uploadMedia, uploadDriverPhoto, listRemoteConfig, createRemoteConfig, updateRemoteConfig, listAuditLogs, getAuditLog, listAdminRoles, getAdminRole, listPermissions, listRoutes, getRoute, saveRoute, deleteRoute, listTariffs, getTariff, saveTariff, deleteTariff, listFaqs, getFaq, saveFaq, deleteFaq, listGallery, createGalleryGroup, createGalleryImage, updateGalleryImage, deleteGalleryRecord, listReviewsAdmin, saveReview, getReview, moderateReview, deleteReview, listVehicles, getVehicle, saveVehicle, deleteVehicle, listAssignments, createAssignment, endAssignment };
+module.exports = { profile, updateProfile, settings, updateSetting, dashboard, listBookings, getBooking, confirmBooking, rejectBooking, cancelBooking, assignDriver, listCustomers, getCustomer, listDrivers, getDriver, saveDriver, deleteDriver, listVehicleCategories, getVehicleCategory, saveVehicleCategory, deleteVehicleCategory, registerAdminDevice, reports, listReviews, listEnquiries, getEnquiry, updateEnquiry, listNotifications, deleteNotification, listAdminUsers, getAdminUser, saveAdminUser, activateAdminUser, deactivateAdminUser, uploadMedia, uploadDriverPhoto, listRemoteConfig, createRemoteConfig, updateRemoteConfig, listAuditLogs, getAuditLog, listAdminRoles, getAdminRole, listPermissions, listRoutes, getRoute, saveRoute, deleteRoute, listTariffs, getTariff, saveTariff, deleteTariff, listFaqs, getFaq, saveFaq, deleteFaq, listGallery, createGalleryGroup, createGalleryImage, updateGalleryImage, deleteGalleryRecord, listReviewsAdmin, saveReview, getReview, moderateReview, deleteReview, listVehicles, getVehicle, saveVehicle, deleteVehicle, listAssignments, createAssignment, endAssignment };
