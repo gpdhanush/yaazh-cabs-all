@@ -76,6 +76,15 @@ The following exact Postman requests remain to be implemented in subsequent slic
 
 ## Direct Admin Password Change
 
+Admin user management is available through authenticated admin endpoints:
+
+- `POST /api/v1/admin/admin-users`
+- `PUT /api/v1/admin/admin-users/:id` (include `password` to reset it)
+- `POST /api/v1/admin/admin-users/:id/activate`
+- `POST /api/v1/admin/admin-users/:id/deactivate`
+
+For initial setup, `POST /api/v1/auth/admin/bootstrap` accepts the same user fields without a bearer token, but requires the server-only `x-admin-bootstrap-key` header matching `ADMIN_BOOTSTRAP_KEY`.
+
 `POST /api/v1/auth/admin/change-password` requires an admin bearer token and accepts:
 
 ```json
@@ -84,4 +93,4 @@ The following exact Postman requests remain to be implemented in subsequent slic
 
 The API also accepts `password` as an input alias. It directly replaces the authenticated admin password with a bcrypt hash. No old password, email delivery, OTP, or reset code is required.
 
-`POST /api/v1/auth/admin/reset-password` accepts `{ "email": "admin@example.com", "new_password": "..." }` and updates the active admin account matched by email. This endpoint has no OTP, email delivery, or authentication and must be protected by a private deployment/admin network before production; otherwise anyone who knows an admin email can take over that account. The authenticated `change-password` endpoint is the safer option.
+`POST /api/v1/auth/admin/reset-password` accepts `{ "email": "admin@example.com" }` and emails a reset link using the configured SMTP settings. The link expires in 15 minutes and is completed with `POST /api/v1/auth/admin/complete-reset-password` using `{ "token": "...", "new_password": "..." }`.

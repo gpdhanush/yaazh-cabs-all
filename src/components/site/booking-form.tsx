@@ -345,9 +345,13 @@ export function BookingForm() {
     if (categories.length) {
       return categories.map((c) => ({
         id: c.id,
-        label: vehicleChoiceLabel(c.name, c.seating_capacity, c.one_way_rate_per_km),
+        label: vehicleChoiceLabel(
+          c.name,
+          c.seating_capacity,
+          trip === "Round Trip" ? c.round_trip_rate_per_km : c.one_way_rate_per_km,
+        ),
         name: vehicleDisplayName(c.name, c.seating_capacity),
-        perKm: c.one_way_rate_per_km,
+        perKm: trip === "Round Trip" ? c.round_trip_rate_per_km : c.one_way_rate_per_km,
         base: 0,
       }));
     }
@@ -358,7 +362,7 @@ export function BookingForm() {
       perKm: v.perKm,
       base: v.base,
     }));
-  }, [categories]);
+  }, [categories, trip]);
 
   useEffect(() => {
     if (!vehicleId && vehicleOptions[0]) setVehicleId(vehicleOptions[0].id);

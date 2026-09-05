@@ -1,6 +1,7 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
+import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatIconModule } from '@angular/material/icon';
@@ -9,7 +10,7 @@ import { AuthService } from '../../core/auth/auth.service';
 @Component({
   selector: 'app-login-page',
   standalone: true,
-  imports: [ReactiveFormsModule, MatButtonModule, MatProgressSpinnerModule, MatIconModule],
+  imports: [ReactiveFormsModule, RouterLink, MatButtonModule, MatProgressSpinnerModule, MatIconModule],
   template: `
     <div class="login-hero">
       <div class="login-orb login-orb--a"></div>
@@ -51,6 +52,7 @@ import { AuthService } from '../../core/auth/auth.service';
                   id="admin-email"
                   type="email"
                   formControlName="email"
+                  (input)="lowercaseEmail($event)"
                   autocomplete="username"
                   placeholder="Enter your email"
                 />
@@ -84,7 +86,7 @@ import { AuthService } from '../../core/auth/auth.service';
                 <input type="checkbox" formControlName="remember" />
                 <span>Remember me</span>
               </label>
-              <!-- <span class="login-forgot">Forgot password via support</span> -->
+              <a routerLink="/forgot-password" class="login-forgot">Forgot password?</a>
             </div>
 
             @if (error()) {
@@ -104,8 +106,10 @@ import { AuthService } from '../../core/auth/auth.service';
               }
             </button>
           </form>
-
-          
+          <div class="login-card__footer">
+            <span>New administrator?</span>
+            <a routerLink="/create-admin-user">Create user</a>
+          </div>
         </div>
       </div>
     </div>
@@ -127,8 +131,8 @@ export class LoginPage {
   ];
 
   readonly form = this.fb.nonNullable.group({
-    email: ['admin@yaazh.local', [Validators.required, Validators.email]],
-    password: ['ChangeMe123!', Validators.required],
+    email: ['', [Validators.required, Validators.email]],
+    password: ['', Validators.required],
     remember: [true],
   });
 
@@ -147,5 +151,12 @@ export class LoginPage {
         this.error.set(err instanceof Error ? err.message : 'Login failed');
       },
     });
+  }
+
+  lowercaseEmail(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const value = input.value.toLowerCase();
+    if (input.value !== value) input.value = value;
+    this.form.controls.email.setValue(value, { emitEvent: false });
   }
 }

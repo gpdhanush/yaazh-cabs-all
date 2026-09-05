@@ -101,6 +101,20 @@ async function updateAdminPassword(userId, passwordHash) {
   return updatePassword('admin', userId, passwordHash);
 }
 
+async function createAdminUser({ name, email, phone, passwordHash, roleId }) {
+  const [result] = await pool.execute(
+    `INSERT INTO admin_users (role_id, name, email, phone, password_hash)
+     VALUES (?, ?, ?, ?, ?)`,
+    [roleId, name, email, phone || null, passwordHash],
+  );
+  return findUserById('admin', result.insertId);
+}
+
+async function findAdminByEmail(email) {
+  const [rows] = await pool.execute('SELECT id FROM admin_users WHERE email = ? LIMIT 1', [email]);
+  return rows[0] || null;
+}
+
 async function updatePassword(type, userId, passwordHash) {
   const table = { customer: 'customers', driver: 'drivers', admin: 'admin_users' }[type];
   if (!table) throw new Error(`Unsupported user type: ${type}`);
@@ -111,4 +125,4 @@ async function updatePassword(type, userId, passwordHash) {
   return result.affectedRows > 0;
 }
 
-module.exports = { findUser, findUserById, createCustomer, updateLastLogin, createSession, findSession, findAccessSession, revokeSession, revokeSessionByHash, revokeAllSessions, loadAdminPermissions, updateAdminPassword, updatePassword };
+module.exports = { findUser, findUserById, createCustomer, createAdminUser, findAdminByEmail, updateLastLogin, createSession, findSession, findAccessSession, revokeSession, revokeSessionByHash, revokeAllSessions, loadAdminPermissions, updateAdminPassword, updatePassword };

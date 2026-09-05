@@ -18,4 +18,14 @@ function verifyAccessToken(token) {
   return jwt.verify(token, getSecret(), { algorithms: ['HS256'] });
 }
 
-module.exports = { signAccessToken, verifyAccessToken };
+function signPasswordResetToken(adminId) {
+  return jwt.sign({ sub: String(adminId), purpose: 'admin_password_reset' }, getSecret(), { expiresIn: '15m', algorithm: 'HS256' });
+}
+
+function verifyPasswordResetToken(token) {
+  const payload = jwt.verify(token, getSecret(), { algorithms: ['HS256'] });
+  if (payload.purpose !== 'admin_password_reset') throw new Error('Invalid reset token.');
+  return payload;
+}
+
+module.exports = { signAccessToken, verifyAccessToken, signPasswordResetToken, verifyPasswordResetToken };

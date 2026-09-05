@@ -26,9 +26,9 @@ export class ApiService {
       );
   }
 
-  post<T>(path: string, body?: unknown): Observable<ApiResult<T>> {
+  post<T>(path: string, body?: unknown, options?: { headers?: Record<string, string> }): Observable<ApiResult<T>> {
     return this.http
-      .post<ApiEnvelope<T>>(`${this.base}${path}`, body ?? {})
+      .post<ApiEnvelope<T>>(`${this.base}${path}`, body ?? {}, options)
       .pipe(
         map((res) => this.unwrap(res)),
         catchError((err) => this.handleError(err)),

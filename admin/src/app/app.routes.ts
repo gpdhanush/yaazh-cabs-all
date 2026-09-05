@@ -24,6 +24,16 @@ export const routes: Routes = [
     loadComponent: () => import('./features/login/login.page').then((m) => m.LoginPage),
   },
   {
+    path: 'forgot-password',
+    canActivate: [guestGuard],
+    loadComponent: () => import('./features/login/forgot-password.page').then((m) => m.ForgotPasswordPage),
+  },
+  {
+    path: 'create-admin-user',
+    canActivate: [guestGuard],
+    loadComponent: () => import('./features/login/create-admin-user.page').then((m) => m.CreateAdminUserPage),
+  },
+  {
     path: '',
     canActivate: [authGuard],
     canActivateChild: [routePermissionGuard],

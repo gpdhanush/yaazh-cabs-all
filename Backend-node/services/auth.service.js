@@ -3,6 +3,8 @@ const argon2 = require('argon2');
 const repository = require('../repositories/auth.repository');
 const { randomToken, sha256 } = require('../utils/crypto');
 const { signAccessToken } = require('../utils/jwt');
+const { signPasswordResetToken, verifyPasswordResetToken } = require('../utils/jwt');
+const { sendAdminPasswordReset } = require('../utils/mailer');
 
 const TYPES = ['customer', 'driver', 'admin'];
 
@@ -101,4 +103,24 @@ async function resetAdminPasswordByEmail(email, newPassword) {
   await repository.updateAdminPassword(admin.id, await bcrypt.hash(newPassword, 12));
 }
 
-module.exports = { login, registerCustomer, refresh, resetAdminPassword, resetAdminPasswordByEmail, publicUser };
+async function requestAdminPasswordReset(email, appUrl) {
+  const admin = await repository.findUser('admin', email);
+  if (!admin || !admin.is_active) return;
+  const token = signPasswordResetToken(admin.id);
+  const resetUrl = `${appUrl.replace(/\/$/, '')}/forgot-password?token=${encodeURIComponent(token)}`;
+  await sendAdminPasswordReset({ to: admin.email, name: admin.name, resetUrl });
+}
+
+async function resetAdminPasswordByToken(token, newPassword) {
+  let payload;
+  try { payload = verifyPasswordResetToken(token); } catch (_error) { throw Object.assign(new Error('Reset link is invalid or expired.'), { statusCode: 400 }); }
+  await resetAdminPassword(Number(payload.sub), newPassword);
+}
+
+async function createAdminUser(input) {
+  const existing = await repository.findAdminByEmail(input.email);
+  if (existing) throw Object.assign(new Error('Admin email already exists.'), { statusCode: 409 });
+  return repository.createAdminUser({ ...input, passwordHash: await bcrypt.hash(input.password, 12) });
+}
+
+module.exports = { login, registerCustomer, refresh, resetAdminPassword, resetAdminPasswordByEmail, requestAdminPasswordReset, resetAdminPasswordByToken, createAdminUser, publicUser };

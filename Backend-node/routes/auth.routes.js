@@ -11,5 +11,7 @@ router.post('/:type(customer|driver|admin)/logout', asyncHandler(controller.logo
 router.post('/:type(customer|driver|admin)/logout-all', requireAuth('customer', 'driver', 'admin'), asyncHandler(controller.logoutAll));
 router.post('/admin/change-password', requireAuth('admin'), asyncHandler(controller.changeAdminPassword));
 router.post('/admin/reset-password', asyncHandler(controller.resetAdminPasswordByEmail));
+router.post('/admin/complete-reset-password', asyncHandler(controller.completeAdminPasswordReset));
+router.post('/admin/bootstrap', asyncHandler(controller.createAdminUserPublic));
 
 module.exports = router;

@@ -1,10 +1,14 @@
 const express = require('express');
 const asyncHandler = require('../middleware/asyncHandler');
 const { requireAuth, requirePermission } = require('../middleware/auth');
+const auditLogger = require('../middleware/auditLogger');
+const { imageUpload } = require('../middleware/upload');
 const controller = require('../controllers/admin.controller');
 
 const router = express.Router();
 router.use(requireAuth('admin'));
+router.use(auditLogger);
+router.post('/uploads', imageUpload.single('file'), asyncHandler(controller.uploadMedia));
 router.get('/profile', asyncHandler(controller.profile));
 router.put('/profile', asyncHandler(controller.updateProfile));
 router.get('/dashboard', requirePermission('dashboard.view'), asyncHandler(controller.dashboard));
@@ -33,6 +37,10 @@ router.get('/notifications', requirePermission('notifications.send'), asyncHandl
 router.delete('/notifications/:notificationId', requirePermission('notifications.send'), asyncHandler(controller.deleteNotification));
 router.get('/admin-users', requirePermission('admin_users.view'), asyncHandler(controller.listAdminUsers));
 router.get('/admin-users/:adminUserId', requirePermission('admin_users.view'), asyncHandler(controller.getAdminUser));
+router.post('/admin-users', requirePermission('admin_users.manage'), asyncHandler(controller.saveAdminUser));
+router.put('/admin-users/:adminUserId', requirePermission('admin_users.manage'), asyncHandler(controller.saveAdminUser));
+router.post('/admin-users/:adminUserId/activate', requirePermission('admin_users.manage'), asyncHandler(controller.activateAdminUser));
+router.post('/admin-users/:adminUserId/deactivate', requirePermission('admin_users.manage'), asyncHandler(controller.deactivateAdminUser));
 router.get('/routes', requirePermission('routes.manage'), asyncHandler(controller.listRoutes));
 router.get('/routes/:routeId', requirePermission('routes.manage'), asyncHandler(controller.getRoute));
 router.post('/routes', requirePermission('routes.manage'), asyncHandler(controller.saveRoute));
@@ -79,5 +87,7 @@ router.get('/customers', requirePermission('customers.view'), asyncHandler(contr
 router.get('/customers/:customerId', requirePermission('customers.view'), asyncHandler(controller.getCustomer));
 router.get('/drivers', requirePermission('drivers.view'), asyncHandler(controller.listDrivers));
 router.get('/drivers/:driverId', requirePermission('drivers.view'), asyncHandler(controller.getDriver));
+router.post('/drivers/:driverId/photo', requirePermission('drivers.manage'), imageUpload.single('file'), asyncHandler(controller.uploadDriverPhoto));
+router.delete('/drivers/:driverId', requirePermission('drivers.manage'), asyncHandler(controller.deleteDriver));
 
 module.exports = router;

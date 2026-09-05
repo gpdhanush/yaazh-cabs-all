@@ -1,5 +1,6 @@
 const pool = require('../config/database');
 const { success } = require('../utils/response');
+const bcrypt = require('bcryptjs');
 
 function adminId(req) {
   return Number(req.user.sub);
@@ -288,7 +289,7 @@ async function getCustomer(req, res) {
 async function listDrivers(req, res) {
   const { page, perPage, offset } = pagination(req);
   const search = String(req.query.q || '').trim();
-  const where = search ? 'WHERE d.name LIKE ? OR d.phone LIKE ? OR d.email LIKE ?' : '';
+  const where = search ? 'WHERE d.is_active = 1 AND (d.name LIKE ? OR d.phone LIKE ? OR d.email LIKE ?)' : 'WHERE d.is_active = 1';
   const searchParams = search ? [`%${search}%`, `%${search}%`, `%${search}%`] : [];
   const [[countRows], [rows]] = await Promise.all([
     pool.execute(`SELECT COUNT(*) AS total FROM drivers d ${where}`, searchParams),
@@ -315,12 +316,19 @@ async function getDriver(req, res) {
   return success(res, { ...rows[0], id: String(rows[0].id), rating_avg: Number(rows[0].rating_avg) });
 }
 
+async function deleteDriver(req, res) {
+  const id = positiveId(req.params.driverId, 'driverId');
+  const [result] = await pool.execute('UPDATE drivers SET is_active = 0 WHERE id = ?', [id]);
+  if (!result.affectedRows) { const error = new Error('Driver not found.'); error.statusCode = 404; throw error; }
+  return success(res, {}, 'Driver deactivated.');
+}
+
 async function listVehicleCategories(req, res) {
   const [rows] = await pool.execute(
     `SELECT id, name, slug, seating_capacity, luggage_capacity, description, image_url,
       one_way_rate_per_km, round_trip_rate_per_km, driver_batta, minimum_km_per_day,
       display_order, is_active, created_at, updated_at
-     FROM vehicle_categories ORDER BY display_order, id`
+    FROM vehicle_categories WHERE is_active = 1 ORDER BY display_order, id`
   );
   return success(res, rows.map((row) => ({ ...row, id: String(row.id) })));
 }
@@ -407,7 +415,7 @@ async function updateEnquiry(req, res) {
 async function listNotifications(req, res) {
   const [rows] = await pool.execute(
     `SELECT id, booking_id, recipient_type, customer_id, driver_id, admin_user_id, channel, title, body, delivery_status, created_at
-     FROM notification_logs ORDER BY created_at DESC LIMIT 500`
+     FROM notification_logs WHERE delivery_status <> 'cancelled' ORDER BY created_at DESC LIMIT 500`
   );
   return success(res, rows.map((row) => ({ ...row, id: String(row.id) })));
 }
@@ -436,6 +444,76 @@ async function getAdminUser(req, res) {
   );
   if (!rows[0]) { const error = new Error('Admin user not found.'); error.statusCode = 404; throw error; }
   return success(res, { ...rows[0], id: String(rows[0].id), role_id: String(rows[0].role_id) });
+}
+
+async function uploadMedia(req, res) {
+  if (!req.file) { const error = new Error('An image file is required.'); error.statusCode = 422; throw error; }
+  const publicPath = `/api/v1/public/media/admin/${req.file.filename}`;
+  return success(res, {
+    url: publicPath,
+    path: publicPath,
+    filename: req.file.filename,
+    original_name: req.file.originalname,
+    mime_type: req.file.mimetype,
+    size: req.file.size,
+  }, 'Image uploaded.', 201);
+}
+
+async function uploadDriverPhoto(req, res) {
+  const id = positiveId(req.params.driverId, 'driverId');
+  if (!req.file) { const error = new Error('An image file is required.'); error.statusCode = 422; throw error; }
+  const publicPath = `/api/v1/public/media/admin/${req.file.filename}`;
+  const [result] = await pool.execute('UPDATE drivers SET profile_image_url = ? WHERE id = ?', [publicPath, id]);
+  if (!result.affectedRows) { const error = new Error('Driver not found.'); error.statusCode = 404; throw error; }
+  return success(res, { photo_url: publicPath, profile_image_url: publicPath }, 'Driver photo updated.');
+}
+
+async function saveAdminUser(req, res) {
+  const name = String(req.body.name || '').trim();
+  const email = String(req.body.email || '').trim().toLowerCase();
+  const roleId = Number(req.body.role_id);
+  if (!name || !email || !Number.isInteger(roleId) || roleId < 1) {
+    const error = new Error('name, email, and role_id are required.'); error.statusCode = 422; throw error;
+  }
+  const id = req.params.adminUserId ? positiveId(req.params.adminUserId, 'adminUserId') : null;
+  const password = req.body.password == null ? '' : String(req.body.password);
+  if (!id && password.length < 8) { const error = new Error('password must be at least 8 characters.'); error.statusCode = 422; throw error; }
+  try {
+    if (id) {
+      const fields = ['name = ?', 'email = ?', 'phone = ?', 'role_id = ?'];
+      const values = [name, email, req.body.phone || null, roleId];
+      if (password) { fields.push('password_hash = ?'); values.push(await bcrypt.hash(password, 12)); }
+      if (req.body.is_active !== undefined) { fields.push('is_active = ?'); values.push(req.body.is_active ? 1 : 0); }
+      values.push(id);
+      const [result] = await pool.execute(`UPDATE admin_users SET ${fields.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, values);
+      if (!result.affectedRows) { const error = new Error('Admin user not found.'); error.statusCode = 404; throw error; }
+      return getAdminUser(req, res);
+    }
+    const [result] = await pool.execute(
+      'INSERT INTO admin_users (role_id, name, email, phone, password_hash) VALUES (?, ?, ?, ?, ?)',
+      [roleId, name, email, req.body.phone || null, await bcrypt.hash(password, 12)],
+    );
+    req.params.adminUserId = result.insertId;
+    return getAdminUser(req, res);
+  } catch (error) {
+    if (error.code === 'ER_DUP_ENTRY') { error.statusCode = 409; error.message = 'Admin email already exists.'; }
+    throw error;
+  }
+}
+
+async function activateAdminUser(req, res) {
+  const id = positiveId(req.params.adminUserId, 'adminUserId');
+  const [result] = await pool.execute('UPDATE admin_users SET is_active = 1 WHERE id = ?', [id]);
+  if (!result.affectedRows) { const error = new Error('Admin user not found.'); error.statusCode = 404; throw error; }
+  return getAdminUser(req, res);
+}
+
+async function deactivateAdminUser(req, res) {
+  const id = positiveId(req.params.adminUserId, 'adminUserId');
+  if (id === adminId(req)) { const error = new Error('You cannot deactivate your own account.'); error.statusCode = 409; throw error; }
+  const [result] = await pool.execute('UPDATE admin_users SET is_active = 0 WHERE id = ?', [id]);
+  if (!result.affectedRows) { const error = new Error('Admin user not found.'); error.statusCode = 404; throw error; }
+  return getAdminUser(req, res);
 }
 
 async function listRemoteConfig(req, res) {
@@ -471,8 +549,21 @@ async function listAuditLogs(req, res) {
   const page = Math.max(1, Number.parseInt(req.query.page, 10) || 1);
   const perPage = Math.min(500, Math.max(1, Number.parseInt(req.query.per_page, 10) || 25));
   const search = String(req.query.q || '').trim();
-  const where = search ? 'WHERE a.action LIKE ? OR a.entity_type LIKE ? OR u.name LIKE ?' : '';
-  const params = search ? [`%${search}%`, `%${search}%`, `%${search}%`] : [];
+  const conditions = [];
+  const params = [];
+  if (search) {
+    conditions.push('(a.action LIKE ? OR a.entity_type LIKE ? OR u.name LIKE ?)');
+    params.push(`%${search}%`, `%${search}%`, `%${search}%`);
+  }
+  if (req.query.action) {
+    conditions.push('a.action = ?');
+    params.push(String(req.query.action));
+  }
+  if (req.query.entity_type) {
+    conditions.push('a.entity_type = ?');
+    params.push(String(req.query.entity_type));
+  }
+  const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
   const [[countRows], [rows]] = await Promise.all([
     pool.execute(`SELECT COUNT(*) AS total FROM audit_logs a LEFT JOIN admin_users u ON u.id = a.admin_user_id ${where}`, params),
     pool.execute(
@@ -519,6 +610,7 @@ async function listRoutes(req, res) {
   const [rows] = await pool.execute(
     `SELECT r.*, pc.name AS pickup_city_name, dc.name AS drop_city_name
      FROM routes r INNER JOIN cities pc ON pc.id = r.pickup_city_id INNER JOIN cities dc ON dc.id = r.drop_city_id
+     WHERE r.is_active = 1
      ORDER BY r.is_popular DESC, r.title LIMIT 500`
   );
   return success(res, rows.map((row) => ({ ...row, id: String(row.id), pickup_city_id: String(row.pickup_city_id), drop_city_id: String(row.drop_city_id), corridor: `${row.pickup_city_name} -> ${row.drop_city_name}` })));
@@ -559,6 +651,7 @@ async function listTariffs(req, res) {
   const [rows] = await pool.execute(
     `SELECT t.*, c.name AS category_name, r.title AS route_title
      FROM tariff_plans t INNER JOIN vehicle_categories c ON c.id = t.vehicle_category_id LEFT JOIN routes r ON r.id = t.route_id
+     WHERE t.is_active = 1
      ORDER BY t.id DESC LIMIT 500`
   );
   return success(res, rows.map((row) => ({ ...row, id: String(row.id), vehicle_category_id: String(row.vehicle_category_id), route_id: row.route_id == null ? null : String(row.route_id), route_label: row.route_title || 'All routes', trip_type_label: row.trip_type })));
@@ -594,7 +687,7 @@ async function deleteTariff(req, res) {
 }
 
 async function listFaqs(req, res) {
-  const [rows] = await pool.execute('SELECT * FROM faqs ORDER BY display_order, id LIMIT 500');
+  const [rows] = await pool.execute('SELECT * FROM faqs WHERE is_active = 1 ORDER BY display_order, id LIMIT 500');
   return success(res, rows.map((row) => ({ ...row, id: String(row.id), route_id: row.route_id == null ? null : String(row.route_id), cms_page_id: row.cms_page_id == null ? null : String(row.cms_page_id) })));
 }
 
@@ -702,6 +795,7 @@ async function deleteReview(req, res) {
 async function listVehicles(req, res) {
   const [rows] = await pool.execute(
     `SELECT v.*, c.name AS category_name FROM vehicles v INNER JOIN vehicle_categories c ON c.id = v.category_id
+     WHERE v.is_active = 1
      ORDER BY v.id DESC LIMIT 500`
   );
   return success(res, rows.map((row) => ({ ...row, id: String(row.id), category_id: String(row.category_id) })));
@@ -769,4 +863,4 @@ async function endAssignment(req, res) {
   return success(res, { id: String(id), is_current: false }, 'Assignment ended.');
 }
 
-module.exports = { profile, updateProfile, settings, updateSetting, dashboard, listBookings, getBooking, confirmBooking, rejectBooking, cancelBooking, assignDriver, listCustomers, getCustomer, listDrivers, getDriver, listVehicleCategories, getVehicleCategory, saveVehicleCategory, deleteVehicleCategory, registerAdminDevice, reports, listReviews, listEnquiries, getEnquiry, updateEnquiry, listNotifications, deleteNotification, listAdminUsers, getAdminUser, listRemoteConfig, createRemoteConfig, updateRemoteConfig, listAuditLogs, getAuditLog, listAdminRoles, getAdminRole, listPermissions, listRoutes, getRoute, saveRoute, deleteRoute, listTariffs, getTariff, saveTariff, deleteTariff, listFaqs, getFaq, saveFaq, deleteFaq, listGallery, createGalleryGroup, createGalleryImage, updateGalleryImage, deleteGalleryRecord, listReviewsAdmin, saveReview, getReview, moderateReview, deleteReview, listVehicles, getVehicle, saveVehicle, deleteVehicle, listAssignments, createAssignment, endAssignment };
+module.exports = { profile, updateProfile, settings, updateSetting, dashboard, listBookings, getBooking, confirmBooking, rejectBooking, cancelBooking, assignDriver, listCustomers, getCustomer, listDrivers, getDriver, deleteDriver, listVehicleCategories, getVehicleCategory, saveVehicleCategory, deleteVehicleCategory, registerAdminDevice, reports, listReviews, listEnquiries, getEnquiry, updateEnquiry, listNotifications, deleteNotification, listAdminUsers, getAdminUser, saveAdminUser, activateAdminUser, deactivateAdminUser, uploadMedia, uploadDriverPhoto, listRemoteConfig, createRemoteConfig, updateRemoteConfig, listAuditLogs, getAuditLog, listAdminRoles, getAdminRole, listPermissions, listRoutes, getRoute, saveRoute, deleteRoute, listTariffs, getTariff, saveTariff, deleteTariff, listFaqs, getFaq, saveFaq, deleteFaq, listGallery, createGalleryGroup, createGalleryImage, updateGalleryImage, deleteGalleryRecord, listReviewsAdmin, saveReview, getReview, moderateReview, deleteReview, listVehicles, getVehicle, saveVehicle, deleteVehicle, listAssignments, createAssignment, endAssignment };
