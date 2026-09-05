@@ -29,7 +29,7 @@ router.put('/vehicle-categories/:categoryId', requirePermission('vehicle_categor
 router.delete('/vehicle-categories/:categoryId', requirePermission('vehicle_categories.manage'), asyncHandler(controller.deleteVehicleCategory));
 router.post('/devices', asyncHandler(controller.registerAdminDevice));
 router.get('/reports', requirePermission('reports.view'), asyncHandler(controller.reports));
-router.get('/reviews', requirePermission('reviews.approve'), asyncHandler(controller.listReviews));
+router.get('/trip-reviews', requirePermission('reviews.approve'), asyncHandler(controller.listReviews));
 router.get('/enquiries', requirePermission('customers.manage'), asyncHandler(controller.listEnquiries));
 router.get('/enquiries/:enquiryId', requirePermission('customers.manage'), asyncHandler(controller.getEnquiry));
 router.put('/enquiries/:enquiryId', requirePermission('customers.manage'), asyncHandler(controller.updateEnquiry));
@@ -80,6 +80,9 @@ router.post('/driver-assignments', requirePermission('driver_assignments.manage'
 router.post('/driver-assignments/:assignmentId/end', requirePermission('driver_assignments.manage'), asyncHandler(controller.endAssignment));
 router.get('/bookings', requirePermission('bookings.view'), asyncHandler(controller.listBookings));
 router.get('/bookings/:bookingId', requirePermission('bookings.view'), asyncHandler(controller.getBooking));
+router.get('/bookings/:bookingId/payment', requirePermission('bookings.view'), asyncHandler(controller.getBookingPayment));
+router.post('/bookings/:bookingId/payment', requirePermission('bookings.update'), asyncHandler(controller.recordBookingPayment));
+router.put('/bookings/:bookingId/payment-status', requirePermission('bookings.update'), asyncHandler(controller.setBookingPaymentStatus));
 router.get('/bookings/:bookingId/invoice/pdf', requirePermission('bookings.view'), asyncHandler(controller.downloadBookingInvoice));
 router.post('/bookings/:bookingId/invoice/resend', requirePermission('bookings.view'), asyncHandler(controller.resendBookingInvoice));
 router.post('/bookings/:bookingId/confirm', requirePermission('bookings.update'), asyncHandler(controller.confirmBooking));

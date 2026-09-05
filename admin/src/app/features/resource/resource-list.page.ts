@@ -411,7 +411,14 @@ export class ResourceListPage implements OnInit, AfterViewInit {
     this.api.list(cfg.path, query).subscribe({
       next: (res) => {
         const data = (Array.isArray(res.data) ? res.data : []) as Record<string, unknown>[];
-        this.dataSource.data = data;
+        const normalized = cfg.path === '/reviews'
+          ? data.map((row) => ({
+              ...row,
+              review_snippet: row['review_snippet'] ?? row['review'] ?? '',
+              status_label: row['status_label'] ?? row['approval_status'] ?? '',
+            }))
+          : data;
+        this.dataSource.data = normalized;
         this.filteredCount.set(this.dataSource.filteredData.length);
         this.bindTableControls();
         if (this.dataSource.paginator) this.dataSource.paginator.firstPage();

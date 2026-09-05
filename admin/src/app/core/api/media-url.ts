@@ -2,6 +2,8 @@ import { environment } from '../../../environments/environment';
 
 const apiOrigin = environment.apiUrl.replace(/\/api\/v1\/?$/i, '').replace(/\/$/, '');
 
+export const DEFAULT_DRIVER_IMAGE = '/driver-default.png';
+
 function durableMediaUrl(value: string): string | null {
   let pathname = value;
   let search = '';

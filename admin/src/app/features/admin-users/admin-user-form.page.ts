@@ -44,6 +44,7 @@ function matchPassword(control: AbstractControl): ValidationErrors | null {
 
       <div class="ya-page-card">
         <div class="ya-page-card__header">
+          <img class="admin-user-form__logo" src="logo.png" alt="Yaazh Cabs" />
           <div>
             <h2 class="page-title">{{ isEdit() ? 'Edit user' : 'Add staff user' }}</h2>
             <p class="page-subtitle">

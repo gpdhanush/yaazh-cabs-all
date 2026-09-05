@@ -32,6 +32,8 @@ import {
 import { cn } from "@/lib/utils";
 import { defaultOgMeta } from "@/lib/analytics";
 
+const DEFAULT_DRIVER_IMAGE = "/driver-default.png";
+
 const title = "Track Your Booking | Yaazh Cabs Udumalpet";
 const description =
   "Check your Yaazh Cabs booking status — confirmation, driver assignment, cab number and pickup time updates using your booking reference or mobile number.";
@@ -480,20 +482,21 @@ function StatusCard({
         <div className="rounded-2xl border border-success/30 bg-success/5 p-5 sm:p-6">
           <h2 className="font-display text-lg font-bold">Your driver</h2>
           <div className="mt-3 flex items-center gap-3">
-            {mediaUrl(booking.driver.photo_url) || booking.driver.id ? (
-              <img
-                src={
-                  mediaUrl(booking.driver.photo_url) ??
-                  mediaUrl(`/api/v1/public/drivers/${booking.driver.id}/photo`) ??
-                  ""
-                }
-                alt={booking.driver.name}
-                className="size-12 shrink-0 rounded-[5px] object-cover bg-primary/15"
-                onError={(e) => {
-                  e.currentTarget.style.display = "none";
-                }}
-              />
-            ) : null}
+            <img
+              src={
+                mediaUrl(booking.driver.photo_url) ??
+                (booking.driver.id
+                  ? mediaUrl(`/api/v1/public/drivers/${booking.driver.id}/photo`)
+                  : null) ??
+                DEFAULT_DRIVER_IMAGE
+              }
+              alt={booking.driver.name}
+              className="size-12 shrink-0 rounded-[5px] object-cover bg-primary/15"
+              onError={(e) => {
+                e.currentTarget.onerror = null;
+                e.currentTarget.src = DEFAULT_DRIVER_IMAGE;
+              }}
+            />
             <p className="text-sm text-muted-foreground">
               {booking.driver.name}
               {booking.vehicle

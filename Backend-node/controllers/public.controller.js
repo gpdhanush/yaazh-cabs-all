@@ -28,6 +28,36 @@ function mysqlDateTime(value, field) {
   return date.toISOString().slice(0, 19).replace('T', ' ');
 }
 
+function normalizePhone(value) {
+  return String(value || '').replace(/\D/g, '');
+}
+
+async function findOrCreateWebsiteCustomer(connection, { name, phone, email }) {
+  const normalizedPhone = normalizePhone(phone);
+  if (normalizedPhone.length < 8) {
+    const error = new Error('customer_phone must contain at least 8 digits.');
+    error.statusCode = 422;
+    throw error;
+  }
+
+  await connection.execute(
+    `INSERT INTO customers (name, email, phone)
+     VALUES (?, ?, ?)
+     ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID(id)`,
+    [String(name).trim(), email ? String(email).trim() : null, normalizedPhone]
+  );
+  const [customers] = await connection.execute(
+    'SELECT id FROM customers WHERE phone = ? LIMIT 1',
+    [normalizedPhone]
+  );
+  if (!customers[0]) {
+    const error = new Error('Unable to create customer profile.');
+    error.statusCode = 500;
+    throw error;
+  }
+  return { id: Number(customers[0].id), phone: normalizedPhone };
+}
+
 async function listCities(req, res) {
   const { limit, offset } = pageParams(req.query);
   const [rows] = await pool.execute(
@@ -296,6 +326,14 @@ async function createGuestBooking(req, res) {
   const connection = await pool.getConnection();
   try {
     await connection.beginTransaction();
+    const authenticatedCustomerId = req.user?.typ === 'customer' ? Number(req.user.sub) : null;
+    const websiteCustomer = authenticatedCustomerId
+      ? { id: authenticatedCustomerId, phone: normalizePhone(req.body.customer_phone) }
+      : await findOrCreateWebsiteCustomer(connection, {
+        name: req.body.customer_name,
+        phone: req.body.customer_phone,
+        email: req.body.customer_email,
+      });
     const [categories] = await connection.execute(
       `SELECT id, one_way_rate_per_km, round_trip_rate_per_km, driver_batta
        FROM vehicle_categories WHERE id = ? AND is_active = 1 LIMIT 1`, [vehicleCategoryId]
@@ -309,7 +347,18 @@ async function createGuestBooking(req, res) {
       if (!route) { const error = new Error('Route not found.'); error.statusCode = 404; throw error; }
     }
     const category = categories[0];
-    const distance = Number(req.body.estimated_distance_km || route?.distance_km || 0);
+    let distance = Number(req.body.estimated_distance_km || route?.distance_km || 0);
+    if (!distance && req.body.pickup_latitude != null && req.body.pickup_longitude != null && req.body.drop_latitude != null && req.body.drop_longitude != null) {
+      distance = Number(haversineDistance(
+        { latitude: number(req.body.pickup_latitude, 'pickup_latitude'), longitude: number(req.body.pickup_longitude, 'pickup_longitude') },
+        { latitude: number(req.body.drop_latitude, 'drop_latitude'), longitude: number(req.body.drop_longitude, 'drop_longitude') }
+      ).toFixed(2));
+    }
+    if (!Number.isFinite(distance) || distance <= 0) {
+      const error = new Error('A valid route, distance, or pickup/drop coordinates are required to calculate the fare.');
+      error.statusCode = 422;
+      throw error;
+    }
     const rate = req.body.trip_type === 'round_trip' ? Number(category.round_trip_rate_per_km) : Number(category.one_way_rate_per_km);
     const baseFare = Number((distance * rate + Number(category.driver_batta)).toFixed(2));
     const reference = `CAB${Date.now().toString(36).toUpperCase()}${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`.slice(0, 30);
@@ -319,8 +368,8 @@ async function createGuestBooking(req, res) {
        pickup_at, return_at, passenger_count, special_note, estimated_distance_km, estimated_duration_minutes,
        rate_per_km, driver_batta, base_fare, estimated_total)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)` ,
-      [reference, req.user?.typ === 'customer' ? Number(req.user.sub) : null, vehicleCategoryId, route?.id || null,
-        req.body.trip_type, req.user?.typ === 'customer' ? 'customer_app' : 'website', req.body.customer_name, req.body.customer_phone,
+      [reference, websiteCustomer.id, vehicleCategoryId, route?.id || null,
+        req.body.trip_type, req.user?.typ === 'customer' ? 'customer_app' : 'website', req.body.customer_name, websiteCustomer.phone,
         req.body.customer_email || null, req.body.pickup_location, req.body.drop_location, req.body.pickup_city || null,
         req.body.drop_city || null, pickupAt, returnAt,
         req.body.passenger_count || null, req.body.special_note || null, distance, route?.duration_minutes || null,

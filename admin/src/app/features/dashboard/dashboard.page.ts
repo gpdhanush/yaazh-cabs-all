@@ -16,7 +16,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { forkJoin } from 'rxjs';
 import { AdminApiService } from '../../core/api/admin-api.service';
 import { Booking, DashboardStats, LiveTrackingTrip } from '../../core/api/api.types';
-import { driverPhotoUrl } from '../../core/api/media-url';
+import { DEFAULT_DRIVER_IMAGE, driverPhotoUrl } from '../../core/api/media-url';
 import { statusLabel, statusTone } from '../../shared/status-chip';
 
 type LeafletMap = {
@@ -160,7 +160,7 @@ type DashCard = {
                   <span><mat-icon>person</mat-icon>{{ trip.customer_name }}</span>
                   <span>
                     @if (trip.driver && driverPhoto(trip.driver); as src) {
-                      <img class="live-trip__face" [src]="src" [alt]="trip.driver.name" />
+                      <img class="live-trip__face" [src]="src" [alt]="trip.driver.name" (error)="useDefaultDriverImage($event)" />
                     } @else {
                       <mat-icon>badge</mat-icon>
                     }
@@ -369,7 +369,13 @@ export class DashboardPage implements OnInit, AfterViewInit, OnDestroy {
   label = statusLabel;
 
   driverPhoto(d: { id: string; photo_url?: string | null }): string | null {
-    return driverPhotoUrl(d);
+    return driverPhotoUrl(d) ?? DEFAULT_DRIVER_IMAGE;
+  }
+
+  useDefaultDriverImage(event: Event): void {
+    const image = event.currentTarget as HTMLImageElement;
+    image.onerror = null;
+    image.src = DEFAULT_DRIVER_IMAGE;
   }
 
   ngOnInit(): void {

@@ -19,6 +19,10 @@ import { AuthService } from '../../core/auth/auth.service';
 
       <div class="login-stage">
         <div class="login-copy">
+          <div class="login-side-logo-wrap">
+            <img class="login-side-logo login-side-logo--dark" src="logo.png" alt="Yaazh Cabs" />
+            <!-- <img class="login-side-logo login-side-logo--dark" src="logo-light.png" alt="Yaazh Cabs" /> -->
+          </div>
           <p class="login-copy__eyebrow">Yaazh Cabs</p>
           <h1>Operate every trip with a premium command center.</h1>
           <p class="login-copy__lead">
@@ -36,7 +40,7 @@ import { AuthService } from '../../core/auth/auth.service';
 
         <div class="login-card">
           <div class="login-card__head">
-            <div class="login-brand-mark">YZ</div>
+            <img class="login-brand-mark" src="app-logo.png" alt="Yaazh Cabs" />
             <div>
               <p class="login-copy__eyebrow">Admin access</p>
               <h2>Welcome back</h2>

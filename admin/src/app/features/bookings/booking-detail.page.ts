@@ -7,7 +7,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { AdminApiService } from '../../core/api/admin-api.service';
 import { Booking, BookingDriver, BookingPayment } from '../../core/api/api.types';
-import { driverPhotoUrl } from '../../core/api/media-url';
+import { DEFAULT_DRIVER_IMAGE, driverPhotoUrl } from '../../core/api/media-url';
 import { canAssignDriver, statusLabel, statusTone } from '../../shared/status-chip';
 import { YaModalPortalDirective } from '../../shared/ya-modal-portal.directive';
 
@@ -126,7 +126,7 @@ import { YaModalPortalDirective } from '../../shared/ya-modal-portal.directive';
               <div class="bk-driver-card">
                 <div class="bk-driver-card__avatar">
                   @if (driverPhoto(d); as src) {
-                    <img [src]="src" [alt]="d.name" (error)="markPhotoFailed(d.id)" />
+                    <img [src]="src" [alt]="d.name" (error)="useDefaultDriverImage($event)" />
                   } @else {
                     {{ initials(d.name) }}
                   }
@@ -386,6 +386,16 @@ import { YaModalPortalDirective } from '../../shared/ya-modal-portal.directive';
           </div>
           <h3 id="ya-invoice-title" class="ya-confirm__title">Send invoice email</h3>
           <p class="ya-confirm__text">Enter the email address that should receive this booking invoice.</p>
+          @if (busy()) {
+            <div class="bk-invoice-sending" role="status" aria-live="polite">
+              <span class="bk-invoice-sending__icon"><mat-icon>mail</mat-icon></span>
+              <span>
+                <strong>Preparing and sending invoice</strong>
+                <small>Please keep this window open...</small>
+              </span>
+              <span class="bk-invoice-sending__dots" aria-hidden="true"><i></i><i></i><i></i></span>
+            </div>
+          }
           <div class="ya-field" style="text-align: left; margin: 0.85rem 0 0.25rem">
             <label for="invoice-email">Email</label>
             <input
@@ -408,7 +418,15 @@ import { YaModalPortalDirective } from '../../shared/ya-modal-portal.directive';
               [disabled]="busy() || !canSendInvoice()"
               (click)="sendInvoice()"
             >
-              {{ busy() ? 'Sending…' : 'Send' }}
+              @if (busy()) {
+                <span class="bk-invoice-button-spinner" aria-hidden="true"></span>
+                Sending…
+              } @else {
+                <ng-container>
+                  <mat-icon>send</mat-icon>
+                  Send
+                </ng-container>
+              }
             </button>
           </div>
         </div>
@@ -426,7 +444,6 @@ export class BookingDetailPage implements OnInit {
   readonly error = signal<string | null>(null);
   readonly busy = signal(false);
   readonly sendOpen = signal(false);
-  private readonly photoFailed = signal<Record<string, boolean>>({});
   sendEmail = '';
   driverId = '';
   payAmount = '';
@@ -485,12 +502,14 @@ export class BookingDetailPage implements OnInit {
   }
 
   driverPhoto(d: BookingDriver): string | null {
-    if (!d.id || this.photoFailed()[d.id]) return null;
-    return driverPhotoUrl(d);
+    if (!d.id) return DEFAULT_DRIVER_IMAGE;
+    return driverPhotoUrl(d) ?? DEFAULT_DRIVER_IMAGE;
   }
 
-  markPhotoFailed(id: string): void {
-    this.photoFailed.update((m) => ({ ...m, [id]: true }));
+  useDefaultDriverImage(event: Event): void {
+    const image = event.currentTarget as HTMLImageElement;
+    image.onerror = null;
+    image.src = DEFAULT_DRIVER_IMAGE;
   }
 
   tripKm(b: Booking): number | null {

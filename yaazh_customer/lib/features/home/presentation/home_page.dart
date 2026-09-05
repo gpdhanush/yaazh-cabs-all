@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:yaazh_customer/app/constants.dart';
 import 'package:yaazh_customer/core/widgets/app_error_view.dart';
+import 'package:yaazh_customer/core/widgets/app_logo.dart';
 import 'package:yaazh_customer/core/widgets/driver_avatar.dart';
 import 'package:yaazh_customer/core/widgets/ya_network_image.dart';
 import 'package:yaazh_customer/features/booking/domain/booking.dart';
@@ -24,11 +25,18 @@ class HomePage extends ConsumerWidget {
     final fleet = ref.watch(vehicleCategoriesProvider);
     final config = ref.watch(appConfigProvider);
     final firstName = (user?.name ?? 'there').split(' ').first;
+    if (config.valueOrNull?.maintenanceMode == true) {
+      return _MaintenancePage(onRetry: () => ref.invalidate(appConfigProvider));
+    }
     void openBook() {
       final cfg = config.valueOrNull;
       if (cfg?.maintenanceMode == true) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Bookings are paused for maintenance. Please try again shortly.')),
+          const SnackBar(
+            content: Text(
+              'Bookings are paused for maintenance. Please try again shortly.',
+            ),
+          ),
         );
         return;
       }
@@ -59,7 +67,8 @@ class HomePage extends ConsumerWidget {
                 data: (data) => Column(
                   children: [
                     if (data.maintenanceMode) const _MaintenanceBanner(),
-                    if (data.offerBannerEnabled && data.offerBannerText.isNotEmpty)
+                    if (data.offerBannerEnabled &&
+                        data.offerBannerText.isNotEmpty)
                       _OfferBanner(text: data.offerBannerText),
                   ],
                 ),
@@ -97,9 +106,7 @@ class HomePage extends ConsumerWidget {
                 ),
               ),
             ),
-            const SliverToBoxAdapter(
-              child: _SectionHeader(title: 'Our fleet'),
-            ),
+            const SliverToBoxAdapter(child: _SectionHeader(title: 'Our fleet')),
             SliverToBoxAdapter(
               child: fleet.when(
                 data: (rows) => _FleetStrip(categories: rows, onOpen: openBook),
@@ -187,7 +194,10 @@ class _HeroHeader extends StatelessWidget {
                 ),
                 IconButton(
                   onPressed: () => context.push('/notifications'),
-                  icon: const Icon(Icons.notifications_none_rounded, color: Colors.white),
+                  icon: const Icon(
+                    Icons.notifications_none_rounded,
+                    color: Colors.white,
+                  ),
                 ),
               ],
             ),
@@ -225,7 +235,11 @@ class _HeroHeader extends StatelessWidget {
                               margin: const EdgeInsets.symmetric(vertical: 3),
                               color: const Color(0xFFE2E8F0),
                             ),
-                            const Icon(Icons.location_on_rounded, size: 14, color: AppConstants.errorColor),
+                            const Icon(
+                              Icons.location_on_rounded,
+                              size: 14,
+                              color: AppConstants.errorColor,
+                            ),
                           ],
                         ),
                         const SizedBox(width: 12),
@@ -243,7 +257,10 @@ class _HeroHeader extends StatelessWidget {
                               ),
                               Text(
                                 'Current location',
-                                style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 15,
+                                ),
                               ),
                               SizedBox(height: 10),
                               Text(
@@ -272,7 +289,10 @@ class _HeroHeader extends StatelessWidget {
                             color: AppConstants.accentColor,
                             borderRadius: BorderRadius.circular(14),
                           ),
-                          child: const Icon(Icons.search_rounded, color: Colors.black),
+                          child: const Icon(
+                            Icons.search_rounded,
+                            color: Colors.black,
+                          ),
                         ),
                       ],
                     ),
@@ -316,8 +336,12 @@ class _UpcomingTripCard extends StatelessWidget {
                       fontWeight: FontWeight.w800,
                       fontSize: 16,
                     ),
-                    subtitle: '${booking.pickupLocation} → ${booking.dropLocation}',
-                    trailing: const Icon(Icons.chevron_right_rounded, color: Colors.white70),
+                    subtitle:
+                        '${booking.pickupLocation} → ${booking.dropLocation}',
+                    trailing: const Icon(
+                      Icons.chevron_right_rounded,
+                      color: Colors.white70,
+                    ),
                   )
                 : Row(
                     children: [
@@ -325,10 +349,15 @@ class _UpcomingTripCard extends StatelessWidget {
                         width: 52,
                         height: 52,
                         decoration: BoxDecoration(
-                          color: AppConstants.accentColor.withValues(alpha: 0.18),
+                          color: AppConstants.accentColor.withValues(
+                            alpha: 0.18,
+                          ),
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(Icons.local_taxi_rounded, color: AppConstants.accentColor),
+                        child: const Icon(
+                          Icons.local_taxi_rounded,
+                          color: AppConstants.accentColor,
+                        ),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
@@ -336,7 +365,9 @@ class _UpcomingTripCard extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              booking.status == 'trip_started' ? 'Trip in progress' : 'Ongoing booking',
+                              booking.status == 'trip_started'
+                                  ? 'Trip in progress'
+                                  : 'Ongoing booking',
                               style: TextStyle(
                                 color: Colors.white.withValues(alpha: 0.62),
                                 fontSize: 11,
@@ -368,7 +399,10 @@ class _UpcomingTripCard extends StatelessWidget {
                           ],
                         ),
                       ),
-                      const Icon(Icons.chevron_right_rounded, color: Colors.white70),
+                      const Icon(
+                        Icons.chevron_right_rounded,
+                        color: Colors.white70,
+                      ),
                     ],
                   ),
           ),
@@ -398,9 +432,21 @@ class _QuickActions extends StatelessWidget {
       child: Row(
         children: [
           _Action(icon: Icons.local_taxi_rounded, label: 'Book', onTap: onBook),
-          _Action(icon: Icons.receipt_long_rounded, label: 'Trips', onTap: onTrips),
-          _Action(icon: Icons.bookmark_rounded, label: 'Places', onTap: onPlaces),
-          _Action(icon: Icons.headset_mic_rounded, label: 'Help', onTap: onSupport),
+          _Action(
+            icon: Icons.receipt_long_rounded,
+            label: 'Trips',
+            onTap: onTrips,
+          ),
+          _Action(
+            icon: Icons.bookmark_rounded,
+            label: 'Places',
+            onTap: onPlaces,
+          ),
+          _Action(
+            icon: Icons.headset_mic_rounded,
+            label: 'Help',
+            onTap: onSupport,
+          ),
         ],
       ),
     );
@@ -441,12 +487,19 @@ class _Action extends StatelessWidget {
                         color: AppConstants.accentColor.withValues(alpha: 0.16),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: Icon(icon, size: 20, color: AppConstants.accentHover),
+                      child: Icon(
+                        icon,
+                        size: 20,
+                        color: AppConstants.accentHover,
+                      ),
                     ),
                     const SizedBox(height: 8),
                     Text(
                       label,
-                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 12,
+                      ),
                     ),
                   ],
                 ),
@@ -468,7 +521,10 @@ class _SectionHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 26, 20, 12),
-      child: Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+      child: Text(
+        title,
+        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+      ),
     );
   }
 }
@@ -484,7 +540,10 @@ class _RouteStrip extends StatelessWidget {
     if (routes.isEmpty) {
       return const Padding(
         padding: EdgeInsets.symmetric(horizontal: 20),
-        child: Text('No popular routes yet.', style: TextStyle(color: AppConstants.textSecondaryLight)),
+        child: Text(
+          'No popular routes yet.',
+          style: TextStyle(color: AppConstants.textSecondaryLight),
+        ),
       );
     }
     return SizedBox(
@@ -534,7 +593,10 @@ class _RouteStrip extends StatelessWidget {
                           children: [
                             if (route.startingFare != null)
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
                                 decoration: BoxDecoration(
                                   color: AppConstants.accentColor,
                                   borderRadius: BorderRadius.circular(8),
@@ -596,7 +658,10 @@ class _FleetStrip extends StatelessWidget {
     if (categories.isEmpty) {
       return const Padding(
         padding: EdgeInsets.symmetric(horizontal: 20),
-        child: Text('Fleet will appear here.', style: TextStyle(color: AppConstants.textSecondaryLight)),
+        child: Text(
+          'Fleet will appear here.',
+          style: TextStyle(color: AppConstants.textSecondaryLight),
+        ),
       );
     }
     return SizedBox(
@@ -628,7 +693,9 @@ class _FleetStrip extends StatelessWidget {
                       height: 108,
                       width: 164,
                       fallbackIcon: Icons.directions_car_filled_rounded,
-                      borderRadius: const BorderRadius.vertical(top: Radius.circular(17)),
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(17),
+                      ),
                     ),
                     Padding(
                       padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
@@ -644,7 +711,10 @@ class _FleetStrip extends StatelessWidget {
                           const SizedBox(height: 4),
                           Text(
                             '${cat.seatingCapacity} seats',
-                            style: const TextStyle(fontSize: 12, color: AppConstants.textSecondaryLight),
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: AppConstants.textSecondaryLight,
+                            ),
                           ),
                           Text(
                             '₹${cat.oneWayRatePerKm.toStringAsFixed(0)}/km',
@@ -705,6 +775,66 @@ class _MaintenanceBanner extends StatelessWidget {
   }
 }
 
+class _MaintenancePage extends StatelessWidget {
+  final VoidCallback onRetry;
+
+  const _MaintenancePage({required this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppConstants.bgLight,
+      body: SafeArea(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(28),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const AppLogo(size: 104),
+                const SizedBox(height: 24),
+                const Text(
+                  'We will be back shortly',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 25,
+                    fontWeight: FontWeight.w800,
+                    color: AppConstants.textPrimaryLight,
+                  ),
+                ),
+                const SizedBox(height: 26),
+                FilledButton.icon(
+                  onPressed: onRetry,
+                  icon: const Icon(Icons.refresh_rounded),
+                  label: const Text('Try again'),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppConstants.accentColor,
+                    foregroundColor: AppConstants.textPrimaryLight,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 22,
+                      vertical: 13,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'Our booking service is temporarily paused while we make improvements. Please check back soon.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 15,
+                    height: 1.5,
+                    color: AppConstants.textSecondaryLight,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _OfferBanner extends StatelessWidget {
   final String text;
 
@@ -722,11 +852,16 @@ class _OfferBanner extends StatelessWidget {
             colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
           ),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppConstants.accentColor.withValues(alpha: 0.35)),
+          border: Border.all(
+            color: AppConstants.accentColor.withValues(alpha: 0.35),
+          ),
         ),
         child: Row(
           children: [
-            const Icon(Icons.local_offer_rounded, color: AppConstants.accentColor),
+            const Icon(
+              Icons.local_offer_rounded,
+              color: AppConstants.accentColor,
+            ),
             const SizedBox(width: 12),
             Expanded(
               child: Text(
@@ -775,10 +910,15 @@ class _SupportCard extends StatelessWidget {
                         width: 46,
                         height: 46,
                         decoration: BoxDecoration(
-                          color: AppConstants.accentColor.withValues(alpha: 0.16),
+                          color: AppConstants.accentColor.withValues(
+                            alpha: 0.16,
+                          ),
                           borderRadius: BorderRadius.circular(14),
                         ),
-                        child: const Icon(Icons.headset_mic_rounded, color: AppConstants.accentColor),
+                        child: const Icon(
+                          Icons.headset_mic_rounded,
+                          color: AppConstants.accentColor,
+                        ),
                       ),
                       const SizedBox(width: 14),
                       Expanded(
@@ -787,17 +927,26 @@ class _SupportCard extends StatelessWidget {
                           children: [
                             const Text(
                               'Need help booking?',
-                              style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800),
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w800,
+                              ),
                             ),
                             const SizedBox(height: 2),
                             Text(
                               hours ?? 'Call our Udumalpet desk',
-                              style: TextStyle(color: Colors.white.withValues(alpha: 0.68), fontSize: 12),
+                              style: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.68),
+                                fontSize: 12,
+                              ),
                             ),
                             const SizedBox(height: 4),
                             Text(
                               phone!,
-                              style: const TextStyle(color: AppConstants.accentColor, fontWeight: FontWeight.w800),
+                              style: const TextStyle(
+                                color: AppConstants.accentColor,
+                                fontWeight: FontWeight.w800,
+                              ),
                             ),
                           ],
                         ),
@@ -834,7 +983,10 @@ class _HScrollSkeleton extends StatelessWidget {
     return const SizedBox(
       height: 120,
       child: Center(
-        child: CircularProgressIndicator(color: AppConstants.accentColor, strokeWidth: 2.5),
+        child: CircularProgressIndicator(
+          color: AppConstants.accentColor,
+          strokeWidth: 2.5,
+        ),
       ),
     );
   }

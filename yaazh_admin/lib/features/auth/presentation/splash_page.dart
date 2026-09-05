@@ -35,7 +35,7 @@ class _SplashPageState extends ConsumerState<SplashPage> {
       }
     } catch (_) {}
 
-    await Future<void>.delayed(const Duration(milliseconds: 800));
+    await Future<void>.delayed(const Duration(seconds: 1));
     if (!mounted) return;
     await ref.read(authNotifierProvider.notifier).checkAuthSession();
     if (!mounted) return;
@@ -51,13 +51,13 @@ class _SplashPageState extends ConsumerState<SplashPage> {
   @override
   Widget build(BuildContext context) {
     final header = Theme.of(context).colorScheme.primary;
-    final onHeader = AppTheme.onPrimaryOf(header);
+    // final onHeader = AppTheme.onPrimaryOf(header);
     final overlay = AppTheme.overlayFor(header, navBar: header);
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: overlay,
       child: Scaffold(
-        backgroundColor: header,
+        // backgroundColor: header,
         body: SafeArea(
           top: false,
           bottom: true,
@@ -65,24 +65,24 @@ class _SplashPageState extends ConsumerState<SplashPage> {
             child: Column(
               children: [
                 const Spacer(flex: 5),
-                const AppLogo(size: 148),
-                const SizedBox(height: 18),
+                const AppLogo(size: 250),
+                const SizedBox(height: 150),
                 Text(
                   AppConstants.appName,
                   style: TextStyle(
-                    color: onHeader,
-                    fontSize: 28,
+                    color: header,
+                    fontSize: 20,
                     fontWeight: FontWeight.w700,
-                    letterSpacing: 0.2,
+                    letterSpacing: 0.3,
                   ),
                 ),
                 const SizedBox(height: 6),
                 Text(
                   'Admin Console',
                   style: TextStyle(
-                    color: onHeader.withValues(alpha: 0.7),
+                    color: header,
                     fontSize: 15,
-                    fontWeight: FontWeight.w500,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
                 const SizedBox(height: 28),
@@ -91,20 +91,21 @@ class _SplashPageState extends ConsumerState<SplashPage> {
                   height: 22,
                   child: CircularProgressIndicator(
                     strokeWidth: 2.2,
-                    color: onHeader,
+                    color: header,
+                    // color: onHeader,
                   ),
                 ),
                 const Spacer(flex: 4),
                 Text(
                   'Version $_version+$_build',
                   style: TextStyle(
-                    color: onHeader.withValues(alpha: 0.55),
+                    color: header,
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                     letterSpacing: 0.4,
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 50),
               ],
             ),
           ),

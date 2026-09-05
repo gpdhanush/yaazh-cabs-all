@@ -7,7 +7,7 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { ThemeProvider, themeInitScript } from "../components/theme-provider";
@@ -15,6 +15,79 @@ import { ClearStaleServiceWorkers } from "../components/site/clear-stale-sw";
 import { SiteCursor } from "../components/site/site-cursor";
 import { GoogleAnalytics } from "../components/site/google-analytics";
 import { defaultOgMeta, GA_MEASUREMENT_ID, GOOGLE_SITE_VERIFICATION, OG_IMAGE, SITE_ORIGIN } from "../lib/analytics";
+import { getAppConfig, isApiConfigured } from "../lib/api";
+import { PHONE_PRIMARY } from "../lib/site-data";
+
+function MaintenancePage({ onRetry, checking }: { onRetry: () => void; checking: boolean }) {
+  return (
+    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#07101f] px-6 text-center text-white">
+      <div className="pointer-events-none absolute -left-24 -top-24 size-72 rounded-full bg-[#f5b700]/10 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-32 -right-20 size-96 rounded-full bg-cyan-400/10 blur-3xl" />
+      <div className="relative max-w-lg rounded-[28px] border border-white/10 bg-white/[0.06] px-8 py-10 shadow-2xl shadow-black/30 backdrop-blur-xl sm:px-12">
+        <img
+          src="/public/logo/logo.png"
+          alt="Yaazh Cabs"
+          className="mx-auto rounded-2xl object-cover shadow-lg shadow-black/20"
+        />
+        {/* <p className="mt-7 text-xs font-bold uppercase tracking-[0.28em] text-[#f5b700]">
+          Yaazh Cabs
+        </p> */}
+        <h1 className="mt-4 text-3xl font-bold tracking-tight sm:text-4xl">
+          We will be back shortly
+        </h1>
+        <p className="mt-4 text-sm leading-7 text-white/65">
+          Our booking service is temporarily paused while we make improvements. Please check back
+          soon or contact our support team for assistance.
+        </p>
+        <a
+          href={`tel:+91${PHONE_PRIMARY.replace(/\D/g, "")}`}
+          className="mt-7 inline-flex items-center justify-center rounded-xl border border-white/15 bg-white/10 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/15"
+        >
+          Call support: <span className="ml-1 text-[#f5b700]">{PHONE_PRIMARY}</span>
+        </a>
+        <div>
+          <button
+            type="button"
+            onClick={onRetry}
+            disabled={checking}
+            className="mt-4 inline-flex min-h-11 items-center justify-center rounded-xl bg-[#f5b700] px-6 text-sm font-bold text-[#07101f] transition hover:bg-[#ffd34d] disabled:cursor-wait disabled:opacity-60"
+          >
+            {checking ? "Checking..." : "Try again"}
+          </button>
+        </div>
+      </div>
+    </main>
+  );
+}
+
+function PublicMaintenanceGate({ children }: { children: ReactNode }) {
+  const [maintenance, setMaintenance] = useState(false);
+  const [checking, setChecking] = useState(true);
+
+  async function checkMaintenance() {
+    if (!isApiConfigured()) {
+      setChecking(false);
+      return;
+    }
+    setChecking(true);
+    try {
+      const config = await getAppConfig();
+      const raw = config.remote_config?.["maintenance_mode"];
+      setMaintenance(raw === true || ["true", "1", "yes", "on"].includes(String(raw).toLowerCase()));
+    } catch {
+      setMaintenance(false);
+    } finally {
+      setChecking(false);
+    }
+  }
+
+  useEffect(() => {
+    void checkMaintenance();
+  }, []);
+
+  if (checking) return <>{children}</>;
+  return maintenance ? <MaintenancePage onRetry={() => void checkMaintenance()} checking={checking} /> : <>{children}</>;
+}
 
 function NotFoundComponent() {
   return (
@@ -174,7 +247,9 @@ function RootComponent() {
         <GoogleAnalytics />
         <SiteCursor />
         {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-        <Outlet />
+        <PublicMaintenanceGate>
+          <Outlet />
+        </PublicMaintenanceGate>
       </ThemeProvider>
     </QueryClientProvider>
   );

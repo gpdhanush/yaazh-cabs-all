@@ -188,6 +188,98 @@ async function getBooking(req, res) {
   });
 }
 
+async function bookingPaymentSummary(bookingId, connection = pool) {
+  const [bookings] = await connection.execute(
+    'SELECT id, estimated_total, final_total, payment_status FROM bookings WHERE id = ? LIMIT 1',
+    [bookingId]
+  );
+  if (!bookings[0]) { const error = new Error('Booking not found.'); error.statusCode = 404; throw error; }
+  const [payments] = await connection.execute(
+    `SELECT id, amount, method, payment_type, status, paid_at, created_at
+     FROM payments WHERE booking_id = ? ORDER BY created_at DESC`, [bookingId]
+  );
+  const fareDue = Number(bookings[0].final_total ?? bookings[0].estimated_total ?? 0);
+  const amountPaid = payments.filter((payment) => payment.status === 'success').reduce((sum, payment) => sum + Number(payment.amount), 0);
+  return {
+    booking_id: String(bookingId),
+    fare_due: fareDue,
+    estimated_total: Number(bookings[0].estimated_total),
+    final_total: bookings[0].final_total == null ? null : Number(bookings[0].final_total),
+    amount_paid: amountPaid,
+    balance_due: Math.max(0, fareDue - amountPaid),
+    payment_status: bookings[0].payment_status,
+    currency: 'INR',
+    payments,
+  };
+}
+
+async function getBookingPayment(req, res) {
+  const id = positiveId(req.params.bookingId, 'bookingId');
+  return success(res, await bookingPaymentSummary(id), 'Payment details fetched.');
+}
+
+async function recordBookingPayment(req, res) {
+  const bookingId = positiveId(req.params.bookingId, 'bookingId');
+  const amount = Number(req.body.amount);
+  const methods = ['cash', 'upi', 'card', 'netbanking', 'wallet', 'bank_transfer', 'other'];
+  const method = req.body.method || 'cash';
+  if (!Number.isFinite(amount) || amount <= 0) { const error = new Error('Payment amount must be greater than 0.'); error.statusCode = 422; throw error; }
+  if (!methods.includes(method)) { const error = new Error('Invalid payment method.'); error.statusCode = 422; throw error; }
+
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+    const [bookings] = await connection.execute(
+      'SELECT id, estimated_total, final_total FROM bookings WHERE id = ? FOR UPDATE', [bookingId]
+    );
+    if (!bookings[0]) { const error = new Error('Booking not found.'); error.statusCode = 404; throw error; }
+    const [paidRows] = await connection.execute(
+      "SELECT COALESCE(SUM(amount), 0) AS amount_paid FROM payments WHERE booking_id = ? AND status = 'success'", [bookingId]
+    );
+    const fareDue = Number(bookings[0].final_total ?? bookings[0].estimated_total ?? 0);
+    const amountPaid = Number(paidRows[0].amount_paid || 0);
+    const balanceDue = Math.max(0, fareDue - amountPaid);
+    if (req.body.allow_overpay !== true && amount > balanceDue + 0.009) {
+      const error = new Error(`Amount ₹${amount} exceeds balance due ₹${balanceDue}.`); error.statusCode = 422; throw error;
+    }
+    const paymentType = amount >= balanceDue - 0.009 ? 'final' : amountPaid > 0 ? 'partial' : 'advance';
+    const [payment] = await connection.execute(
+      `INSERT INTO payments (booking_id, payment_reference, gateway, method, payment_type, amount, currency, status, paid_at, gateway_response)
+       VALUES (?, ?, 'admin_payment', ?, ?, ?, 'INR', 'success', CURRENT_TIMESTAMP, ?)`,
+      [bookingId, `ADM-${bookingId}-${Date.now()}`, method, paymentType, amount, JSON.stringify({ note: req.body.note || null, admin_id: adminId(req) })]
+    );
+    const nextAmountPaid = amountPaid + amount;
+    const nextStatus = nextAmountPaid >= fareDue - 0.009 ? 'paid' : 'partial';
+    await connection.execute('UPDATE bookings SET payment_status = ? WHERE id = ?', [nextStatus, bookingId]);
+    await connection.commit();
+    return success(res, { ...(await bookingPaymentSummary(bookingId, connection)), payment_id: String(payment.insertId) }, 'Payment recorded.', 201);
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
+}
+
+async function setBookingPaymentStatus(req, res) {
+  const bookingId = positiveId(req.params.bookingId, 'bookingId');
+  const validStatuses = ['unpaid', 'partial', 'paid', 'refunded', 'failed'];
+  const paymentStatus = String(req.body.payment_status || '');
+  if (!validStatuses.includes(paymentStatus)) { const error = new Error('Invalid payment status.'); error.statusCode = 422; throw error; }
+  if (paymentStatus === 'paid') {
+    const summary = await bookingPaymentSummary(bookingId);
+    if (summary.balance_due > 0) {
+      req.body.amount = summary.balance_due;
+      req.body.method = 'other';
+      req.body.allow_overpay = true;
+      return recordBookingPayment(req, res);
+    }
+  }
+  const [result] = await pool.execute('UPDATE bookings SET payment_status = ? WHERE id = ?', [paymentStatus, bookingId]);
+  if (!result.affectedRows) { const error = new Error('Booking not found.'); error.statusCode = 404; throw error; }
+  return success(res, await bookingPaymentSummary(bookingId), 'Payment status updated.');
+}
+
 async function invoiceData(bookingId) {
   const [bookings] = await pool.execute(
     `SELECT id, booking_reference, customer_name, customer_phone, customer_email,
@@ -196,7 +288,10 @@ async function invoiceData(bookingId) {
   );
   if (!bookings[0]) { const error = new Error('Booking not found.'); error.statusCode = 404; throw error; }
   const [invoices] = await pool.execute('SELECT * FROM booking_invoices WHERE booking_id = ? LIMIT 1', [bookingId]);
-  return { booking: bookings[0], invoice: invoices[0] || null };
+  const [payments] = await pool.execute(
+    'SELECT amount, status FROM payments WHERE booking_id = ? ORDER BY created_at DESC', [bookingId]
+  );
+  return { booking: bookings[0], invoice: invoices[0] ? { ...invoices[0], payments } : { payments } };
 }
 
 async function downloadBookingInvoice(req, res) {
@@ -213,8 +308,25 @@ async function resendBookingInvoice(req, res) {
   const email = String(req.body.email || data.booking.customer_email || '').trim().toLowerCase();
   if (!email) { const error = new Error('Customer email is required to send the invoice.'); error.statusCode = 422; throw error; }
   const pdf = await createInvoicePdf(data);
+  const invoiceNumber = data.invoice?.invoice_number || `INV-${data.booking.booking_reference}`;
+  const total = Number(data.invoice?.total_amount ?? data.booking.final_total ?? data.booking.estimated_total ?? 0);
+  const paymentRows = data.invoice?.payments || [];
+  const paid = paymentRows.length
+    ? paymentRows.filter((payment) => payment.status === 'success').reduce((sum, payment) => sum + Number(payment.amount || 0), 0)
+    : Number(data.invoice?.amount_paid || 0);
+  const balance = Math.max(0, total - paid);
   try {
-    await sendBookingInvoice({ to: email, name: data.booking.customer_name, bookingReference: data.booking.booking_reference, pdf });
+    await sendBookingInvoice({
+      to: email,
+      name: data.booking.customer_name,
+      bookingReference: data.booking.booking_reference,
+      invoiceNumber,
+      pickup: data.booking.pickup_location,
+      drop: data.booking.drop_location,
+      total,
+      balance,
+      pdf,
+    });
   } catch (error) {
     if (isSmtpAuthError(error)) {
       error.statusCode = 503;
@@ -948,4 +1060,4 @@ async function endAssignment(req, res) {
   return success(res, { id: String(id), is_current: false }, 'Assignment ended.');
 }
 
-module.exports = { profile, updateProfile, settings, updateSetting, dashboard, listBookings, getBooking, downloadBookingInvoice, resendBookingInvoice, confirmBooking, rejectBooking, cancelBooking, assignDriver, listCustomers, getCustomer, listDrivers, getDriver, saveDriver, deleteDriver, listVehicleCategories, getVehicleCategory, saveVehicleCategory, deleteVehicleCategory, registerAdminDevice, reports, listReviews, listEnquiries, getEnquiry, updateEnquiry, listNotifications, deleteNotification, listAdminUsers, getAdminUser, saveAdminUser, activateAdminUser, deactivateAdminUser, uploadMedia, uploadDriverPhoto, listRemoteConfig, createRemoteConfig, updateRemoteConfig, listAuditLogs, getAuditLog, listAdminRoles, getAdminRole, listPermissions, listRoutes, listAdminCities, getRoute, saveRoute, deleteRoute, listTariffs, getTariff, saveTariff, deleteTariff, listFaqs, getFaq, saveFaq, deleteFaq, listGallery, createGalleryGroup, createGalleryImage, updateGalleryImage, deleteGalleryRecord, listReviewsAdmin, saveReview, getReview, moderateReview, deleteReview, listVehicles, getVehicle, saveVehicle, deleteVehicle, listAssignments, createAssignment, endAssignment };
+module.exports = { profile, updateProfile, settings, updateSetting, dashboard, listBookings, getBooking, getBookingPayment, recordBookingPayment, setBookingPaymentStatus, downloadBookingInvoice, resendBookingInvoice, confirmBooking, rejectBooking, cancelBooking, assignDriver, listCustomers, getCustomer, listDrivers, getDriver, saveDriver, deleteDriver, listVehicleCategories, getVehicleCategory, saveVehicleCategory, deleteVehicleCategory, registerAdminDevice, reports, listReviews, listEnquiries, getEnquiry, updateEnquiry, listNotifications, deleteNotification, listAdminUsers, getAdminUser, saveAdminUser, activateAdminUser, deactivateAdminUser, uploadMedia, uploadDriverPhoto, listRemoteConfig, createRemoteConfig, updateRemoteConfig, listAuditLogs, getAuditLog, listAdminRoles, getAdminRole, listPermissions, listRoutes, listAdminCities, getRoute, saveRoute, deleteRoute, listTariffs, getTariff, saveTariff, deleteTariff, listFaqs, getFaq, saveFaq, deleteFaq, listGallery, createGalleryGroup, createGalleryImage, updateGalleryImage, deleteGalleryRecord, listReviewsAdmin, saveReview, getReview, moderateReview, deleteReview, listVehicles, getVehicle, saveVehicle, deleteVehicle, listAssignments, createAssignment, endAssignment };

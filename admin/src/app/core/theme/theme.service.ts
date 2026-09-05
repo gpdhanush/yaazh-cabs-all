@@ -95,11 +95,11 @@ export class ThemeService {
       next: (res) => {
         const rows = Array.isArray(res.data) ? res.data : [];
         const map = Object.fromEntries(rows.map((r) => [String(r.key ?? ''), String(r.value ?? '')]));
-        this.applyBrand(map['admin_primary_color'], map['admin_secondary_color']);
+        if (normalizeHex(map['admin_primary_color']) || normalizeHex(map['admin_secondary_color'])) {
+          this.applyBrand(map['admin_primary_color'], map['admin_secondary_color']);
+        }
       },
-      error: () => {
-        this.applyBrand(DEFAULT_THEME.primary, DEFAULT_THEME.secondary);
-      },
+      error: () => undefined,
     });
   }
 

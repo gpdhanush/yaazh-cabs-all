@@ -161,7 +161,7 @@ export class TestimonialFormPage implements OnInit {
     review: ['', Validators.required],
     rating: this.fb.nonNullable.control(5),
     approval_status: ['approved'],
-    is_featured: this.fb.nonNullable.control(false),
+    is_featured: this.fb.nonNullable.control(true),
     admin_reply: [''],
   });
 

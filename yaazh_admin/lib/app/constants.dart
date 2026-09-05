@@ -28,6 +28,7 @@ class AppConstants {
   static const String appName = 'Yaazh Admin';
   static const String appVersion = '1.0.0+1';
   static const String appLogo = 'assets/img/app-logo-admin.png';
+  static const String loginLogo = 'assets/img/logo-light.png';
   static const String brandMark = 'YZ';
 
   static const String defaultBaseUrl =

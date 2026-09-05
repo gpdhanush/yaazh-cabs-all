@@ -9,7 +9,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { AdminApiService } from '../../core/api/admin-api.service';
 import { Booking, BookingDriver } from '../../core/api/api.types';
-import { driverPhotoUrl } from '../../core/api/media-url';
+import { DEFAULT_DRIVER_IMAGE, driverPhotoUrl } from '../../core/api/media-url';
 import { canAssignDriver, statusLabel, statusTone } from '../../shared/status-chip';
 
 @Component({
@@ -107,7 +107,7 @@ import { canAssignDriver, statusLabel, statusTone } from '../../shared/status-ch
                   <div class="bk-driver-cell">
                     <div class="bk-driver-cell__avatar">
                       @if (driverPhoto(d); as src) {
-                        <img [src]="src" [alt]="d.name" (error)="markPhotoFailed(d.id)" />
+                        <img [src]="src" [alt]="d.name" (error)="useDefaultDriverImage($event)" />
                       } @else {
                         {{ initials(d.name) }}
                       }
@@ -242,15 +242,16 @@ export class BookingsPage implements OnInit, AfterViewInit {
   tone = statusTone;
   label = statusLabel;
   canAssign = canAssignDriver;
-  private readonly photoFailed = signal<Record<string, boolean>>({});
 
   driverPhoto(d: BookingDriver): string | null {
-    if (!d.id || this.photoFailed()[d.id]) return null;
-    return driverPhotoUrl(d);
+    if (!d.id) return DEFAULT_DRIVER_IMAGE;
+    return driverPhotoUrl(d) ?? DEFAULT_DRIVER_IMAGE;
   }
 
-  markPhotoFailed(id: string): void {
-    this.photoFailed.update((m) => ({ ...m, [id]: true }));
+  useDefaultDriverImage(event: Event): void {
+    const image = event.currentTarget as HTMLImageElement;
+    image.onerror = null;
+    image.src = DEFAULT_DRIVER_IMAGE;
   }
 
   initials(name: string): string {

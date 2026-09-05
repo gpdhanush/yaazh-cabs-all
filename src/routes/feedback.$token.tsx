@@ -14,6 +14,8 @@ import {
 } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
+const DEFAULT_DRIVER_IMAGE = "/driver-default.png";
+
 const PRESETS: Record<number, string[]> = {
   5: ["Punctual and professional", "Clean vehicle", "Smooth comfortable ride", "Very polite driver"],
   4: ["Good trip overall", "On-time pickup", "Comfortable ride", "Helpful driver"],
@@ -140,24 +142,21 @@ function FeedbackPage() {
               <section className="rounded-2xl border border-border bg-card p-5">
                 <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">Driver</p>
                 <div className="mt-3 flex items-center gap-3">
-                  {mediaUrl(data.driver.photo_url) || data.driver.id ? (
-                    <img
-                      src={
-                        mediaUrl(data.driver.photo_url) ??
-                        mediaUrl(`/api/v1/public/drivers/${data.driver.id}/photo`) ??
-                        ""
-                      }
-                      alt=""
-                      className="size-14 shrink-0 rounded-full bg-primary/10 object-cover"
-                      onError={(e) => {
-                        e.currentTarget.style.display = "none";
-                      }}
-                    />
-                  ) : (
-                    <div className="flex size-14 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-brand">
-                      {data.driver.name.slice(0, 1)}
-                    </div>
-                  )}
+                  <img
+                    src={
+                      mediaUrl(data.driver.photo_url) ??
+                      (data.driver.id
+                        ? mediaUrl(`/api/v1/public/drivers/${data.driver.id}/photo`)
+                        : null) ??
+                      DEFAULT_DRIVER_IMAGE
+                    }
+                    alt=""
+                    className="size-14 shrink-0 rounded-full bg-primary/10 object-cover"
+                    onError={(e) => {
+                      e.currentTarget.onerror = null;
+                      e.currentTarget.src = DEFAULT_DRIVER_IMAGE;
+                    }}
+                  />
                   <div>
                     <p className="font-semibold">{data.driver.name}</p>
                     {data.vehicle ? (

@@ -16,7 +16,7 @@ import { ApiError } from '../../core/api/api.types';
       <div class="login-stage login-stage--single">
         <div class="login-card">
           <div class="login-card__head">
-            <div class="login-brand-mark">YZ</div>
+            <img class="login-brand-mark" src="app-logo.png" alt="Yaazh Cabs" />
             <div>
               <p class="login-copy__eyebrow">Initial setup</p>
               <h2>Create admin user</h2>

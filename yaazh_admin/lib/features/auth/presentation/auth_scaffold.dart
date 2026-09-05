@@ -52,14 +52,19 @@ class AuthScaffold extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           const SizedBox(height: 12),
-                          const Center(child: AppLogo(size: 88)),
-                          const SizedBox(height: 16),
-                          Text(
-                            AppConstants.appName,
-                            textAlign: TextAlign.center,
-                            style: theme.textTheme.headlineSmall,
+                          const Center(
+                            child: AppLogo(
+                              size: 250,
+                              asset: AppConstants.loginLogo,
+                            ),
                           ),
-                          const SizedBox(height: 28),
+                          const SizedBox(height: 16),
+                          // Text(
+                          //   AppConstants.appName,
+                          //   textAlign: TextAlign.center,
+                          //   style: theme.textTheme.headlineSmall,
+                          // ),
+                          const SizedBox(height: 50),
                           Text(title, style: theme.textTheme.headlineSmall),
                           const SizedBox(height: 6),
                           Text(

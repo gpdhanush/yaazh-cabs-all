@@ -4,15 +4,16 @@ import 'package:yaazh_admin/app/constants.dart';
 class AppLogo extends StatelessWidget {
   final double size;
   final bool clip;
+  final String? asset;
 
-  const AppLogo({super.key, this.size = 96, this.clip = false});
+  const AppLogo({super.key, this.size = 96, this.clip = false, this.asset});
 
   @override
   Widget build(BuildContext context) {
     final image = Image.asset(
-      AppConstants.appLogo,
+      asset ?? AppConstants.loginLogo,
       width: size,
-      height: size,
+      // height: size,
       fit: BoxFit.contain,
       filterQuality: FilterQuality.high,
     );

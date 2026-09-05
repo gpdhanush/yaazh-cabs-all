@@ -12,7 +12,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { AdminApiService } from '../../core/api/admin-api.service';
-import { driverPhotoUrl, mediaUrl } from '../../core/api/media-url';
+import { DEFAULT_DRIVER_IMAGE, driverPhotoUrl, mediaUrl } from '../../core/api/media-url';
 import { YaDatepickerComponent } from '../../shared/ya-datepicker.component';
 
 type FieldOpt = { label: string; value: string | boolean };
@@ -60,7 +60,7 @@ function phoneValidator(control: AbstractControl): ValidationErrors | null {
             <div class="ya-upload" [class.ya-upload--filled]="!!photoPreview()">
               <div class="ya-upload__preview">
                 @if (photoPreview()) {
-                  <img [src]="photoPreview()!" alt="Driver photo" />
+                  <img [src]="photoPreview()!" alt="Driver photo" (error)="useDefaultDriverImage($event)" />
                 } @else {
                   <div class="ya-upload__placeholder">
                     <mat-icon>person</mat-icon>
@@ -411,6 +411,12 @@ export class DriverFormPage implements OnInit {
         this.error.set(err instanceof Error ? err.message : 'Photo upload failed');
       },
     });
+  }
+
+  useDefaultDriverImage(event: Event): void {
+    const image = event.currentTarget as HTMLImageElement;
+    image.onerror = null;
+    image.src = DEFAULT_DRIVER_IMAGE;
   }
 
   submit(): void {
