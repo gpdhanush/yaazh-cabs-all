@@ -1,6 +1,6 @@
 # Yaazh Cabs public website — SEO
 
-Customer site: [https://yaazhcabs.in](https://yaazhcabs.in)  
+Customer site: [https://yaazhcabsudumalpet.in](https://yaazhcabsudumalpet.in)
 This note is an audit of the current public site plus a step-by-step plan (Search Console, Analytics, local SEO, landing pages).
 
 ---
@@ -16,7 +16,7 @@ This note is an audit of the current public site plus a step-by-step plan (Searc
 
 ## What is already in good shape
 
-- Home meta in [`src/routes/index.tsx`](../src/routes/index.tsx): title, description, `og:url`, canonical `https://yaazhcabs.in/`.
+- Home meta in [`src/routes/index.tsx`](../src/routes/index.tsx): title, description, `og:url`, canonical `https://yaazhcabsudumalpet.in/`.
 - Track-booking meta in [`src/routes/status.tsx`](../src/routes/status.tsx).
 - Feedback pages are `noindex, nofollow` (correct).
 - [`public/robots.txt`](../public/robots.txt) allows crawlers and points at the sitemap.
@@ -42,12 +42,11 @@ This note is an audit of the current public site plus a step-by-step plan (Searc
 
 ### 1. Google Search Console (do this first)
 
-1. Open [Google Search Console](https://search.google.com/search-console) → Add property `https://yaazhcabs.in`.
-2. Also add `https://www.yaazhcabs.in` if that host exists. Keep **one** canonical host (the site already uses non-www).
+1. Open [Google Search Console](https://search.google.com/search-console) → Add property `https://yaazhcabsudumalpet.in`.
 3. Verify with a DNS TXT record **or** HTML meta `google-site-verification` in [`src/routes/__root.tsx`](../src/routes/__root.tsx).
-4. Submit `https://yaazhcabs.in/sitemap.xml`.
+4. Submit `https://yaazhcabsudumalpet.in/sitemap.xml`.
 5. Request indexing for `/`.
-6. In cPanel `.htaccess`, 301 `www` and `http` to `https://yaazhcabs.in`.
+6. In cPanel `.htaccess`, 301 `www` and `http` to `https://yaazhcabsudumalpet.in`.
 
 ### 2. Google Analytics 4
 
@@ -72,7 +71,7 @@ This note is an audit of the current public site plus a step-by-step plan (Searc
 ### 4. Social / share image (missing today)
 
 1. Add a 1200×630 image, e.g. `public/og-cover.jpg`.
-2. Set `og:image` and `twitter:image` to the absolute URL `https://yaazhcabs.in/og-cover.jpg` on home and `/status`.
+2. Set `og:image` and `twitter:image` to the absolute URL `https://yaazhcabsudumalpet.in/og-cover.jpg` on home and `/status`.
 3. Root meta currently has **no** `og:image`.
 
 ### 5. Strengthen structured data
@@ -101,7 +100,7 @@ Each page needs a unique title, description, H1, 300–500 words, a book CTA, an
 ### 8. Technical crawl (cPanel SPA)
 
 1. Confirm `.htaccess` serves `index.html` for unknown paths **and** still exposes `/robots.txt`, `/sitemap.xml`, `/manifest.webmanifest`.
-2. The TypeScript sitemap is a **server route**. On **static cPanel**, check `https://yaazhcabs.in/sitemap.xml`. If it 404s, add a static [`public/sitemap.xml`](../public/sitemap.xml) before the next deploy.
+2. The TypeScript sitemap is a **server route**. On **static cPanel**, check `https://yaazhcabsudumalpet.in/sitemap.xml`. If it 404s, add a static [`public/sitemap.xml`](../public/sitemap.xml) before the next deploy.
 3. Rebuild after any `VITE_*` change ([`docs/cpanel-deploy.md`](cpanel-deploy.md)).
 
 ### 9. Performance (Core Web Vitals)
@@ -110,7 +109,7 @@ Each page needs a unique title, description, H1, 300–500 words, a book CTA, an
 2. Lazy-load below-fold images.
 3. Subset or self-host Inter (`preconnect` is already in the root head).
 4. Keep `prefers-reduced-motion`; do not load the scroll-journey rail on small screens.
-5. Run [PageSpeed Insights](https://pagespeed.web.dev/) on `yaazhcabs.in` and fix LCP (hero image) first.
+5. Run [PageSpeed Insights](https://pagespeed.web.dev/) on `yaazhcabsudumalpet.in` and fix LCP (hero image) first.
 
 ### 10. Images and accessibility
 

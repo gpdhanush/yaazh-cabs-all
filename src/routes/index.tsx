@@ -18,7 +18,7 @@ import { defaultOgMeta } from "@/lib/analytics";
 const title = "Yaazh Cabs Udumalpet | Airport, Outstation & Tour Taxi";
 const description =
   "Book chauffeur-driven sedans, Ertiga, Innova, SUV and tempo traveller cabs in Udumalpet. Airport transfers, one-way, round trip and Ooty–Kodaikanal tour packages, 24×7.";
-const url = "https://yaazhcabs.in/";
+const url = "https://yaazhcabsudumalpet.in/";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -45,7 +45,7 @@ export const Route = createFileRoute("/")({
           name: "Yaazh Cabs",
           areaServed: "Udumalpet, Tamil Nadu",
           telephone: "+919360055761",
-          email: "hello@yaazhcabs.in",
+          email: "hello@yaazhcabsudumalpet.in",
           slogan: "Safe journey, every time",
           url,
           address: {

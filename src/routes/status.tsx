@@ -35,7 +35,7 @@ import { defaultOgMeta } from "@/lib/analytics";
 const title = "Track Your Booking | Yaazh Cabs Udumalpet";
 const description =
   "Check your Yaazh Cabs booking status — confirmation, driver assignment, cab number and pickup time updates using your booking reference or mobile number.";
-const url = "https://yaazhcabs.in/status";
+const url = "https://yaazhcabsudumalpet.in/status";
 
 type View = "form" | "list" | "detail";
 

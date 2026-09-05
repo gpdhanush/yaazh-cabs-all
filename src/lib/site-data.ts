@@ -160,7 +160,7 @@ export const PHONE_PRIMARY = "93600 55761";
 export const PHONE_SECONDARY = "63690 22364";
 
 export const ADMIN_WHATSAPP = "917845456609";
-export const ADMIN_EMAIL = "hello@yaazhcabs.in";
+export const ADMIN_EMAIL = "hello@yaazhcabsudumalpet.in";
 
 export const BUSINESS_ADDRESS = "Udumalpet, Tiruppur District, Tamil Nadu 642126";
 export const BUSINESS_HOURS = "Open 24×7";

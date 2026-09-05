@@ -15,16 +15,20 @@ const adminRoutes = require('./routes/admin.routes');
 const driverRoutes = require('./routes/driver.routes');
 
 const app = express();
-const configuredOrigins = (process.env.CORS_ORIGIN || process.env.CORS_ORIGINS || '')
+const configuredOrigins = [process.env.CORS_ORIGIN, process.env.CORS_ORIGINS]
+  .filter(Boolean)
+  .join(',')
   .split(',')
   .map((origin) => origin.trim())
+  .map((origin) => origin.replace(/\/$/, ''))
   .filter(Boolean);
 
 app.disable('x-powered-by');
 app.use(requestLogger);
 app.use(cors({
   origin(origin, callback) {
-    if (!origin || configuredOrigins.includes(origin) || (process.env.NODE_ENV !== 'production' && !configuredOrigins.length)) {
+    const normalizedOrigin = origin?.replace(/\/$/, '');
+    if (!origin || configuredOrigins.includes(normalizedOrigin) || (process.env.NODE_ENV !== 'production' && !configuredOrigins.length)) {
       return callback(null, true);
     }
     return callback(new Error('Origin is not allowed by CORS'));

@@ -8,8 +8,8 @@ The **API** stays separate: `backend/` on a Node subdomain.
 ## Architecture
 
 ```text
-https://yaazhcabs.in          → this app (static SPA in public_html)
-https://api.yaazhcabs.in      → backend/ Fastify API (Node Selector)
+https://yaazhcabsudumalpet.in       → this app (static SPA in public_html)
+https://api.yaazhcabsudumalpet.in   → Backend-node API (Node Selector)
 ```
 
 ## 1. Build (SPA)
@@ -48,7 +48,7 @@ cPanel → SSL/TLS Status → AutoSSL, then uncomment HTTPS redirect in `.htacce
 
 For the `Backend-node` API on cPanel, upload `package.json` and `package-lock.json`, run `npm ci --omit=dev` in the `Backend-node` directory using Node Selector/SSH, and restart the application. This is required after adding dependencies such as `nodemailer`, `multer`, and `pdfkit`.
 
-Set the Node application environment variable `CORS_ORIGIN` (or `CORS_ORIGINS`) to a comma-separated list containing every browser origin, for example `https://yaazhcabs.in,https://www.yaazhcabs.in,https://admin.yaazhcabs.in`. Do not leave only localhost origins in production.
+Set the Node application environment variable `CORS_ORIGIN` or `CORS_ORIGINS` to `https://yaazhcabsudumalpet.in,https://admin.yaazhcabsudumalpet.in`. Both variable names are merged, and trailing slashes are normalized. Do not leave only localhost origins in production.
 
 For SMTP, use the full mailbox address as `MAIL_USERNAME`, the current mailbox password as `MAIL_PASSWORD` without surrounding quote characters, port `465`, `MAIL_SECURE=true`, and `MAIL_AUTH_METHOD=LOGIN`. If the server rejects authentication with `535`, reset the mailbox password in cPanel Email Accounts and update the Node application environment before restarting it.
 
@@ -71,13 +71,13 @@ After DB migrate, run `bash scripts/seed.sh` in `backend/` so FAQs, testimonials
 2. Set API CORS allowlist (comma-separated):
 
 ```env
-CORS_ORIGINS=https://yaazhcabs.in,https://www.yaazhcabs.in,http://localhost:4000
+CORS_ORIGINS=https://yaazhcabsudumalpet.in,https://admin.yaazhcabsudumalpet.in,http://localhost:4000
 ```
 
 3. Set site env **before** building the SPA (Vite bakes `VITE_*` at build time):
 
 ```env
-VITE_API_URL=https://api.yaazhcabs.in
+VITE_API_URL=https://api.yaazhcabsudumalpet.in
 ```
 
 Local dev example: `VITE_API_URL=http://127.0.0.1:3000` then `npm run dev`.

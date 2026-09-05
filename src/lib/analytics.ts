@@ -1,5 +1,5 @@
 export const SITE_ORIGIN =
-  (import.meta.env["VITE_SITE_URL"] as string | undefined)?.replace(/\/$/, "") || "https://yaazhcabs.in";
+  (import.meta.env["VITE_SITE_URL"] as string | undefined)?.replace(/\/$/, "") || "https://yaazhcabsudumalpet.in";
 
 export const OG_IMAGE = `${SITE_ORIGIN}/og-cover.jpg`;
 

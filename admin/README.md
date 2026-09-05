@@ -25,7 +25,7 @@ Default seed login:
 ## Environment
 
 - Development: `src/environments/environment.development.ts` → `http://127.0.0.1:3000`
-- Production: `src/environments/environment.ts` → `https://api.yaazhcabs.in`
+- Production: `src/environments/environment.ts` → `https://api.yaazhcabsudumalpet.in`
 
 Ensure backend `CORS_ORIGINS` includes `http://localhost:4200`.
 
