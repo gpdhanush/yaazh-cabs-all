@@ -12,6 +12,7 @@ const authRoutes = require('./routes/auth.routes');
 const publicRoutes = require('./routes/public.routes');
 const customerRoutes = require('./routes/customer.routes');
 const adminRoutes = require('./routes/admin.routes');
+const driverRoutes = require('./routes/driver.routes');
 
 const app = express();
 const configuredOrigins = (process.env.CORS_ORIGIN || '')
@@ -62,6 +63,7 @@ app.get('/ready', async (req, res, next) => {
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/public', publicRoutes);
 app.use('/api/v1/customer', customerRoutes);
+app.use('/api/v1/driver', driverRoutes);
 app.use('/api/v1/admin', adminRoutes);
 
 app.use(notFound);

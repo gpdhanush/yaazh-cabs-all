@@ -61,6 +61,15 @@ async function findSession(refreshHash, type) {
   return rows[0] || null;
 }
 
+async function findAccessSession(id, type, userId) {
+  const columns = { customer: 'customer_id', driver: 'driver_id', admin: 'admin_user_id' };
+  const [rows] = await pool.execute(
+    `SELECT id, expires_at, revoked_at FROM auth_sessions
+     WHERE id = ? AND user_type = ? AND ${columns[type]} = ? LIMIT 1`, [id, type, userId]
+  );
+  return rows[0] || null;
+}
+
 async function revokeSession(id) {
   await pool.execute('UPDATE auth_sessions SET revoked_at = CURRENT_TIMESTAMP WHERE id = ? AND revoked_at IS NULL', [id]);
 }
@@ -81,7 +90,7 @@ async function revokeAllSessions(type, userId) {
 
 async function loadAdminPermissions(userId) {
   const [rows] = await pool.execute(
-    `SELECT CONCAT(p.module, ':', p.action) AS permission
+    `SELECT CONCAT(p.module, '.', p.action) AS permission
      FROM admin_users u INNER JOIN role_permissions rp ON rp.role_id = u.role_id
      INNER JOIN permissions p ON p.id = rp.permission_id WHERE u.id = ?`, [userId]
   );
@@ -102,4 +111,4 @@ async function updatePassword(type, userId, passwordHash) {
   return result.affectedRows > 0;
 }
 
-module.exports = { findUser, findUserById, createCustomer, updateLastLogin, createSession, findSession, revokeSession, revokeSessionByHash, revokeAllSessions, loadAdminPermissions, updateAdminPassword, updatePassword };
+module.exports = { findUser, findUserById, createCustomer, updateLastLogin, createSession, findSession, findAccessSession, revokeSession, revokeSessionByHash, revokeAllSessions, loadAdminPermissions, updateAdminPassword, updatePassword };

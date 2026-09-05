@@ -44,12 +44,11 @@ The following exact Postman requests remain to be implemented in subsequent slic
 
 ### Driver
 
-- `GET|PUT /api/v1/driver/profile` (`drivers`)
-- `GET|PUT /api/v1/driver/status` (`drivers`)
-- `GET /api/v1/driver/offers`, `GET /api/v1/driver/offers/:offerId`, `POST .../:offerId/accept`, `POST .../:offerId/reject` (`booking_driver_offers`, `bookings`)
-- `GET /api/v1/driver/trips`, `GET /api/v1/driver/trips/:bookingId` (`bookings`)
+- Implemented: `GET|PUT /api/v1/driver/profile` and `GET|PUT /api/v1/driver/status` (`drivers`)
+- Implemented: `GET /api/v1/driver/offers`, `GET /api/v1/driver/offers/:offerId`, `POST .../:offerId/accept`, `POST .../:offerId/reject` (`booking_driver_offers`, `bookings`, `trip_events`)
+- Implemented: `GET /api/v1/driver/trips`, `GET /api/v1/driver/trips/:bookingId` (`bookings`, `trip_events`)
+- Implemented: `POST /api/v1/driver/location` (`driver_locations`, `drivers`)
 - Trip transitions: `POST /api/v1/driver/trips/:bookingId/on-the-way`, `/arrived`, `/start`, `/complete` (`bookings`, `trip_events`, `booking_status_history`)
-- `POST /api/v1/driver/location` (`driver_locations`, `drivers`)
 - `GET|POST /api/v1/driver/documents` (`driver_documents`)
 - `GET /api/v1/driver/wallet`, `GET /api/v1/driver/wallet/transactions` (`driver_wallet_transactions`)
 - `GET|POST /api/v1/driver/payouts` (`driver_payouts`)
@@ -57,6 +56,7 @@ The following exact Postman requests remain to be implemented in subsequent slic
 
 ### Admin
 
+- Implemented: `GET /api/v1/admin/dashboard` (`bookings`, `drivers`, `customers`, `contact_enquiries`)
 - Bookings: `GET|POST /api/v1/admin/bookings`, `GET /:bookingId`, `POST /:bookingId/confirm`, `/cancel`, `/assign-driver` (`bookings`, offers, history, audit)
 - Customers/drivers: `GET /api/v1/admin/customers`, `GET /:customerId`, `GET /api/v1/admin/drivers`, `GET /:driverId`, `PUT /:driverId`, `POST /:driverId/approve`, `/reject` (`customers`, `drivers`)
 - Fleet: `GET|POST /api/v1/admin/vehicles`, `PUT /:vehicleId`, `GET|POST /api/v1/admin/driver-assignments` (`vehicles`, assignments)
