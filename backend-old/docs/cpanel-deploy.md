@@ -39,12 +39,24 @@ CORS_ORIGINS=https://yourdomain.com,https://admin.yourdomain.com
 
 ```bash
 cd ~/cab-api
+rm -rf node_modules/.prisma
 npm ci
 bash scripts/migrate.sh
 bash scripts/seed.sh
 npx prisma generate
+npm run prisma:test
 npm run build
 ```
+
+The Prisma client is configured for the binary engine and includes the
+`debian-openssl-3.0.x` engine required by this hosting environment. If the
+installation was previously generated with a different Prisma version, use
+`rm -rf node_modules && npm install` before `npx prisma generate`.
+
+`npm run prisma:test` runs `SELECT 1` through Prisma without starting the API.
+It should pass before the application is restarted. If it still reports
+`PANIC: timer has gone away`, test the cPanel application with Node.js 20
+before changing the database or application code.
 
 The build uses the cPanel environment variables configured for the Node.js application. A `.env` file is optional; do not commit production credentials.
 

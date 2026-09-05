@@ -1,6 +1,6 @@
 export const environment = {
   production: true,
-  apiUrl: 'https://api.yaazhcabsudumalpet.in',
+  apiUrl: 'https://luxe-motion-ride-1.onrender.com',
   appName: 'Yaazh Admin',
   appVersion: '1.0.0',
   firebase: {
