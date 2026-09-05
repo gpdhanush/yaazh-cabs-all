@@ -655,6 +655,13 @@ async function listRoutes(req, res) {
   return success(res, rows.map((row) => ({ ...row, id: String(row.id), pickup_city_id: String(row.pickup_city_id), drop_city_id: String(row.drop_city_id), corridor: `${row.pickup_city_name} -> ${row.drop_city_name}` })));
 }
 
+async function listAdminCities(req, res) {
+  const [rows] = await pool.execute(
+    'SELECT id, name, slug, state, is_airport, is_active FROM cities WHERE is_active = 1 ORDER BY name, id',
+  );
+  return success(res, rows.map((row) => ({ ...row, id: String(row.id) })));
+}
+
 async function getRoute(req, res) {
   const id = positiveId(req.params.routeId, 'routeId');
   const [rows] = await pool.execute(
@@ -902,4 +909,4 @@ async function endAssignment(req, res) {
   return success(res, { id: String(id), is_current: false }, 'Assignment ended.');
 }
 
-module.exports = { profile, updateProfile, settings, updateSetting, dashboard, listBookings, getBooking, confirmBooking, rejectBooking, cancelBooking, assignDriver, listCustomers, getCustomer, listDrivers, getDriver, saveDriver, deleteDriver, listVehicleCategories, getVehicleCategory, saveVehicleCategory, deleteVehicleCategory, registerAdminDevice, reports, listReviews, listEnquiries, getEnquiry, updateEnquiry, listNotifications, deleteNotification, listAdminUsers, getAdminUser, saveAdminUser, activateAdminUser, deactivateAdminUser, uploadMedia, uploadDriverPhoto, listRemoteConfig, createRemoteConfig, updateRemoteConfig, listAuditLogs, getAuditLog, listAdminRoles, getAdminRole, listPermissions, listRoutes, getRoute, saveRoute, deleteRoute, listTariffs, getTariff, saveTariff, deleteTariff, listFaqs, getFaq, saveFaq, deleteFaq, listGallery, createGalleryGroup, createGalleryImage, updateGalleryImage, deleteGalleryRecord, listReviewsAdmin, saveReview, getReview, moderateReview, deleteReview, listVehicles, getVehicle, saveVehicle, deleteVehicle, listAssignments, createAssignment, endAssignment };
+module.exports = { profile, updateProfile, settings, updateSetting, dashboard, listBookings, getBooking, confirmBooking, rejectBooking, cancelBooking, assignDriver, listCustomers, getCustomer, listDrivers, getDriver, saveDriver, deleteDriver, listVehicleCategories, getVehicleCategory, saveVehicleCategory, deleteVehicleCategory, registerAdminDevice, reports, listReviews, listEnquiries, getEnquiry, updateEnquiry, listNotifications, deleteNotification, listAdminUsers, getAdminUser, saveAdminUser, activateAdminUser, deactivateAdminUser, uploadMedia, uploadDriverPhoto, listRemoteConfig, createRemoteConfig, updateRemoteConfig, listAuditLogs, getAuditLog, listAdminRoles, getAdminRole, listPermissions, listRoutes, listAdminCities, getRoute, saveRoute, deleteRoute, listTariffs, getTariff, saveTariff, deleteTariff, listFaqs, getFaq, saveFaq, deleteFaq, listGallery, createGalleryGroup, createGalleryImage, updateGalleryImage, deleteGalleryRecord, listReviewsAdmin, saveReview, getReview, moderateReview, deleteReview, listVehicles, getVehicle, saveVehicle, deleteVehicle, listAssignments, createAssignment, endAssignment };

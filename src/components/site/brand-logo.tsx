@@ -38,7 +38,7 @@ export function BrandLogo({ variant = "nav", className }: BrandLogoProps) {
   if (variant === "footer") {
     return (
       <img
-        src="/logo-horizontal-dark.png"
+        src="/logo/logo.png"
         alt="Yaazh Cabs"
         className={cn("h-11 w-auto max-w-[220px] object-contain object-left", className)}
         width={220}
@@ -50,18 +50,18 @@ export function BrandLogo({ variant = "nav", className }: BrandLogoProps) {
   return (
     <span className={cn("relative inline-flex items-center", className)}>
       <img
-        src="/logo-horizontal.png"
+        src="/logo/logo-light.png"
         alt="Yaazh Cabs"
-        className="h-9 w-auto max-w-[168px] object-contain object-left dark:hidden sm:max-w-[200px] md:h-10 md:max-w-[230px]"
-        width={230}
-        height={52}
+        className="h-12 w-auto max-w-[230px] object-contain object-left dark:hidden sm:max-w-[270px] md:h-14 md:max-w-[310px]"
+        width={310}
+        height={70}
       />
       <img
-        src="/logo-horizontal-dark.png"
+        src="/logo/logo.png"
         alt="Yaazh Cabs"
-        className="hidden h-9 w-auto max-w-[168px] object-contain object-left dark:block sm:max-w-[200px] md:h-10 md:max-w-[230px]"
-        width={230}
-        height={52}
+        className="hidden h-12 w-auto max-w-[230px] object-contain object-left dark:block sm:max-w-[270px] md:h-14 md:max-w-[310px]"
+        width={310}
+        height={70}
       />
     </span>
   );

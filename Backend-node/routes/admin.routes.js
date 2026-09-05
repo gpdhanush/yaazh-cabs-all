@@ -42,6 +42,7 @@ router.put('/admin-users/:adminUserId', requirePermission('admin_users.manage'),
 router.post('/admin-users/:adminUserId/activate', requirePermission('admin_users.manage'), asyncHandler(controller.activateAdminUser));
 router.post('/admin-users/:adminUserId/deactivate', requirePermission('admin_users.manage'), asyncHandler(controller.deactivateAdminUser));
 router.get('/routes', requirePermission('routes.manage'), asyncHandler(controller.listRoutes));
+router.get('/cities', requirePermission('routes.manage'), asyncHandler(controller.listAdminCities));
 router.get('/routes/:routeId', requirePermission('routes.manage'), asyncHandler(controller.getRoute));
 router.post('/routes', requirePermission('routes.manage'), asyncHandler(controller.saveRoute));
 router.put('/routes/:routeId', requirePermission('routes.manage'), asyncHandler(controller.saveRoute));

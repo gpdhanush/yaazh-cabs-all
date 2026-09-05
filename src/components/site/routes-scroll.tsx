@@ -2,13 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { Clock, Route } from "lucide-react";
-import gallery2 from "@/assets/gallery-city.jpg";
-import gallery3 from "@/assets/gallery-temple.jpg";
-import gallery4 from "@/assets/gallery-lake.jpg";
 import { BOOKING_FARE_NOTE, popularOneWayRoutes } from "@/lib/site-data";
 import { getAppConfig, getRoutes, isApiConfigured, mediaUrl, type PublicRoute } from "@/lib/api";
 
-const routeImages = [gallery3, gallery2, gallery3, gallery3, gallery4, gallery4, gallery2, gallery2, gallery2];
+const defaultRouteImage = "/popular-routes/default.png";
 
 type Card = {
   id: string;
@@ -115,14 +112,14 @@ export function PopularRoutes() {
         </p>
 
         <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {routes.map((r, i) => (
+          {routes.map((r) => (
             <article
               key={r.id}
               className="group overflow-hidden rounded-2xl border border-border bg-card shadow-[0_16px_40px_-28px_rgba(17,24,39,0.35)] transition-all duration-300 hover:-translate-y-1 hover:border-brand/50"
             >
               <div className="relative aspect-[16/10] overflow-hidden">
                 <img
-                  src={r.imageUrl || routeImages[i % routeImages.length]}
+                  src={r.imageUrl || defaultRouteImage}
                   alt={`${r.from} to ${r.to} taxi route`}
                   loading="lazy"
                   className="size-full object-cover transition duration-500 group-hover:scale-[1.04]"
