@@ -74,4 +74,47 @@ async function updateSetting(req, res) {
   return success(res, { key, value: parseValue(value, type), type }, 'Setting updated.');
 }
 
-module.exports = { profile, updateProfile, settings, updateSetting };
+async function listBookings(req, res) {
+  const page = Math.max(1, Number.parseInt(req.query.page, 10) || 1);
+  const perPage = Math.min(500, Math.max(1, Number.parseInt(req.query.per_page, 10) || 20));
+  const validStatuses = ['pending', 'confirmed', 'driver_notified', 'driver_accepted', 'driver_rejected', 'driver_assigned', 'on_the_way', 'arrived', 'trip_started', 'completed', 'cancelled', 'rejected', 'no_show'];
+  const status = req.query.status ? String(req.query.status) : null;
+  if (status && !validStatuses.includes(status)) { const error = new Error('Invalid booking status.'); error.statusCode = 422; throw error; }
+  const where = status ? 'WHERE b.status = ?' : '';
+  const params = status ? [status] : [];
+  const [[countRows], [rows]] = await Promise.all([
+    pool.execute(`SELECT COUNT(*) AS total FROM bookings b ${where}`, params),
+    pool.execute(
+      `SELECT b.id, b.booking_reference, b.status, b.trip_type, b.payment_status,
+        b.customer_name, b.customer_phone, b.customer_email, b.pickup_location, b.drop_location,
+        b.pickup_at, b.estimated_total, b.final_total, b.assigned_driver_id,
+        b.estimated_distance_km, b.start_odometer_km, b.end_odometer_km, b.actual_distance_km,
+        b.created_at, b.confirmed_at, b.completed_at,
+        d.id AS driver_id, d.name AS driver_name, d.phone AS driver_phone, d.profile_image_url AS driver_photo_url,
+        v.id AS vehicle_id, v.vehicle_name, v.registration_no
+       FROM bookings b
+       LEFT JOIN drivers d ON d.id = b.assigned_driver_id
+       LEFT JOIN vehicles v ON v.id = b.assigned_vehicle_id
+       ${where}
+       ORDER BY b.created_at DESC, b.id DESC LIMIT ? OFFSET ?`, [...params, perPage, (page - 1) * perPage]
+    )
+  ]);
+  const data = rows.map((row) => ({
+    ...row,
+    id: String(row.id),
+    assigned_driver_id: row.assigned_driver_id == null ? null : String(row.assigned_driver_id),
+    driver: row.driver_id == null ? null : {
+      id: String(row.driver_id), name: row.driver_name, phone: row.driver_phone,
+      photo_url: row.driver_photo_url, profile_image_url: row.driver_photo_url
+    },
+    vehicle: row.vehicle_id == null ? null : {
+      id: String(row.vehicle_id), name: row.vehicle_name, registration: row.registration_no
+    }
+  }));
+  const total = Number(countRows[0].total);
+  return success(res, data, 'Bookings fetched.', 200, {
+    page, per_page: perPage, total, total_pages: Math.ceil(total / perPage)
+  });
+}
+
+module.exports = { profile, updateProfile, settings, updateSetting, listBookings };

@@ -9,5 +9,6 @@ router.get('/profile', asyncHandler(controller.profile));
 router.put('/profile', asyncHandler(controller.updateProfile));
 router.get('/settings', asyncHandler(controller.settings));
 router.put('/settings/:key', asyncHandler(controller.updateSetting));
+router.get('/bookings', asyncHandler(controller.listBookings));
 
 module.exports = router;
