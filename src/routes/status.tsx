@@ -11,7 +11,6 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { SiteFooter } from "@/components/site/footer";
-import { ChatWidget } from "@/components/site/chat-widget";
 import { Toaster } from "@/components/ui/sonner";
 import {
   isActiveTripStatus,
@@ -333,7 +332,6 @@ function StatusPage() {
       </div>
 
       <SiteFooter />
-      <ChatWidget />
       <Toaster position="top-center" />
     </main>
   );

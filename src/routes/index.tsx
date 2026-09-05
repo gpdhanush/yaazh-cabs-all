@@ -12,7 +12,6 @@ import { Gallery } from "@/components/site/gallery";
 import { Contact } from "@/components/site/contact";
 import { FAQ, faqJsonLd } from "@/components/site/faq";
 import { SiteFooter } from "@/components/site/footer";
-import { ChatWidget } from "@/components/site/chat-widget";
 import { Toaster } from "@/components/ui/sonner";
 import { defaultOgMeta } from "@/lib/analytics";
 
@@ -85,7 +84,6 @@ export function Index() {
       <Contact />
       <FAQ />
       <SiteFooter />
-      <ChatWidget />
       <Toaster position="top-center" />
     </main>
   );
