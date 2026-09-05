@@ -4,7 +4,7 @@ const repository = require('../repositories/auth.repository');
 const { randomToken, sha256 } = require('../utils/crypto');
 const { signAccessToken } = require('../utils/jwt');
 const { signPasswordResetToken, verifyPasswordResetToken } = require('../utils/jwt');
-const { sendAdminPasswordReset } = require('../utils/mailer');
+const { sendAdminPasswordReset, isSmtpAuthError } = require('../utils/mailer');
 
 const TYPES = ['customer', 'driver', 'admin'];
 
@@ -108,7 +108,15 @@ async function requestAdminPasswordReset(email, appUrl) {
   if (!admin || !admin.is_active) return;
   const token = signPasswordResetToken(admin.id);
   const resetUrl = `${appUrl.replace(/\/$/, '')}/forgot-password?token=${encodeURIComponent(token)}`;
-  await sendAdminPasswordReset({ to: admin.email, name: admin.name, resetUrl });
+  try {
+    await sendAdminPasswordReset({ to: admin.email, name: admin.name, resetUrl });
+  } catch (error) {
+    if (isSmtpAuthError(error)) {
+      error.statusCode = 503;
+      error.message = 'SMTP authentication failed. Check MAIL_USERNAME and MAIL_PASSWORD in cPanel.';
+    }
+    throw error;
+  }
 }
 
 async function resetAdminPasswordByToken(token, newPassword) {

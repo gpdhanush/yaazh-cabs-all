@@ -50,6 +50,8 @@ For the `Backend-node` API on cPanel, upload `package.json` and `package-lock.js
 
 Set the Node application environment variable `CORS_ORIGIN` (or `CORS_ORIGINS`) to a comma-separated list containing every browser origin, for example `https://yaazhcabs.in,https://www.yaazhcabs.in,https://admin.yaazhcabs.in`. Do not leave only localhost origins in production.
 
+For SMTP, use the full mailbox address as `MAIL_USERNAME`, the current mailbox password as `MAIL_PASSWORD` without surrounding quote characters, port `465`, `MAIL_SECURE=true`, and `MAIL_AUTH_METHOD=LOGIN`. If the server rejects authentication with `535`, reset the mailbox password in cPanel Email Accounts and update the Node application environment before restarting it.
+
 The website calls the Fastify API for:
 
 - `GET /api/v1/public/vehicle-categories` — fleet + booking vehicle picker

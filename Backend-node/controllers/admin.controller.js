@@ -2,7 +2,7 @@ const pool = require('../config/database');
 const { success } = require('../utils/response');
 const bcrypt = require('bcryptjs');
 const { createInvoicePdf } = require('../utils/invoice-pdf');
-const { sendBookingInvoice } = require('../utils/mailer');
+const { sendBookingInvoice, isSmtpAuthError } = require('../utils/mailer');
 
 function adminId(req) {
   return Number(req.user.sub);
@@ -213,7 +213,15 @@ async function resendBookingInvoice(req, res) {
   const email = String(req.body.email || data.booking.customer_email || '').trim().toLowerCase();
   if (!email) { const error = new Error('Customer email is required to send the invoice.'); error.statusCode = 422; throw error; }
   const pdf = await createInvoicePdf(data);
-  await sendBookingInvoice({ to: email, name: data.booking.customer_name, bookingReference: data.booking.booking_reference, pdf });
+  try {
+    await sendBookingInvoice({ to: email, name: data.booking.customer_name, bookingReference: data.booking.booking_reference, pdf });
+  } catch (error) {
+    if (isSmtpAuthError(error)) {
+      error.statusCode = 503;
+      error.message = 'SMTP authentication failed. Check MAIL_USERNAME and MAIL_PASSWORD in cPanel.';
+    }
+    throw error;
+  }
   return success(res, { email, booking_reference: data.booking.booking_reference }, 'Invoice sent.');
 }
 
