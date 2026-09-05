@@ -82,7 +82,7 @@ import { YaModalPortalDirective } from '../../shared/ya-modal-portal.directive';
 
             <ng-container matColumnDef="ip">
               <th mat-header-cell *matHeaderCellDef>IP</th>
-              <td mat-cell *matCellDef="let row">{{ row.ip_address || '—' }}</td>
+              <td mat-cell *matCellDef="let row">{{ formatIp(row.ip_address) }}</td>
             </ng-container>
 
             <ng-container matColumnDef="actions">
@@ -159,7 +159,7 @@ import { YaModalPortalDirective } from '../../shared/ya-modal-portal.directive';
                 </div>
                 <div>
                   <p class="ya-kv-label">IP address</p>
-                  <p class="ya-kv-value">{{ item.ip_address || '—' }}</p>
+                  <p class="ya-kv-value">{{ formatIp(item.ip_address) }}</p>
                 </div>
               </div>
 
@@ -324,6 +324,11 @@ export class AuditLogsPage implements OnInit {
   formatEntity(entityType: string | null): string {
     if (!entityType) return '—';
     return entityType.replace(/_/g, ' ');
+  }
+
+  formatIp(value: string | null): string {
+    if (!value) return '—';
+    return value.startsWith('::ffff:') ? value.slice(7) : value;
   }
 
   formatJson(value: unknown): string {

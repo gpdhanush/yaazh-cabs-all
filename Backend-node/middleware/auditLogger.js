@@ -1,5 +1,11 @@
 const pool = require('../config/database');
 
+function clientIp(req) {
+  const forwarded = process.env.TRUST_PROXY === 'true' ? req.get('x-forwarded-for')?.split(',')[0]?.trim() : null;
+  const value = forwarded || req.ip || req.socket.remoteAddress || null;
+  return value?.startsWith('::ffff:') ? value.slice(7) : value;
+}
+
 function auditLogger(req, res, next) {
   if (!['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) return next();
 
@@ -10,7 +16,7 @@ function auditLogger(req, res, next) {
     const action = `${req.method} ${path}`.slice(0, 120);
     const entityType = path.split('/').filter(Boolean).at(-2) || null;
     const entityId = Number(req.params?.id || Object.values(req.params || {})[0]);
-    const ipAddress = req.ip || req.socket.remoteAddress || null;
+    const ipAddress = clientIp(req);
     const userAgent = req.get('user-agent') || null;
 
     pool.execute(

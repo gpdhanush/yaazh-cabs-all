@@ -24,10 +24,7 @@ export function vehicleSeatsLabel(name: string, seating: number) {
 export function vehicleDisplayName(name: string, seats: number) {
   const short = shortVehicleName(name);
   const shown = vehicleSeatsLabel(name, seats);
-  if (short === "Tempo Traveller" || /tempo|eicher|mini bus/i.test(name)) {
-    return `${short} (${shown} seats)`;
-  }
-  return short;
+  return `${short} (${shown} seats)`;
 }
 
 export function vehicleChoiceLabel(name: string, seats: number, perKm: number) {
