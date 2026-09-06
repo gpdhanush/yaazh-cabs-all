@@ -866,7 +866,24 @@ async function getTariff(req, res) {
 async function saveTariff(req, res) {
   const fields = ['vehicle_category_id', 'trip_type', 'route_id', 'rate_per_km', 'base_fare', 'driver_batta', 'minimum_km', 'minimum_fare', 'extra_km_rate', 'extra_hour_rate', 'night_charge', 'waiting_charge_per_hour', 'permit_charge', 'toll_included', 'parking_included', 'gst_percentage', 'effective_from', 'effective_to', 'is_active'];
   if (!req.body.vehicle_category_id || !req.body.trip_type || req.body.rate_per_km == null || !req.body.effective_from) { const error = new Error('vehicle_category_id, trip_type, rate_per_km, and effective_from are required.'); error.statusCode = 422; throw error; }
-  const values = fields.map((field) => req.body[field] ?? null);
+  const defaults = {
+    route_id: null,
+    base_fare: 0,
+    driver_batta: 0,
+    minimum_km: 0,
+    minimum_fare: 0,
+    extra_km_rate: 0,
+    extra_hour_rate: 0,
+    night_charge: 0,
+    waiting_charge_per_hour: 0,
+    permit_charge: 0,
+    toll_included: 0,
+    parking_included: 0,
+    gst_percentage: 0,
+    effective_to: null,
+    is_active: 1
+  };
+  const values = fields.map((field) => req.body[field] ?? defaults[field] ?? null);
   if (req.params.tariffId) {
     const id = positiveId(req.params.tariffId, 'tariffId');
     await pool.execute(`UPDATE tariff_plans SET ${fields.map((field) => `${field} = ?`).join(', ')} WHERE id = ?`, [...values, id]);

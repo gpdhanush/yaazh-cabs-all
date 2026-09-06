@@ -41,7 +41,7 @@ RewriteRule ^ _shell.html [L]
   Header always set Permissions-Policy "camera=(), microphone=(), geolocation=(self), interest-cohort=()"
   Header always set X-DNS-Prefetch-Control "on"
   # Update api host to your live API subdomain
-  Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://www.google-analytics.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https://api.yaazhcabs.in https://*.yaazhcabs.in https://nominatim.openstreetmap.org https://www.google-analytics.com; frame-ancestors 'self'; base-uri 'self'; form-action 'self' https://wa.me mailto: tel:"
+  Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://www.google-analytics.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https://api.yaazhcabs.in https://*.yaazhcabs.in https://api.yaazhcabsudumalpet.in https://nominatim.openstreetmap.org https://www.google-analytics.com; frame-ancestors 'self'; base-uri 'self'; form-action 'self' https://wa.me mailto: tel:"
 </IfModule>
 
 # Cache hashed assets
