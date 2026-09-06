@@ -122,6 +122,8 @@ export function PopularRoutes() {
                   src={r.imageUrl || defaultRouteImage}
                   alt={`${r.from} to ${r.to} taxi route`}
                   loading="lazy"
+                  width={1280}
+                  height={800}
                   className="size-full object-cover transition duration-500 group-hover:scale-[1.04]"
                 />
                 {r.tag ? (

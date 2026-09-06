@@ -142,6 +142,8 @@ export function Gallery() {
                       src={cover.src}
                       alt={g.title}
                       loading="lazy"
+                      width={1280}
+                      height={800}
                       className="absolute inset-0 size-full object-cover transition-transform duration-700 group-hover:scale-[1.03]"
                     />
                   )}
@@ -208,6 +210,8 @@ export function Gallery() {
               <img
                 src={current.src}
                 alt={current.caption || album.title}
+                width={1600}
+                height={1000}
                 className="max-h-[62vh] w-full object-contain"
               />
               {photos.length > 1 && (
@@ -247,7 +251,7 @@ export function Gallery() {
                         : "border-white/20 opacity-55 hover:opacity-100"
                     }`}
                   >
-                    <img src={img.src} alt="" className="size-full object-cover" />
+                    <img src={img.src} alt="" width={96} height={64} className="size-full object-cover" />
                   </button>
                 ))}
               </div>

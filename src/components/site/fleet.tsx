@@ -179,6 +179,8 @@ export function Fleet() {
             <img
               src={active.image}
               alt={`${active.name} taxi`}
+              width={1280}
+              height={800}
               className="mx-auto max-h-[68vh] w-full object-contain p-5 sm:p-10"
             />
             <figcaption className="flex flex-wrap items-center justify-between gap-3 border-t border-black/8 bg-white/90 px-5 py-4 backdrop-blur-md">

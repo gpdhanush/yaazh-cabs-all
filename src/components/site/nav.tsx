@@ -132,7 +132,7 @@ export function SiteNav() {
                   onClick={(event) => goToSection(l.id, event)}
                   className={
                     l.id === "book"
-                      ? "rounded-full bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground"
+                      ? "inline-flex min-h-11 items-center rounded-full bg-primary px-3 text-sm font-semibold text-primary-foreground"
                       : navLinkClass(active)
                   }
                 >
@@ -165,7 +165,7 @@ export function SiteNav() {
           <a
             href={`tel:+91${PHONE_PRIMARY.replace(/\s/g, "")}`}
             aria-label="Call Yaazh Cabs"
-            className="grid size-10 place-items-center rounded-full bg-primary text-primary-foreground sm:hidden"
+            className="grid size-11 place-items-center rounded-full bg-primary text-primary-foreground sm:hidden"
           >
             <Phone className="size-4" />
           </a>
@@ -173,7 +173,7 @@ export function SiteNav() {
             aria-label="Toggle menu"
             aria-expanded={open}
             onClick={() => setOpen((v) => !v)}
-            className="grid size-10 place-items-center rounded-full border border-border text-foreground lg:hidden"
+            className="grid size-11 place-items-center rounded-full border border-border text-foreground lg:hidden"
           >
             {open ? <X className="size-5" /> : <Menu className="size-5" />}
           </button>

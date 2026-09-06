@@ -15,11 +15,11 @@ import {
 import { ApiError, getAppConfig, isApiConfigured, submitContact } from "@/lib/api";
 import { trackEvent } from "@/lib/analytics";
 import { Reveal, StaggerGroup, StaggerItem } from "./motion-primitives";
-import iconPhone from "@/assets/contact/phone.png";
-import iconWhatsapp from "@/assets/contact/whatsapp.png";
-import iconEmail from "@/assets/contact/email.png";
-import iconLocation from "@/assets/contact/location.png";
-import iconHours from "@/assets/contact/hours.png";
+import iconPhone from "@/assets/contact/optimized/phone.jpg";
+import iconWhatsapp from "@/assets/contact/optimized/whatsapp.jpg";
+import iconEmail from "@/assets/contact/optimized/email.jpg";
+import iconLocation from "@/assets/contact/optimized/location.jpg";
+import iconHours from "@/assets/contact/optimized/hours.jpg";
 
 type ContactInfo = {
   phonePrimary: string;

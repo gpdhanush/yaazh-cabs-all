@@ -6,7 +6,7 @@ import { GA_MEASUREMENT_ID, trackEvent } from "@/lib/analytics";
 
 export function GoogleAnalytics() {
   const location = useRouterState({
-    select: (state) => `${state.location.pathname}${state.location.search}`,
+    select: (state) => state.location.href,
   });
 
   useEffect(() => {

@@ -46,6 +46,7 @@ export function LocationField({
   placeholder,
 }: Props) {
   const listId = useId();
+  const inputId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
   const [query, setQuery] = useState(value);
   const [open, setOpen] = useState(false);
@@ -128,7 +129,7 @@ export function LocationField({
 
   return (
     <div className="relative w-full" ref={rootRef}>
-      <label className="mb-1.5 block text-[13px] font-medium text-foreground">{label}</label>
+      <label htmlFor={inputId} className="mb-1.5 block text-[13px] font-medium text-foreground">{label}</label>
       <div
         className={cn(
           "flex h-11 items-center gap-2.5 rounded-lg border px-3 transition-colors",
@@ -139,6 +140,7 @@ export function LocationField({
       >
         <span className="shrink-0 text-muted-foreground [&_svg]:size-4">{icon ?? <MapPin />}</span>
           <input
+            id={inputId}
             value={query}
             name={isFixed ? "yc_pickup_location" : "yc_drop_location"}
             autoComplete="off"
@@ -177,6 +179,7 @@ export function LocationField({
             aria-expanded={open}
             aria-controls={listId}
             aria-autocomplete="none"
+            aria-label={label}
             placeholder={displayPlaceholder}
             className={cn(
               "w-full bg-transparent text-sm font-normal text-foreground outline-none placeholder:text-[13px] placeholder:font-normal placeholder:tracking-wide placeholder:text-muted-foreground/55",
@@ -192,7 +195,7 @@ export function LocationField({
                 onChange("");
                 setOpen(true);
               }}
-              className="grid size-6 place-items-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
+              className="grid size-11 place-items-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
             >
               <X className="size-3.5" />
             </button>

@@ -127,7 +127,7 @@ export function ChatWidget() {
                   <button
                     key={s}
                     onClick={() => void send(s)}
-                    className="rounded-full border border-border px-3 py-1.5 text-[11px] text-muted-foreground hover:border-brand/50 hover:text-foreground"
+                    className="min-h-11 rounded-full border border-border px-3 text-[11px] text-muted-foreground hover:border-brand/50 hover:text-foreground"
                   >
                     {s}
                   </button>
@@ -157,7 +157,7 @@ export function ChatWidget() {
               type="submit"
               disabled={loading || !input.trim()}
               aria-label="Send message"
-              className="grid size-10 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground disabled:opacity-50"
+              className="grid size-11 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground disabled:opacity-50"
             >
               <Send className="size-4" />
             </button>

@@ -1,11 +1,11 @@
 "use client";
 
-import airportTaxi from "@/assets/services/airport-taxi.png";
-import oneWayTaxi from "@/assets/services/one-way-taxi.png";
-import roundTripTaxi from "@/assets/services/round-trip-taxi.png";
-import tourPackages from "@/assets/services/tour-packages.png";
-import localTaxi from "@/assets/services/local-taxi.png";
-import corporateTaxi from "@/assets/services/corporate-taxi.png";
+import airportTaxi from "@/assets/services/optimized/airport-taxi.jpg";
+import oneWayTaxi from "@/assets/services/optimized/one-way-taxi.jpg";
+import roundTripTaxi from "@/assets/services/optimized/round-trip-taxi.jpg";
+import tourPackages from "@/assets/services/optimized/tour-packages.jpg";
+import localTaxi from "@/assets/services/optimized/local-taxi.jpg";
+import corporateTaxi from "@/assets/services/optimized/corporate-taxi.jpg";
 import { Reveal, StaggerGroup, StaggerItem } from "./motion-primitives";
 
 type Service = { image: string; title: string; body: string };

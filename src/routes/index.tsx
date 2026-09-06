@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { lazy, Suspense } from "react";
 import { SiteNav } from "@/components/site/nav";
 import { Hero } from "@/components/site/hero";
 import { Services } from "@/components/site/services";
@@ -8,12 +9,14 @@ import { FareEstimator } from "@/components/site/fare-estimator";
 import { BookingProcess } from "@/components/site/booking-process";
 import { Stats } from "@/components/site/stats";
 import { Testimonials } from "@/components/site/testimonials";
-import { Gallery } from "@/components/site/gallery";
-import { Contact } from "@/components/site/contact";
-import { FAQ, faqJsonLd } from "@/components/site/faq";
+import { faqJsonLd } from "@/components/site/faq-data";
 import { SiteFooter } from "@/components/site/footer";
 import { Toaster } from "@/components/ui/sonner";
 import { defaultOgMeta } from "@/lib/analytics";
+
+const Gallery = lazy(() => import("@/components/site/gallery").then((module) => ({ default: module.Gallery })));
+const Contact = lazy(() => import("@/components/site/contact").then((module) => ({ default: module.Contact })));
+const FAQ = lazy(() => import("@/components/site/faq").then((module) => ({ default: module.FAQ })));
 
 const title = "Yaazh Cabs - Taxi in Udumalpet - Airport and Outstation Cabs";
 const description =
@@ -80,9 +83,11 @@ export function Index() {
       <BookingProcess />
       <Stats />
       <Testimonials />
-      <Gallery />
-      <Contact />
-      <FAQ />
+      <Suspense fallback={<div className="min-h-24" aria-hidden />}>
+        <Gallery />
+        <Contact />
+        <FAQ />
+      </Suspense>
       <SiteFooter />
       <Toaster position="top-center" />
     </main>

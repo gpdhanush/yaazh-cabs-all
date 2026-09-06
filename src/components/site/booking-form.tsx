@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import { format } from "date-fns";
 import {
   CalendarDays,
@@ -88,18 +88,21 @@ const noAutoComplete = {
 
 function Field({
   label,
+  id,
   error,
   icon,
   children,
 }: {
   label: string;
+  id?: string;
   error?: string | undefined;
   icon?: React.ReactNode;
   children: React.ReactNode;
 }) {
+  const inputId = useId();
   return (
     <div className="w-full">
-      <label className={fieldLabel}>{label}</label>
+      <label htmlFor={id} className={fieldLabel}>{label}</label>
       <div className={fieldBox(error)}>
         {icon ? <span className="shrink-0 text-muted-foreground [&_svg]:size-4">{icon}</span> : null}
         <div className="min-w-0 flex-1">{children}</div>
@@ -132,9 +135,11 @@ function TextField({
   placeholder?: string;
   name?: string;
 }) {
+  const inputId = useId();
   return (
-    <Field label={label} error={error} icon={icon}>
+    <Field label={label} id={inputId} error={error} icon={icon}>
       <input
+        id={inputId}
         {...noAutoComplete}
         name={name}
         type={type}
@@ -176,6 +181,7 @@ function SelectField({
         <PopoverTrigger asChild>
           <button
             type="button"
+            aria-label={label}
             className="flex w-full items-center justify-between gap-2 text-left outline-none"
           >
             <span className={cn("truncate text-sm", value ? "text-foreground" : "text-[13px] tracking-wide text-muted-foreground/55")}>
@@ -192,6 +198,7 @@ function SelectField({
             {searchable && (
               <CommandInput
                 placeholder={`Search ${label.toLowerCase()}…`}
+                aria-label={`Search ${label.toLowerCase()}`}
                 autoComplete="off"
                 className="placeholder:text-[13px] placeholder:font-normal placeholder:text-muted-foreground/55"
               />

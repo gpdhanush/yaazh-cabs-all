@@ -32,7 +32,7 @@ function MaintenancePage({ onRetry, checking }: { onRetry: () => void; checking:
       <div className="pointer-events-none absolute -bottom-32 -right-20 size-96 rounded-full bg-cyan-400/10 blur-3xl" />
       <div className="relative max-w-lg rounded-[28px] border border-white/10 bg-white/[0.06] px-8 py-10 shadow-2xl shadow-black/30 backdrop-blur-xl sm:px-12">
         <img
-          src="/public/logo/logo.png"
+          src="/logo/logo.png"
           alt="Yaazh Cabs"
           className="mx-auto rounded-2xl object-cover shadow-lg shadow-black/20"
         />
