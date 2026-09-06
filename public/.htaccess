@@ -25,6 +25,9 @@ RewriteRule ^og-cover\.png$ /og-cover.jpg [L,R=301]
   </Files>
 </IfModule>
 
+# Play Store privacy policy must remain a standalone static document.
+RewriteRule ^privacy_policy\.html$ - [L]
+
 # Serve real files / directories first (assets, favicon, robots, shell)
 RewriteCond %{REQUEST_FILENAME} -f [OR]
 RewriteCond %{REQUEST_FILENAME} -d

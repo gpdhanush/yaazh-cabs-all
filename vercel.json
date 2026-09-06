@@ -17,6 +17,6 @@
       "source": "/api/v1/public/invoices/:file",
       "destination": "https://luxe-motion-ride-1.onrender.com/api/v1/public/invoices/:file"
     },
-    { "source": "/((?!assets/).*)", "destination": "/index.html" }
+    { "source": "/((?!assets/|privacy_policy\\.html$).*)", "destination": "/index.html" }
   ]
 }
