@@ -5,6 +5,8 @@ export const OG_IMAGE = `${SITE_ORIGIN}/og-cover.jpg`;
 
 export const GA_MEASUREMENT_ID = (import.meta.env["VITE_GA_MEASUREMENT_ID"] as string | undefined)?.trim() || "";
 
+export const GTM_CONTAINER_ID = (import.meta.env["VITE_GTM_CONTAINER_ID"] as string | undefined)?.trim() || "";
+
 export const GOOGLE_SITE_VERIFICATION =
   (import.meta.env["VITE_GOOGLE_SITE_VERIFICATION"] as string | undefined)?.trim() || "";
 
@@ -29,6 +31,8 @@ declare global {
 }
 
 export function trackEvent(name: string, params?: Record<string, string | number | boolean>) {
-  if (typeof window === "undefined" || typeof window.gtag !== "function") return;
-  window.gtag("event", name, params);
+  if (typeof window === "undefined") return;
+  window.dataLayer = window.dataLayer || [];
+  window.dataLayer.push({ event: name, ...params });
+  if (typeof window.gtag === "function") window.gtag("event", name, params);
 }

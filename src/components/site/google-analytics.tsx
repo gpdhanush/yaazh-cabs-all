@@ -1,9 +1,23 @@
 "use client";
 
 import { useEffect } from "react";
+import { useRouterState } from "@tanstack/react-router";
 import { GA_MEASUREMENT_ID, trackEvent } from "@/lib/analytics";
 
 export function GoogleAnalytics() {
+  const location = useRouterState({
+    select: (state) => `${state.location.pathname}${state.location.search}`,
+  });
+
+  useEffect(() => {
+    if (!GA_MEASUREMENT_ID) return;
+    trackEvent("page_view", {
+      page_path: location,
+      page_title: document.title,
+      page_location: window.location.href,
+    });
+  }, [location]);
+
   useEffect(() => {
     if (!GA_MEASUREMENT_ID) return;
 

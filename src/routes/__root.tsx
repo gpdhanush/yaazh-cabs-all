@@ -14,7 +14,14 @@ import { ThemeProvider, themeInitScript } from "../components/theme-provider";
 import { ClearStaleServiceWorkers } from "../components/site/clear-stale-sw";
 import { SiteCursor } from "../components/site/site-cursor";
 import { GoogleAnalytics } from "../components/site/google-analytics";
-import { defaultOgMeta, GA_MEASUREMENT_ID, GOOGLE_SITE_VERIFICATION, OG_IMAGE, SITE_ORIGIN } from "../lib/analytics";
+import {
+  defaultOgMeta,
+  GA_MEASUREMENT_ID,
+  GOOGLE_SITE_VERIFICATION,
+  GTM_CONTAINER_ID,
+  OG_IMAGE,
+  SITE_ORIGIN,
+} from "../lib/analytics";
 import { getAppConfig, isApiConfigured } from "../lib/api";
 import { PHONE_PRIMARY } from "../lib/site-data";
 
@@ -218,18 +225,36 @@ function RootShell({ children }: { children: ReactNode }) {
         <link rel="image_src" href={OG_IMAGE} />
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
         <HeadContent />
+        {GTM_CONTAINER_ID ? (
+          <script
+            dangerouslySetInnerHTML={{
+              __html: `(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','${GTM_CONTAINER_ID}');`,
+            }}
+          />
+        ) : null}
         {GA_MEASUREMENT_ID ? (
           <>
             <script async src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`} />
             <script
               dangerouslySetInnerHTML={{
-                __html: `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','${GA_MEASUREMENT_ID}');`,
+                __html: `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','${GA_MEASUREMENT_ID}',{send_page_view:false});`,
               }}
             />
           </>
         ) : null}
       </head>
       <body className="font-sans antialiased">
+        {GTM_CONTAINER_ID ? (
+          <noscript>
+            <iframe
+              src={`https://www.googletagmanager.com/ns.html?id=${GTM_CONTAINER_ID}`}
+              height="0"
+              width="0"
+              style={{ display: "none", visibility: "hidden" }}
+              title="Google Tag Manager"
+            />
+          </noscript>
+        ) : null}
         {children}
         <Scripts />
       </body>

@@ -8,6 +8,7 @@ This note is an audit of the current public site plus a step-by-step plan (Searc
 ## Implemented in the repo
 
 - GA4 loader when `VITE_GA_MEASUREMENT_ID` is set ([`src/lib/analytics.ts`](../src/lib/analytics.ts), [`src/routes/__root.tsx`](../src/routes/__root.tsx)). Events: `generate_lead` (booking + enquiry), `click_to_call`, `whatsapp_click`.
+- Optional Google Tag Manager loader when `VITE_GTM_CONTAINER_ID` is set. Events are also pushed to `dataLayer` for GTM triggers.
 - Search Console meta when `VITE_GOOGLE_SITE_VERIFICATION` is set.
 - Share image: [`public/og-cover.jpg`](../public/og-cover.jpg) (`og:image` / `twitter:image`, 1200×630 JPEG).
 - Static sitemap: [`public/sitemap.xml`](../public/sitemap.xml) (works on cPanel SPA). Env: see [`.env.example`](../.env.example). Rebuild after setting `VITE_*`.
@@ -89,10 +90,11 @@ Content-Type: application/json
 
 ## Gaps that hold Google back
 
-- No Google Search Console or Google Analytics 4.
-- No `og:image` / `twitter:image` (WhatsApp and Facebook shares look empty).
+- Google Analytics 4 is integrated when `VITE_GA_MEASUREMENT_ID` is set. The current production ID is configured in `.env`.
+- Google Search Console verification is still pending until `VITE_GOOGLE_SITE_VERIFICATION` is filled with Google's token.
+- `og:image` / `twitter:image` are configured from `public/og-cover.jpg`.
 - Almost no extra indexable URLs (one SPA homepage; hashes like `#routes` do not rank).
-- No conversion events (booking, call, WhatsApp).
+- Conversion and engagement events are available: `generate_lead` for booking/enquiry submissions, `click_to_call`, and `whatsapp_click`.
 - FAQ JSON-LD uses fallback copy, not the live API FAQ list.
 - On static cPanel, `/sitemap.xml` may 404 if the TanStack server route is not deployed — confirm live.
 
@@ -110,15 +112,21 @@ Content-Type: application/json
 
 ### 2. Google Analytics 4
 
-1. Create a GA4 property (not Universal Analytics).
-2. Store the Measurement ID (`G-XXXXXXXX`) in env, e.g. `VITE_GA_MEASUREMENT_ID`.
-3. Load `gtag.js` only in production, from the root shell (add a cookie banner if you need consent).
-4. Events to send:
-   - `page_view`
-   - `generate_lead` — booking form submit
-   - `contact` — enquiry form
-   - `click_to_call`
-   - `whatsapp_click`
+1. Create a GA4 property (not Universal Analytics) and a Web data stream for `https://yaazhcabsudumalpet.in`.
+2. Either put the Measurement ID (`G-XXXXXXXX`) in `VITE_GA_MEASUREMENT_ID`, or manage GA4 through GTM. Do not configure both for the same site because events can be counted twice.
+3. For GTM, create a Web container, put its ID (`GTM-XXXXXXX`) in `VITE_GTM_CONTAINER_ID`, create a GA4 Configuration tag using `G-ZX9NKJ2WGZ`, and publish the container.
+4. Run `npm run build:cpanel` and deploy the resulting `dist/` directory after changing environment values.
+5. The public site sends `page_view`, `generate_lead` (booking and enquiry), `click_to_call`, and `whatsapp_click` to GTM's `dataLayer`.
+6. In GA4, open **Reports → Realtime** while testing. Use **Admin → Events** to mark `generate_lead`, `click_to_call`, and `whatsapp_click` as key events if they represent business conversions.
+
+### 3. Google Tag Manager setup
+
+1. Open [Google Tag Manager](https://tagmanager.google.com/) and create a Web container for `yaazhcabsudumalpet.in`.
+2. Add `VITE_GTM_CONTAINER_ID=GTM-XXXXXXX` to the production environment and rebuild the site.
+3. In GTM, create a **Google tag** with your GA4 Measurement ID and trigger it on **Initialization - All pages**.
+4. For conversion events, create Custom Event triggers named `generate_lead`, `click_to_call`, and `whatsapp_click`, then add GA4 Event tags using the matching event name.
+5. Select **Preview** in GTM, enter the live site URL, and confirm the events appear in Tag Assistant.
+6. Submit the container with **Publish**. Preview mode alone does not publish changes.
 5. Optional: Google Tag Manager instead of raw gtag if you later add Ads / Meta pixels without rebuilding.
 
 ### 3. Google Business Profile (local SEO)

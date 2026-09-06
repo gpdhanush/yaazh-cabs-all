@@ -13,4 +13,4 @@ Allow: /
 User-agent: *
 Allow: /
 
-Sitemap: https://yaazhcabs.in/sitemap.xml
+Sitemap: https://yaazhcabsudumalpet.in/sitemap.xml
