@@ -61,49 +61,50 @@ async function updateProfile(req, res) {
   return profile(req, res);
 }
 
+async function listSeoMeta(req, res) {
+  const [rows] = await pool.execute(
+    `SELECT id, entity_type, entity_id, url_path, meta_title, meta_description,
+      canonical_url, og_title, og_description, og_image_url, schema_json,
+      robots_index, robots_follow, created_at, updated_at
+     FROM seo_meta ORDER BY url_path, id`
+  );
+  return success(res, rows);
+}
+
+async function saveSeoMeta(req, res) {
+  const entityTypes = ['home', 'cms_page', 'blog_post', 'route', 'vehicle_category', 'custom'];
+  const entityType = String(req.body.entity_type || '').trim();
+  const urlPath = String(req.body.url_path || '').trim();
+  if (!entityTypes.includes(entityType) || !urlPath.startsWith('/')) {
+    const error = new Error('entity_type and a url_path beginning with / are required.'); error.statusCode = 422; throw error;
+  }
+  const entityId = req.body.entity_id == null || req.body.entity_id === '' ? null : positiveId(req.body.entity_id, 'entity_id');
+  const fields = ['meta_title', 'meta_description', 'canonical_url', 'og_title', 'og_description', 'og_image_url', 'schema_json'];
+  const values = fields.map((field) => req.body[field] == null ? null : String(req.body[field]));
+  if (values[6]) {
+    try { JSON.parse(values[6]); } catch (_error) { const error = new Error('schema_json must be valid JSON.'); error.statusCode = 422; throw error; }
+  }
+  const robotsIndex = req.body.robots_index == null ? 1 : Number(Boolean(req.body.robots_index));
+  const robotsFollow = req.body.robots_follow == null ? 1 : Number(Boolean(req.body.robots_follow));
+  const [existing] = await pool.execute('SELECT id FROM seo_meta WHERE entity_type = ? AND (entity_id = ? OR (entity_id IS NULL AND ? IS NULL)) AND url_path = ? LIMIT 1', [entityType, entityId, entityId, urlPath]);
+  if (existing[0]) {
+    await pool.execute(
+      `UPDATE seo_meta SET entity_id = ?, meta_title = ?, meta_description = ?, canonical_url = ?,
+       og_title = ?, og_description = ?, og_image_url = ?, schema_json = ?, robots_index = ?, robots_follow = ? WHERE id = ?`,
+      [entityId, ...values, robotsIndex, robotsFollow, existing[0].id]
+    );
+    return success(res, { id: String(existing[0].id) }, 'SEO metadata updated.');
+  }
+  const [result] = await pool.execute(
+    `INSERT INTO seo_meta (entity_type, entity_id, url_path, meta_title, meta_description, canonical_url,
+      og_title, og_description, og_image_url, schema_json, robots_index, robots_follow)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [entityType, entityId, urlPath, ...values, robotsIndex, robotsFollow]
+  );
+  return success(res, { id: String(result.insertId) }, 'SEO metadata created.', 201);
+}
+
 async function settings(req, res) {
-  async function listSeoMeta(req, res) {
-    const [rows] = await pool.execute(
-      `SELECT id, entity_type, entity_id, url_path, meta_title, meta_description,
-        canonical_url, og_title, og_description, og_image_url, schema_json,
-        robots_index, robots_follow, created_at, updated_at
-       FROM seo_meta ORDER BY url_path, id`
-    );
-    return success(res, rows);
-  }
-  async function saveSeoMeta(req, res) {
-    const entityTypes = ['home', 'cms_page', 'blog_post', 'route', 'vehicle_category', 'custom'];
-    const entityType = String(req.body.entity_type || '').trim();
-    const urlPath = String(req.body.url_path || '').trim();
-    if (!entityTypes.includes(entityType) || !urlPath.startsWith('/')) {
-      const error = new Error('entity_type and a url_path beginning with / are required.'); error.statusCode = 422; throw error;
-    }
-    const entityId = req.body.entity_id == null || req.body.entity_id === '' ? null : positiveId(req.body.entity_id, 'entity_id');
-    const fields = ['meta_title', 'meta_description', 'canonical_url', 'og_title', 'og_description', 'og_image_url', 'schema_json'];
-    const values = fields.map((field) => req.body[field] == null ? null : String(req.body[field]));
-    if (values[6]) {
-      try { JSON.parse(values[6]); } catch (_error) { const error = new Error('schema_json must be valid JSON.'); error.statusCode = 422; throw error; }
-    }
-    const robotsIndex = req.body.robots_index == null ? 1 : Number(Boolean(req.body.robots_index));
-    const robotsFollow = req.body.robots_follow == null ? 1 : Number(Boolean(req.body.robots_follow));
-    const [existing] = await pool.execute('SELECT id FROM seo_meta WHERE entity_type = ? AND (entity_id = ? OR (entity_id IS NULL AND ? IS NULL)) AND url_path = ? LIMIT 1', [entityType, entityId, entityId, urlPath]);
-    if (existing[0]) {
-      await pool.execute(
-        `UPDATE seo_meta SET entity_id = ?, meta_title = ?, meta_description = ?, canonical_url = ?,
-         og_title = ?, og_description = ?, og_image_url = ?, schema_json = ?, robots_index = ?, robots_follow = ? WHERE id = ?`,
-        [entityId, ...values, robotsIndex, robotsFollow, existing[0].id]
-      );
-      return success(res, { id: String(existing[0].id) }, 'SEO metadata updated.');
-    }
-    const [result] = await pool.execute(
-      `INSERT INTO seo_meta (entity_type, entity_id, url_path, meta_title, meta_description, canonical_url,
-        og_title, og_description, og_image_url, schema_json, robots_index, robots_follow)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [entityType, entityId, urlPath, ...values, robotsIndex, robotsFollow]
-    );
-    return success(res, { id: String(result.insertId) }, 'SEO metadata created.', 201);
-  }
-  module.exports = { profile, updateProfile, settings, updateSetting, listSeoMeta, saveSeoMeta, dashboard, listBookings, getBooking, getBookingPayment, recordBookingPayment, setBookingPaymentStatus, downloadBookingInvoice, resendBookingInvoice, confirmBooking, rejectBooking, cancelBooking, assignDriver, listCustomers, getCustomer, listDrivers, getDriver, saveDriver, deleteDriver, listVehicleCategories, getVehicleCategory, saveVehicleCategory, deleteVehicleCategory, registerAdminDevice, reports, listReviews, listEnquiries, getEnquiry, updateEnquiry, listNotifications, deleteNotification, listAdminUsers, getAdminUser, saveAdminUser, activateAdminUser, deactivateAdminUser, uploadMedia, uploadDriverPhoto, listRemoteConfig, createRemoteConfig, updateRemoteConfig, listAuditLogs, getAuditLog, listAdminRoles, getAdminRole, listPermissions, listRoutes, listAdminCities, getRoute, saveRoute, deleteRoute, listTariffs, getTariff, saveTariff, deleteTariff, listFaqs, getFaq, saveFaq, deleteFaq, listGallery, createGalleryGroup, createGalleryImage, updateGalleryImage, deleteGalleryRecord, listReviewsAdmin, saveReview, getReview, moderateReview, deleteReview, listVehicles, getVehicle, saveVehicle, deleteVehicle, listAssignments, createAssignment, endAssignment };
   const [rows] = await pool.execute(
     `SELECT setting_key, setting_value AS value, value_type AS type, group_name AS group_name
      FROM app_settings ORDER BY group_name, setting_key`
@@ -1246,4 +1247,4 @@ async function endAssignment(req, res) {
   return success(res, { id: String(id), is_current: false }, 'Assignment ended.');
 }
 
-module.exports = { profile, updateProfile, settings, updateSetting, dashboard, liveTracking, listBookings, getBooking, getBookingPayment, recordBookingPayment, setBookingPaymentStatus, downloadBookingInvoice, resendBookingInvoice, confirmBooking, rejectBooking, cancelBooking, completeBooking, assignDriver, listCustomers, getCustomer, listDrivers, getDriver, saveDriver, deleteDriver, listVehicleCategories, getVehicleCategory, saveVehicleCategory, deleteVehicleCategory, registerAdminDevice, reports, listReviews, listEnquiries, getEnquiry, updateEnquiry, listNotifications, sendNotification, deleteNotification, listAdminUsers, getAdminUser, saveAdminUser, activateAdminUser, deactivateAdminUser, uploadMedia, uploadDriverPhoto, listRemoteConfig, createRemoteConfig, updateRemoteConfig, listAuditLogs, getAuditLog, listAdminRoles, getAdminRole, listPermissions, listRoutes, listAdminCities, getRoute, saveRoute, deleteRoute, listTariffs, getTariff, saveTariff, deleteTariff, listFaqs, getFaq, saveFaq, deleteFaq, listGallery, createGalleryGroup, createGalleryImage, updateGalleryImage, deleteGalleryRecord, listReviewsAdmin, saveReview, getReview, moderateReview, deleteReview, listVehicles, getVehicle, saveVehicle, deleteVehicle, listAssignments, createAssignment, endAssignment };
+module.exports = { profile, updateProfile, settings, updateSetting, listSeoMeta, saveSeoMeta, dashboard, liveTracking, listBookings, getBooking, getBookingPayment, recordBookingPayment, setBookingPaymentStatus, downloadBookingInvoice, resendBookingInvoice, confirmBooking, rejectBooking, cancelBooking, completeBooking, assignDriver, listCustomers, getCustomer, listDrivers, getDriver, saveDriver, deleteDriver, listVehicleCategories, getVehicleCategory, saveVehicleCategory, deleteVehicleCategory, registerAdminDevice, reports, listReviews, listEnquiries, getEnquiry, updateEnquiry, listNotifications, sendNotification, deleteNotification, listAdminUsers, getAdminUser, saveAdminUser, activateAdminUser, deactivateAdminUser, uploadMedia, uploadDriverPhoto, listRemoteConfig, createRemoteConfig, updateRemoteConfig, listAuditLogs, getAuditLog, listAdminRoles, getAdminRole, listPermissions, listRoutes, listAdminCities, getRoute, saveRoute, deleteRoute, listTariffs, getTariff, saveTariff, deleteTariff, listFaqs, getFaq, saveFaq, deleteFaq, listGallery, createGalleryGroup, createGalleryImage, updateGalleryImage, deleteGalleryRecord, listReviewsAdmin, saveReview, getReview, moderateReview, deleteReview, listVehicles, getVehicle, saveVehicle, deleteVehicle, listAssignments, createAssignment, endAssignment };

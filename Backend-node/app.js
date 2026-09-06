@@ -15,7 +15,16 @@ const adminRoutes = require('./routes/admin.routes');
 const driverRoutes = require('./routes/driver.routes');
 
 const app = express();
-const configuredOrigins = [process.env.CORS_ORIGIN, process.env.CORS_ORIGINS]
+const configuredOrigins = [
+  process.env.CORS_ORIGIN,
+  process.env.CORS_ORIGINS,
+  process.env.PUBLIC_WEB_URL,
+  process.env.APP_URL,
+  process.env.ADMIN_URL,
+  'https://yaazhcabsudumalpet.in',
+  'https://www.yaazhcabsudumalpet.in',
+  'https://admin.yaazhcabsudumalpet.in'
+]
   .filter(Boolean)
   .join(',')
   .split(',')
