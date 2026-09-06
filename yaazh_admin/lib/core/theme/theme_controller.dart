@@ -2,9 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:yaazh_admin/app/constants.dart';
-import 'package:yaazh_admin/core/format.dart';
-import 'package:yaazh_admin/core/network/api_client.dart';
-import 'package:yaazh_admin/core/theme/brand_colors.dart';
 
 class AppThemeState {
   final ThemeMode mode;
@@ -28,16 +25,18 @@ class AppThemeState {
 
 final appThemeProvider =
     StateNotifierProvider<AppThemeController, AppThemeState>((ref) {
-  return AppThemeController();
-});
+      return AppThemeController();
+    });
 
 class AppThemeController extends StateNotifier<AppThemeState> {
   AppThemeController()
-      : super(const AppThemeState(
+    : super(
+        const AppThemeState(
           mode: ThemeMode.light,
           primary: AppColors.primary,
           secondary: Color(0xFF1F2933),
-        )) {
+        ),
+      ) {
     _hydrate();
   }
 
@@ -76,28 +75,4 @@ class AppThemeController extends StateNotifier<AppThemeState> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt(AppConstants.themeSecondaryKey, color.toARGB32());
   }
-
-  Future<void> loadFromApi(ApiClient api) async {
-    try {
-      final data = await api.get('/admin/settings', silent: true);
-      final rows = asMapList(data);
-      if (rows.isEmpty) return;
-      final map = <String, String>{
-        for (final row in rows)
-          if ((row['key']?.toString() ?? '').isNotEmpty)
-            row['key'].toString(): row['value']?.toString() ?? '',
-      };
-      final primary = parseHexColor(map['admin_primary_color']);
-      final secondary = parseHexColor(map['admin_secondary_color']);
-      if (primary != null) await setPrimary(primary);
-      if (secondary != null) await setSecondary(secondary);
-    } catch (_) {
-      /* keep local / default colours */
-    }
-  }
 }
-
-final brandThemeBootstrapProvider = FutureProvider<void>((ref) async {
-  final api = ref.read(apiClientProvider);
-  await ref.read(appThemeProvider.notifier).loadFromApi(api);
-});

@@ -62,6 +62,18 @@ async function updateProfile(req, res) {
   return profile(req, res);
 }
 
+async function uploadProfilePhoto(req, res) {
+  if (!req.file) { const error = new Error('An image file is required.'); error.statusCode = 422; throw error; }
+  const publicPath = `/api/v1/public/media/admin/${req.file.filename}`;
+  await pool.execute('UPDATE admin_users SET avatar_url = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND is_active = 1', [publicPath, adminId(req)]);
+  return profile(req, res);
+}
+
+async function removeProfilePhoto(req, res) {
+  await pool.execute('UPDATE admin_users SET avatar_url = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND is_active = 1', [adminId(req)]);
+  return profile(req, res);
+}
+
 async function listSeoMeta(req, res) {
   const [rows] = await pool.execute(
     `SELECT id, entity_type, entity_id, url_path, meta_title, meta_description,
@@ -382,6 +394,76 @@ async function setBookingPaymentStatus(req, res) {
   return success(res, await bookingPaymentSummary(bookingId), 'Payment status updated.');
 }
 
+async function applyBookingFare(req, res) {
+  const bookingId = positiveId(req.params.bookingId, 'bookingId');
+  const hasDiscount = req.body.discount_amount !== undefined && req.body.discount_amount !== null;
+  const hasFinalTotal = req.body.final_total !== undefined && req.body.final_total !== null;
+  if (!hasDiscount && !hasFinalTotal) {
+    const error = new Error('Enter a discount amount or a final fare.'); error.statusCode = 422; throw error;
+  }
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+    const [bookings] = await connection.execute(
+      'SELECT id, booking_reference, status, estimated_total FROM bookings WHERE id = ? FOR UPDATE', [bookingId]
+    );
+    const booking = bookings[0];
+    if (!booking) { const error = new Error('Booking not found.'); error.statusCode = 404; throw error; }
+    const quoted = Number(booking.estimated_total || 0);
+    if (quoted <= 0) { const error = new Error('Quoted fare is missing.'); error.statusCode = 422; throw error; }
+
+    let discount;
+    let finalTotal;
+    if (hasFinalTotal) {
+      finalTotal = Number(req.body.final_total);
+      if (!Number.isFinite(finalTotal) || finalTotal < 0) { const error = new Error('Final fare cannot be negative.'); error.statusCode = 422; throw error; }
+      if (finalTotal > quoted + 0.009) { const error = new Error(`Final fare cannot exceed quoted Rs. ${quoted}.`); error.statusCode = 422; throw error; }
+      discount = quoted - finalTotal;
+    } else {
+      discount = Number(req.body.discount_amount);
+      if (!Number.isFinite(discount) || discount < 0) { const error = new Error('Discount cannot be negative.'); error.statusCode = 422; throw error; }
+      if (discount > quoted + 0.009) { const error = new Error(`Discount cannot exceed quoted Rs. ${quoted}.`); error.statusCode = 422; throw error; }
+      finalTotal = Math.max(0, quoted - discount);
+    }
+    discount = Number(discount.toFixed(2));
+    finalTotal = Number(finalTotal.toFixed(2));
+    const [paidRows] = await connection.execute(
+      "SELECT COALESCE(SUM(amount), 0) AS amount_paid FROM payments WHERE booking_id = ? AND status = 'success'", [bookingId]
+    );
+    const amountPaid = Number(paidRows[0]?.amount_paid || 0);
+    if (finalTotal + 0.009 < amountPaid) {
+      const error = new Error(`Final fare Rs. ${finalTotal} is below amount already paid Rs. ${amountPaid}.`); error.statusCode = 422; throw error;
+    }
+    const paymentStatus = amountPaid <= 0 ? 'unpaid' : amountPaid >= finalTotal - 0.009 ? 'paid' : 'partial';
+    const balanceDue = Number(Math.max(0, finalTotal - amountPaid).toFixed(2));
+    await connection.execute(
+      `UPDATE bookings SET discount_amount = ?, final_total = ?, payment_status = ? WHERE id = ?`,
+      [discount, finalTotal, paymentStatus, bookingId]
+    );
+    await connection.execute(
+      `INSERT INTO booking_status_history (booking_id, old_status, new_status, changed_by_type, changed_by_admin_id, note)
+       VALUES (?, ?, ?, 'admin', ?, ?)`,
+      [bookingId, booking.status, booking.status, adminId(req), `Fare reduced by Rs. ${discount}. Final Rs. ${finalTotal}`]
+    );
+    const [invoices] = await connection.execute('SELECT id, status FROM booking_invoices WHERE booking_id = ? LIMIT 1', [bookingId]);
+    if (invoices[0]) {
+      const invoiceStatus = balanceDue <= 0 ? 'paid' : amountPaid > 0 ? 'partially_paid' : invoices[0].status;
+      await connection.execute(
+        `UPDATE booking_invoices SET discount_amount = ?, total_amount = ?, amount_paid = ?, balance_amount = ?, status = ? WHERE id = ?`,
+        [discount, finalTotal, amountPaid, balanceDue, invoiceStatus, invoices[0].id]
+      );
+    }
+    await connection.commit();
+    return success(res, await bookingPaymentSummary(bookingId), 'Discount applied.');
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
+}
+module.exports = { profile, updateProfile, uploadProfilePhoto, removeProfilePhoto, settings, updateSetting, listSeoMeta, saveSeoMeta, dashboard, liveTracking, listBookings, getBooking, getBookingPayment, recordBookingPayment, setBookingPaymentStatus, applyBookingFare, downloadBookingInvoice, sendBookingInvoiceWhatsApp, resendBookingInvoice, sendFeedbackLink, confirmBooking, rejectBooking, cancelBooking, completeBooking, assignDriver, listCustomers, getCustomer, listDrivers, getDriver, saveDriver, deleteDriver, listVehicleCategories, getVehicleCategory, saveVehicleCategory, deleteVehicleCategory, registerAdminDevice, reports, listReviews, listEnquiries, getEnquiry, updateEnquiry, listNotifications, sendNotification, deleteNotification, listAdminUsers, getAdminUser, saveAdminUser, activateAdminUser, deactivateAdminUser, uploadMedia, uploadDriverPhoto, listRemoteConfig, createRemoteConfig, updateRemoteConfig, listAuditLogs, getAuditLog, listAdminRoles, getAdminRole, listPermissions, listRoutes, listAdminCities, getRoute, saveRoute, deleteRoute, listTariffs, getTariff, deleteTariff, listFaqs, getFaq, saveFaq, deleteFaq, listGallery, createGalleryGroup, createGalleryImage, updateGalleryImage, deleteGalleryRecord, listReviewsAdmin, saveReview, getReview, moderateReview, deleteReview, listVehicles, getVehicle, saveVehicle, deleteVehicle, listAssignments, createAssignment, endAssignment };
+
 async function invoiceData(bookingId) {
   const [bookings] = await pool.execute(
     `SELECT id, booking_reference, customer_name, customer_phone, customer_email,
@@ -663,7 +745,8 @@ async function listDrivers(req, res) {
     pool.execute(
       `SELECT d.id, d.name, d.phone, d.email, d.license_no, d.license_expiry_date, d.address,
         d.profile_image_url, d.verification_status, d.online_status, d.availability_status,
-        d.is_active, d.rating_avg, d.total_completed_trips, d.created_at
+        d.is_active, COALESCE((SELECT AVG(r.customer_rating) FROM trip_ratings r WHERE r.driver_id = d.id), d.rating_avg, 0) AS rating_avg,
+        d.total_completed_trips, d.created_at
        FROM drivers d ${where} ORDER BY d.created_at DESC, d.id DESC LIMIT ? OFFSET ?`, [...searchParams, perPage, offset]
     )
   ]);
@@ -676,8 +759,10 @@ async function getDriver(req, res) {
   const [rows] = await pool.execute(
     `SELECT id, name, phone, email, license_no, license_expiry_date, address, profile_image_url,
       verification_status, online_status, availability_status, current_latitude, current_longitude,
-      last_location_at, rating_avg, total_completed_trips, is_active, created_at
-     FROM drivers WHERE id = ? LIMIT 1`, [id]
+      last_location_at,
+      COALESCE((SELECT AVG(r.customer_rating) FROM trip_ratings r WHERE r.driver_id = drivers.id), drivers.rating_avg, 0) AS rating_avg,
+      total_completed_trips, is_active, created_at
+         FROM drivers WHERE id = ? LIMIT 1`, [id]
   );
   if (!rows[0]) { const error = new Error('Driver not found.'); error.statusCode = 404; throw error; }
   return success(res, { ...rows[0], id: String(rows[0].id), rating_avg: Number(rows[0].rating_avg) });

@@ -76,6 +76,7 @@ class BookingStatus {
       status != rejected;
 
   static bool canComplete(String status) =>
+      status == driverNotified ||
       status == driverAssigned ||
       status == onTheWay ||
       status == arrived ||

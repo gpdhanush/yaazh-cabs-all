@@ -2,12 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:yaazh_admin/app/constants.dart';
 import 'package:yaazh_admin/app/theme.dart';
-import 'package:yaazh_admin/core/network/api_exception.dart';
-import 'package:yaazh_admin/core/theme/brand_colors.dart';
 import 'package:yaazh_admin/core/theme/theme_controller.dart';
-import 'package:yaazh_admin/core/widgets/app_toast.dart';
 import 'package:yaazh_admin/core/widgets/keyboard_dismiss.dart';
-import 'package:yaazh_admin/features/settings/data/web_settings_repository.dart';
 import 'package:yaazh_admin/features/shell/admin_shell.dart';
 
 class AppSettingsPage extends ConsumerWidget {
@@ -95,18 +91,6 @@ class AppSettingsPage extends ConsumerWidget {
                             await ref
                                 .read(appThemeProvider.notifier)
                                 .setPrimary(swatch.color);
-                            try {
-                              await ref
-                                  .read(webSettingsRepositoryProvider)
-                                  .update(
-                                    'admin_primary_color',
-                                    colorToHex(swatch.color),
-                                  );
-                            } catch (e) {
-                              showErrorToast(
-                                e is ApiException ? e.message : e.toString(),
-                              );
-                            }
                           },
                         ),
                       ),

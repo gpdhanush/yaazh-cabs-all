@@ -302,8 +302,25 @@ async function submitFeedback(req, res) {
   const [bookings] = await pool.execute('SELECT id, customer_id, assigned_driver_id, customer_name, customer_phone, status FROM bookings WHERE id = ? LIMIT 1', [id]);
   if (!bookings[0] || bookings[0].status !== 'completed') { const error = new Error('Feedback opens after the trip is completed.'); error.statusCode = 403; throw error; }
   const review = String(req.body.review || 'Great trip with Yaazh Cabs.').trim();
-  await pool.execute(`INSERT INTO trip_ratings (booking_id, customer_id, driver_id, customer_rating, customer_review) VALUES (?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE customer_rating = VALUES(customer_rating), customer_review = VALUES(customer_review)`, [id, bookings[0].customer_id, bookings[0].assigned_driver_id, rating, review]);
-  await pool.execute(`INSERT INTO testimonials (booking_id, customer_id, customer_name, customer_phone, rating, review, approval_status) VALUES (?, ?, ?, ?, ?, ?, 'pending') ON DUPLICATE KEY UPDATE rating = VALUES(rating), review = VALUES(review), approval_status = 'pending'`, [id, bookings[0].customer_id, bookings[0].customer_name, bookings[0].customer_phone, rating, review]);
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+    await connection.execute(`INSERT INTO trip_ratings (booking_id, customer_id, driver_id, customer_rating, customer_review) VALUES (?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE customer_rating = VALUES(customer_rating), customer_review = VALUES(customer_review), driver_id = VALUES(driver_id)`, [id, bookings[0].customer_id, bookings[0].assigned_driver_id, rating, review]);
+    await connection.execute(`INSERT INTO testimonials (booking_id, customer_id, customer_name, customer_phone, rating, review, approval_status) VALUES (?, ?, ?, ?, ?, ?, 'pending') ON DUPLICATE KEY UPDATE rating = VALUES(rating), review = VALUES(review), approval_status = 'pending'`, [id, bookings[0].customer_id, bookings[0].customer_name, bookings[0].customer_phone, rating, review]);
+    if (bookings[0].assigned_driver_id != null) {
+      await connection.execute(
+        `UPDATE drivers AS d
+         SET rating_avg = COALESCE((SELECT AVG(r.customer_rating) FROM trip_ratings r WHERE r.driver_id = d.id), 0)
+         WHERE d.id = ?`, [bookings[0].assigned_driver_id]
+      );
+    }
+    await connection.commit();
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
   return success(res, { id: String(id), rating, review }, 'Thank you for your feedback.', 201);
 }
 

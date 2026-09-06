@@ -202,7 +202,10 @@ class _AdminDrawer extends ConsumerWidget {
                   ClipOval(
                     child: ColoredBox(
                       color: onHeader.withValues(alpha: 0.14),
-                      child: const AppLogo(size: 48),
+                      child: const AppLogo(
+                        size: 48,
+                        asset: AppConstants.appLogo,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -316,9 +319,9 @@ class _AdminDrawer extends ConsumerWidget {
       child: Text(
         text.toUpperCase(),
         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.6,
-            ),
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.6,
+        ),
       ),
     );
   }

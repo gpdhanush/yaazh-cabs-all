@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:yaazh_admin/app/constants.dart';
 import 'package:yaazh_admin/core/network/media_url.dart';
 import 'package:yaazh_admin/features/bookings/domain/booking.dart';
 
@@ -22,18 +23,7 @@ class DriverAvatar extends StatelessWidget {
   });
 
   String? get _id => driver?.id ?? id;
-  String? get _name => driver?.name ?? name;
   String? get _photo => driver?.photoUrl ?? photoUrl;
-
-  String get _initials {
-    if (driver != null) return driver!.initials;
-    final parts = (_name ?? '').trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty);
-    if (parts.length >= 2) {
-      return (parts.first[0] + parts.elementAt(1)[0]).toUpperCase();
-    }
-    if ((_name ?? '').trim().isNotEmpty) return _name!.trim()[0].toUpperCase();
-    return 'D';
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -48,7 +38,7 @@ class DriverAvatar extends StatelessWidget {
         width: size,
         height: size,
         child: url == null
-            ? _Initials(letters: _initials, radius: radius)
+            ? _DefaultDriverImage(size: size)
             : CachedNetworkImage(
                 imageUrl: url,
                 width: size,
@@ -57,36 +47,26 @@ class DriverAvatar extends StatelessWidget {
                 fadeInDuration: const Duration(milliseconds: 180),
                 memCacheWidth: (size * 3).round(),
                 errorListener: (_) {},
-                placeholder: (_, _) => _Initials(letters: _initials, radius: radius),
-                errorWidget: (_, _, _) => _Initials(letters: _initials, radius: radius),
+                placeholder: (_, _) => _DefaultDriverImage(size: size),
+                errorWidget: (_, _, _) => _DefaultDriverImage(size: size),
               ),
       ),
     );
   }
 }
 
-class _Initials extends StatelessWidget {
-  final String letters;
-  final double radius;
+class _DefaultDriverImage extends StatelessWidget {
+  final double size;
 
-  const _Initials({required this.letters, required this.radius});
+  const _DefaultDriverImage({required this.size});
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return ColoredBox(
-      color: theme.colorScheme.primary.withValues(alpha: 0.15),
-      child: Center(
-        child: Text(
-          letters,
-          style: TextStyle(
-            color: theme.colorScheme.primary,
-            fontWeight: FontWeight.w700,
-            fontSize: radius * 0.7,
-            height: 1,
-          ),
-        ),
-      ),
+    return Image.asset(
+      AppConstants.driverDefaultImage,
+      width: size,
+      height: size,
+      fit: BoxFit.cover,
     );
   }
 }

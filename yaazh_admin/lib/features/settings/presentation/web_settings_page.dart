@@ -8,7 +8,6 @@ import 'package:yaazh_admin/core/widgets/keyboard_dismiss.dart';
 import 'package:yaazh_admin/core/widgets/ya_field.dart';
 import 'package:yaazh_admin/core/widgets/ya_loader.dart';
 import 'package:yaazh_admin/core/theme/brand_colors.dart';
-import 'package:yaazh_admin/core/theme/theme_controller.dart';
 import 'package:yaazh_admin/features/settings/data/web_settings_repository.dart';
 import 'package:yaazh_admin/features/settings/domain/app_setting.dart';
 
@@ -66,18 +65,6 @@ class _WebSettingsPageState extends ConsumerState<WebSettingsPage> {
       for (final key in dirty) {
         await repo.update(key, _controllers[key]!.text);
         _original[key] = _controllers[key]!.text;
-        if (key == 'admin_primary_color') {
-          final color = parseHexColor(_controllers[key]!.text);
-          if (color != null) {
-            await ref.read(appThemeProvider.notifier).setPrimary(color);
-          }
-        }
-        if (key == 'admin_secondary_color') {
-          final color = parseHexColor(_controllers[key]!.text);
-          if (color != null) {
-            await ref.read(appThemeProvider.notifier).setSecondary(color);
-          }
-        }
       }
       invalidateWebSettings(ref);
       showSuccessToast('Settings saved');
@@ -108,7 +95,8 @@ class _WebSettingsPageState extends ConsumerState<WebSettingsPage> {
             _hydrate(rows);
             final groups = <String, List<AppSetting>>{};
             for (final row in rows) {
-              if (row.group == 'admin_branding' || row.key.startsWith('admin_')) {
+              if (row.group == 'admin_branding' ||
+                  row.key.startsWith('admin_')) {
                 continue;
               }
               groups.putIfAbsent(row.group, () => []).add(row);
@@ -171,14 +159,23 @@ class _GroupCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(AppSetting.groupIcon(group), color: theme.colorScheme.primary),
+              Icon(
+                AppSetting.groupIcon(group),
+                color: theme.colorScheme.primary,
+              ),
               const SizedBox(width: 10),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(AppSetting.groupTitle(group), style: theme.textTheme.titleMedium),
-                    Text(AppSetting.groupHint(group), style: theme.textTheme.bodySmall),
+                    Text(
+                      AppSetting.groupTitle(group),
+                      style: theme.textTheme.titleMedium,
+                    ),
+                    Text(
+                      AppSetting.groupHint(group),
+                      style: theme.textTheme.bodySmall,
+                    ),
                   ],
                 ),
               ),
@@ -203,7 +200,9 @@ class _GroupCard extends StatelessWidget {
                       margin: const EdgeInsets.only(right: 10, bottom: 2),
                       decoration: BoxDecoration(
                         color: parsed ?? theme.dividerColor,
-                        borderRadius: BorderRadius.circular(AppConstants.radiusField),
+                        borderRadius: BorderRadius.circular(
+                          AppConstants.radiusField,
+                        ),
                         border: Border.all(color: theme.dividerColor),
                       ),
                     ),
@@ -214,8 +213,9 @@ class _GroupCard extends StatelessWidget {
                       controller: controller,
                       minLines: multiline ? 2 : 1,
                       maxLines: multiline ? 4 : 1,
-                      textInputAction:
-                          multiline ? TextInputAction.newline : TextInputAction.next,
+                      textInputAction: multiline
+                          ? TextInputAction.newline
+                          : TextInputAction.next,
                     ),
                   ),
                 ],

@@ -11,6 +11,8 @@ router.use(auditLogger);
 router.post('/uploads', imageUpload.single('file'), asyncHandler(controller.uploadMedia));
 router.get('/profile', asyncHandler(controller.profile));
 router.put('/profile', asyncHandler(controller.updateProfile));
+router.post('/profile/photo', imageUpload.single('file'), asyncHandler(controller.uploadProfilePhoto));
+router.delete('/profile/photo', asyncHandler(controller.removeProfilePhoto));
 router.get('/dashboard', requirePermission('dashboard.view'), asyncHandler(controller.dashboard));
 router.get('/live-tracking', requirePermission('bookings.view'), asyncHandler(controller.liveTracking));
 router.get('/settings', requirePermission('settings.manage'), asyncHandler(controller.settings));
@@ -87,6 +89,7 @@ router.get('/bookings', requirePermission('bookings.view'), asyncHandler(control
 router.get('/bookings/:bookingId', requirePermission('bookings.view'), asyncHandler(controller.getBooking));
 router.get('/bookings/:bookingId/payment', requirePermission('bookings.view'), asyncHandler(controller.getBookingPayment));
 router.post('/bookings/:bookingId/payment', requirePermission('bookings.update'), asyncHandler(controller.recordBookingPayment));
+router.patch('/bookings/:bookingId/fare', requirePermission('bookings.update'), asyncHandler(controller.applyBookingFare));
 router.put('/bookings/:bookingId/payment-status', requirePermission('bookings.update'), asyncHandler(controller.setBookingPaymentStatus));
 router.get('/bookings/:bookingId/invoice/pdf', requirePermission('bookings.view'), asyncHandler(controller.downloadBookingInvoice));
 router.post('/bookings/:bookingId/invoice/whatsapp', requirePermission('bookings.view'), asyncHandler(controller.sendBookingInvoiceWhatsApp));
