@@ -92,6 +92,7 @@ router.post('/bookings/:bookingId/invoice/resend', requirePermission('bookings.v
 router.post('/bookings/:bookingId/confirm', requirePermission('bookings.update'), asyncHandler(controller.confirmBooking));
 router.post('/bookings/:bookingId/reject', requirePermission('bookings.update'), asyncHandler(controller.rejectBooking));
 router.post('/bookings/:bookingId/cancel', requirePermission('bookings.cancel'), asyncHandler(controller.cancelBooking));
+router.post('/bookings/:bookingId/complete', requirePermission('bookings.update'), asyncHandler(controller.completeBooking));
 router.post('/bookings/:bookingId/assign-driver', requirePermission('driver_offers.manage'), asyncHandler(controller.assignDriver));
 router.get('/customers', requirePermission('customers.view'), asyncHandler(controller.listCustomers));
 router.get('/customers/:customerId', requirePermission('customers.view'), asyncHandler(controller.getCustomer));

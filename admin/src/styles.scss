@@ -1969,6 +1969,161 @@ select.ya-field__control.bk-select {
   border-top: 1px solid var(--ya-border);
 }
 
+.bk-detail-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 1.1rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid color-mix(in srgb, var(--ya-primary) 18%, var(--ya-border));
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--ya-primary) 5%, var(--ya-card));
+}
+
+.bk-detail-actions__copy {
+  display: grid;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.bk-detail-actions__copy strong {
+  color: var(--ya-text);
+  font-size: 0.9rem;
+}
+
+.bk-detail-actions__copy > span:last-child {
+  color: var(--ya-muted);
+  font-size: 0.78rem;
+}
+
+.bk-detail-actions__eyebrow {
+  color: var(--ya-primary);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.bk-detail-actions__buttons {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.55rem;
+}
+
+.bk-detail-actions__buttons mat-icon {
+  margin-right: 0.35rem;
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+  vertical-align: middle;
+}
+
+.bk-complete-dialog {
+  max-width: 32rem;
+}
+
+.bk-complete-dialog__summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 1rem 0 0.25rem;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--ya-border);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--ya-primary) 5%, var(--ya-card));
+  color: var(--ya-muted);
+  font-size: 0.78rem;
+}
+
+.bk-complete-dialog__summary strong {
+  color: var(--ya-text);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.82rem;
+}
+
+.bk-cancel-dialog {
+  max-width: 32rem;
+}
+
+.bk-cancel-dialog__reference {
+  margin-top: 1rem;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid rgba(220, 38, 38, 0.2);
+  border-radius: 10px;
+  background: rgba(220, 38, 38, 0.06);
+  color: #b91c1c;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.bk-cancel-dialog__field {
+  margin-top: 1rem;
+  text-align: left;
+}
+
+.bk-cancel-dialog__textarea {
+  min-height: 5rem;
+  resize: vertical;
+}
+
+.ya-confirm__icon--danger {
+  display: grid;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  background: rgba(220, 38, 38, 0.1);
+  color: #dc2626;
+}
+
+.ya-confirm__icon--danger mat-icon {
+  color: #dc2626 !important;
+}
+
+.bk-btn--cancel {
+  border: 1px solid #dc2626 !important;
+  color: #b91c1c !important;
+  background: transparent !important;
+}
+
+.bk-btn--cancel .mdc-button__label,
+.bk-btn--cancel mat-icon {
+  color: #b91c1c !important;
+}
+
+.bk-btn--cancel:hover {
+  background: rgba(220, 38, 38, 0.08) !important;
+}
+
+html[data-theme='dark'] .bk-btn--cancel {
+  border-color: #f87171 !important;
+  color: #fca5a5 !important;
+}
+
+html[data-theme='dark'] .bk-btn--cancel .mdc-button__label,
+html[data-theme='dark'] .bk-btn--cancel mat-icon {
+  color: #fca5a5 !important;
+}
+
+@media (max-width: 640px) {
+  .bk-detail-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .bk-detail-actions__buttons {
+    justify-content: stretch;
+  }
+
+  .bk-detail-actions__buttons .bk-btn {
+    flex: 1 1 100%;
+  }
+}
+
 .bk-detail-grid {
   display: grid;
   gap: 1rem;

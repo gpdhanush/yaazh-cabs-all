@@ -51,6 +51,10 @@ export class AdminApiService {
     return this.api.post<Booking>(`${ADMIN}/bookings/${id}/cancel`, { reason }).pipe(map((r) => r.data));
   }
 
+  completeBooking(id: string): Observable<Booking> {
+    return this.api.post<Booking>(`${ADMIN}/bookings/${id}/complete`).pipe(map((r) => r.data));
+  }
+
   resendBookingInvoice(id: string, email?: string): Observable<BookingInvoice> {
     return this.api
       .post<BookingInvoice>(`${ADMIN}/bookings/${id}/invoice/resend`, email ? { email } : {})

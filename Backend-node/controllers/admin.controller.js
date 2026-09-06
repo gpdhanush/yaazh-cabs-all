@@ -413,6 +413,59 @@ async function confirmBooking(req, res) { return transitionBooking(req, res, 'co
 async function rejectBooking(req, res) { return transitionBooking(req, res, 'rejected', 'Booking rejected.', req.body.reason || null); }
 async function cancelBooking(req, res) { return transitionBooking(req, res, 'cancelled', 'Booking cancelled.', req.body.reason || null); }
 
+async function completeBooking(req, res) {
+  const id = positiveId(req.params.bookingId, 'bookingId');
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+    const [rows] = await connection.execute(
+      `SELECT id, status, assigned_driver_id, estimated_total, final_total, estimated_distance_km,
+        actual_distance_km, payment_status
+       FROM bookings WHERE id = ? FOR UPDATE`, [id]
+    );
+    const booking = rows[0];
+    if (!booking) { const error = new Error('Booking not found.'); error.statusCode = 404; throw error; }
+    if (!['driver_notified', 'driver_assigned', 'on_the_way', 'arrived', 'trip_started'].includes(booking.status)) {
+      const error = new Error(`Cannot complete booking while status is ${booking.status}.`); error.statusCode = 409; throw error;
+    }
+    if (booking.payment_status !== 'paid') {
+      const error = new Error('Record full payment before completing this ride.'); error.statusCode = 409; throw error;
+    }
+    const distance = booking.actual_distance_km ?? booking.estimated_distance_km;
+    await connection.execute(
+      `UPDATE bookings SET status = 'completed', completed_at = CURRENT_TIMESTAMP,
+        final_total = COALESCE(final_total, estimated_total), actual_distance_km = COALESCE(actual_distance_km, ?)
+       WHERE id = ?`, [distance == null ? null : Number(distance), id]
+    );
+    await connection.execute(
+      `INSERT INTO booking_status_history (booking_id, old_status, new_status, changed_by_type, changed_by_admin_id, note)
+       VALUES (?, ?, 'completed', 'admin', ?, 'Trip completed by admin without odometer')`, [id, booking.status, adminId(req)]
+    );
+    if (booking.assigned_driver_id) {
+      const [[activeRows]] = await connection.execute(
+        `SELECT COUNT(*) AS total FROM bookings
+         WHERE assigned_driver_id = ? AND id <> ? AND status IN ('driver_notified', 'driver_accepted', 'driver_assigned', 'on_the_way', 'arrived', 'trip_started')`,
+        [booking.assigned_driver_id, id]
+      );
+      if (Number(activeRows.total) === 0) {
+        await connection.execute(
+          `UPDATE drivers SET online_status = 'online', availability_status = 'available', total_completed_trips = total_completed_trips + 1 WHERE id = ?`,
+          [booking.assigned_driver_id]
+        );
+      } else {
+        await connection.execute('UPDATE drivers SET total_completed_trips = total_completed_trips + 1 WHERE id = ?', [booking.assigned_driver_id]);
+      }
+    }
+    await connection.commit();
+    return success(res, { id: String(id), status: 'completed' }, 'Trip completed.');
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
+}
+
 async function assignDriver(req, res) {
   const bookingId = positiveId(req.params.bookingId, 'bookingId');
   const driverId = positiveId(req.body.driver_id, 'driver_id');
@@ -1136,4 +1189,4 @@ async function endAssignment(req, res) {
   return success(res, { id: String(id), is_current: false }, 'Assignment ended.');
 }
 
-module.exports = { profile, updateProfile, settings, updateSetting, dashboard, listBookings, getBooking, getBookingPayment, recordBookingPayment, setBookingPaymentStatus, downloadBookingInvoice, resendBookingInvoice, confirmBooking, rejectBooking, cancelBooking, assignDriver, listCustomers, getCustomer, listDrivers, getDriver, saveDriver, deleteDriver, listVehicleCategories, getVehicleCategory, saveVehicleCategory, deleteVehicleCategory, registerAdminDevice, reports, listReviews, listEnquiries, getEnquiry, updateEnquiry, listNotifications, sendNotification, deleteNotification, listAdminUsers, getAdminUser, saveAdminUser, activateAdminUser, deactivateAdminUser, uploadMedia, uploadDriverPhoto, listRemoteConfig, createRemoteConfig, updateRemoteConfig, listAuditLogs, getAuditLog, listAdminRoles, getAdminRole, listPermissions, listRoutes, listAdminCities, getRoute, saveRoute, deleteRoute, listTariffs, getTariff, saveTariff, deleteTariff, listFaqs, getFaq, saveFaq, deleteFaq, listGallery, createGalleryGroup, createGalleryImage, updateGalleryImage, deleteGalleryRecord, listReviewsAdmin, saveReview, getReview, moderateReview, deleteReview, listVehicles, getVehicle, saveVehicle, deleteVehicle, listAssignments, createAssignment, endAssignment };
+module.exports = { profile, updateProfile, settings, updateSetting, dashboard, listBookings, getBooking, getBookingPayment, recordBookingPayment, setBookingPaymentStatus, downloadBookingInvoice, resendBookingInvoice, confirmBooking, rejectBooking, cancelBooking, completeBooking, assignDriver, listCustomers, getCustomer, listDrivers, getDriver, saveDriver, deleteDriver, listVehicleCategories, getVehicleCategory, saveVehicleCategory, deleteVehicleCategory, registerAdminDevice, reports, listReviews, listEnquiries, getEnquiry, updateEnquiry, listNotifications, sendNotification, deleteNotification, listAdminUsers, getAdminUser, saveAdminUser, activateAdminUser, deactivateAdminUser, uploadMedia, uploadDriverPhoto, listRemoteConfig, createRemoteConfig, updateRemoteConfig, listAuditLogs, getAuditLog, listAdminRoles, getAdminRole, listPermissions, listRoutes, listAdminCities, getRoute, saveRoute, deleteRoute, listTariffs, getTariff, saveTariff, deleteTariff, listFaqs, getFaq, saveFaq, deleteFaq, listGallery, createGalleryGroup, createGalleryImage, updateGalleryImage, deleteGalleryRecord, listReviewsAdmin, saveReview, getReview, moderateReview, deleteReview, listVehicles, getVehicle, saveVehicle, deleteVehicle, listAssignments, createAssignment, endAssignment };

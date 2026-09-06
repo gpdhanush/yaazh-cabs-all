@@ -1,4 +1,4 @@
-import { DatePipe, TitleCasePipe } from '@angular/common';
+import { DatePipe, DecimalPipe, TitleCasePipe } from '@angular/common';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -16,6 +16,7 @@ import { YaModalPortalDirective } from '../../shared/ya-modal-portal.directive';
   standalone: true,
   imports: [
     DatePipe,
+    DecimalPipe,
     TitleCasePipe,
     RouterLink,
     FormsModule,
@@ -52,6 +53,41 @@ import { YaModalPortalDirective } from '../../shared/ya-modal-portal.directive';
               <button mat-stroked-button class="ya-btn-ghost bk-btn" type="button" [disabled]="busy()" (click)="reject()">
                 Reject
               </button>
+            </div>
+          }
+          @if (canComplete(b) || canCancel(b)) {
+            <div class="bk-detail-actions">
+              <div class="bk-detail-actions__copy">
+                <span class="bk-detail-actions__eyebrow">Ride actions</span>
+                <strong>{{ canComplete(b) ? 'Ready to close this booking?' : 'Manage this booking' }}</strong>
+                <span>{{ canComplete(b) ? 'Confirm payment before completing the ride.' : 'Choose an action for this booking.' }}</span>
+              </div>
+              <div class="bk-detail-actions__buttons">
+                @if (canComplete(b)) {
+                  <button
+                    mat-flat-button
+                    class="ya-btn-primary bk-btn"
+                    type="button"
+                    [disabled]="busy()"
+                    (click)="completeRide()"
+                  >
+                    <mat-icon>flag</mat-icon>
+                    Complete ride
+                  </button>
+                }
+                @if (canCancel(b)) {
+                  <button
+                    mat-stroked-button
+                    class="bk-btn bk-btn--cancel"
+                    type="button"
+                    [disabled]="busy()"
+                    (click)="openCancellation()"
+                  >
+                    <mat-icon>close</mat-icon>
+                    Cancel booking
+                  </button>
+                }
+              </div>
             </div>
           }
         </section>
@@ -272,15 +308,15 @@ import { YaModalPortalDirective } from '../../shared/ya-modal-portal.directive';
             <div class="bk-odo">
               <div class="bk-odo__cell">
                 <span>Fare due</span>
-                <strong>₹{{ pay(b)?.fare_due ?? b.estimated_total }}</strong>
+                <strong>₹{{ pay(b)?.fare_due ?? b.estimated_total | number: '1.2-2' }}</strong>
               </div>
               <div class="bk-odo__cell">
                 <span>Paid</span>
-                <strong>₹{{ pay(b)?.amount_paid ?? 0 }}</strong>
+                <strong>₹{{ pay(b)?.amount_paid ?? 0 | number: '1.2-2' }}</strong>
               </div>
               <div class="bk-odo__cell bk-odo__cell--diff">
                 <span>Balance</span>
-                <strong>₹{{ pay(b)?.balance_due ?? b.estimated_total }}</strong>
+                <strong>₹{{ pay(b)?.balance_due ?? b.estimated_total | number: '1.2-2' }}</strong>
               </div>
             </div>
 
@@ -372,6 +408,80 @@ import { YaModalPortalDirective } from '../../shared/ya-modal-portal.directive';
       }
     </div>
 
+    @if (cancelOpen()) {
+      <div class="ya-modal-overlay" yaModalPortal (click)="closeCancellation()" role="presentation">
+        <div
+          class="ya-confirm bk-cancel-dialog"
+          (click)="$event.stopPropagation()"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="ya-cancel-title"
+        >
+          <div class="ya-confirm__icon ya-confirm__icon--danger" aria-hidden="true">
+            <mat-icon>close</mat-icon>
+          </div>
+          <h3 id="ya-cancel-title" class="ya-confirm__title">Cancel this booking?</h3>
+          <p class="ya-confirm__text">
+            This will cancel the booking and notify the team. Add a short reason for the booking history.
+          </p>
+          <div class="bk-cancel-dialog__reference">{{ booking()?.booking_reference }}</div>
+          <div class="ya-field bk-cancel-dialog__field">
+            <label for="cancel-reason">Cancellation reason</label>
+            <textarea
+              id="cancel-reason"
+              class="ya-field__control bk-cancel-dialog__textarea"
+              rows="3"
+              maxlength="255"
+              [(ngModel)]="cancelReason"
+              placeholder="Cancelled by admin"
+            ></textarea>
+          </div>
+          <div class="ya-confirm__footer">
+            <button mat-stroked-button class="ya-btn-ghost" type="button" (click)="closeCancellation()" [disabled]="busy()">
+              Keep booking
+            </button>
+            <button mat-stroked-button class="bk-btn bk-btn--cancel" type="button" (click)="confirmCancellation()" [disabled]="busy()">
+              <mat-icon>close</mat-icon>
+              {{ busy() ? 'Cancelling…' : 'Cancel booking' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    }
+
+    @if (completeOpen()) {
+      <div class="ya-modal-overlay" yaModalPortal (click)="closeComplete()" role="presentation">
+        <div
+          class="ya-confirm bk-complete-dialog"
+          (click)="$event.stopPropagation()"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="ya-complete-title"
+        >
+          <div class="ya-confirm__icon ya-confirm__icon--primary" aria-hidden="true">
+            <mat-icon>flag</mat-icon>
+          </div>
+          <h3 id="ya-complete-title" class="ya-confirm__title">Complete this ride?</h3>
+          <p class="ya-confirm__text">
+            Payment is fully recorded. The trip will be marked complete, and the estimated fare will be used when no odometer distance is available.
+          </p>
+          <div class="bk-complete-dialog__summary">
+            <span>Booking</span>
+            <strong>{{ booking()?.booking_reference }}</strong>
+          </div>
+          <div class="ya-confirm__footer">
+            <button mat-stroked-button class="ya-btn-ghost" type="button" (click)="closeComplete()" [disabled]="busy()">
+              Keep open
+            </button>
+            <button mat-flat-button class="ya-btn-primary" type="button" (click)="confirmComplete()" [disabled]="busy()">
+              <mat-icon>check</mat-icon>
+              {{ busy() ? 'Completing…' : 'Complete ride' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    }
+
     @if (sendOpen()) {
       <div class="ya-modal-overlay" yaModalPortal (click)="closeSendInvoice()" role="presentation">
         <div
@@ -444,7 +554,10 @@ export class BookingDetailPage implements OnInit {
   readonly error = signal<string | null>(null);
   readonly busy = signal(false);
   readonly sendOpen = signal(false);
+  readonly cancelOpen = signal(false);
+  readonly completeOpen = signal(false);
   sendEmail = '';
+  cancelReason = 'Cancelled by admin';
   driverId = '';
   payAmount = '';
   payMethod = 'cash';
@@ -525,6 +638,14 @@ export class BookingDetailPage implements OnInit {
     return b.payment;
   }
 
+  canCancel(b: Booking): boolean {
+    return ['pending', 'confirmed', 'driver_notified', 'driver_assigned'].includes(b.status);
+  }
+
+  canComplete(b: Booking): boolean {
+    return ['driver_notified', 'driver_assigned', 'on_the_way', 'arrived', 'trip_started'].includes(b.status);
+  }
+
   recordPayment(): void {
     const b = this.booking();
     const amount = this.payAmountValue();
@@ -563,6 +684,70 @@ export class BookingDetailPage implements OnInit {
       error: (err: unknown) => {
         this.busy.set(false);
         this.snack.open(err instanceof Error ? err.message : 'Update failed', 'Close');
+      },
+    });
+  }
+
+  openCancellation(): void {
+    const b = this.booking();
+    if (!b) return;
+    this.cancelReason = 'Cancelled by admin';
+    this.cancelOpen.set(true);
+  }
+
+  closeCancellation(): void {
+    if (this.busy()) return;
+    this.cancelOpen.set(false);
+  }
+
+  confirmCancellation(): void {
+    const b = this.booking();
+    if (!b) return;
+    const reason = this.cancelReason.trim() || 'Cancelled by admin';
+    this.busy.set(true);
+    this.api.cancelBooking(b.id, reason).subscribe({
+      next: () => {
+        this.busy.set(false);
+        this.cancelOpen.set(false);
+        this.snack.open('Booking cancelled', 'OK', { duration: 2500 });
+        this.load(b.id);
+      },
+      error: (err: unknown) => {
+        this.busy.set(false);
+        this.snack.open(err instanceof Error ? err.message : 'Cancellation failed', 'Close');
+      },
+    });
+  }
+
+  completeRide(): void {
+    const b = this.booking();
+    if (!b) return;
+    if (b.payment_status !== 'paid') {
+      this.snack.open('Mark the booking fully paid before completing the ride.', 'OK', { duration: 3200 });
+      return;
+    }
+    this.completeOpen.set(true);
+  }
+
+  closeComplete(): void {
+    if (this.busy()) return;
+    this.completeOpen.set(false);
+  }
+
+  confirmComplete(): void {
+    const b = this.booking();
+    if (!b) return;
+    this.busy.set(true);
+    this.api.completeBooking(b.id).subscribe({
+      next: () => {
+        this.busy.set(false);
+        this.completeOpen.set(false);
+        this.snack.open('Ride completed', 'OK', { duration: 2500 });
+        this.load(b.id);
+      },
+      error: (err: unknown) => {
+        this.busy.set(false);
+        this.snack.open(err instanceof Error ? err.message : 'Completion failed', 'Close');
       },
     });
   }

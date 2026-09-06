@@ -119,6 +119,17 @@ function createInvoicePdf({ booking, invoice }) {
     label(document, 'Balance remaining', 355, rowY + 79, 120);
     value(document, money(balance), 355, rowY + 94, 178, { bold: true, color: balance > 0 ? COLORS.goldDark : COLORS.green, size: 10 });
 
+    if (paymentRows.length) {
+      const historyY = rowY + 22;
+      document.fillColor(COLORS.ink).font('Helvetica-Bold').fontSize(10).text('Payment history', left + 16, historyY, { width: 270 });
+      paymentRows.forEach((payment, index) => {
+        const itemY = historyY + 18 + index * 23;
+        const method = String(payment.method || 'payment').replace(/_/g, ' ').toUpperCase();
+        document.fillColor(COLORS.muted).font('Helvetica').fontSize(8).text(`${dateText(payment.paid_at || payment.created_at)} · ${method}`, left + 16, itemY, { width: 195 });
+        document.fillColor(COLORS.ink).font('Helvetica-Bold').fontSize(8).text(money(payment.amount), 225, itemY, { width: 90, align: 'right' });
+      });
+    }
+
     document.fillColor(COLORS.muted).font('Helvetica').fontSize(9).text('Toll, parking and permit charges may be billed separately where applicable.', left, 720, { width: contentWidth });
     document.strokeColor(COLORS.line).lineWidth(1).moveTo(left, 760).lineTo(right, 760).stroke();
     document.fillColor(COLORS.ink).font('Helvetica-Bold').fontSize(10).text('Thank you for riding with Yaazh Cabs.', left, 778);
