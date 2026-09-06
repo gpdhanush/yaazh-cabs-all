@@ -414,13 +414,20 @@ async function publicInvoice(req, res) {
   const [rows] = await pool.execute(
     `SELECT b.id, b.booking_reference, b.customer_name, b.customer_phone, b.customer_email,
       b.pickup_location, b.drop_location, b.pickup_at, b.estimated_total, b.final_total,
-      i.* FROM booking_invoices i INNER JOIN bookings b ON b.id = i.booking_id
-      WHERE i.invoice_number = ? LIMIT 1`, [invoiceNumber]
+      i.id AS invoice_id, i.invoice_number, i.invoice_date, i.subtotal, i.discount_amount,
+      i.taxable_amount, i.gst_percentage, i.gst_amount, i.total_amount, i.amount_paid,
+      i.balance_amount, i.currency, i.status, i.pdf_url, i.issued_at
+     FROM bookings b LEFT JOIN booking_invoices i ON i.booking_id = b.id
+     WHERE i.invoice_number = ? OR CONCAT('INV-', b.booking_reference) = ?
+     ORDER BY i.id DESC LIMIT 1`, [invoiceNumber, invoiceNumber]
   );
   if (!rows[0]) { const error = new Error('Invoice not found.'); error.statusCode = 404; throw error; }
   const row = rows[0];
   const [payments] = await pool.execute('SELECT amount, status FROM payments WHERE booking_id = ? ORDER BY created_at DESC', [row.id]);
-  const pdf = await createInvoicePdf({ booking: row, invoice: { ...row, payments } });
+  const invoice = row.invoice_id == null
+    ? { invoice_number: invoiceNumber, payments }
+    : { ...row, payments };
+  const pdf = await createInvoicePdf({ booking: row, invoice });
   res.set({ 'Content-Type': 'application/pdf', 'Content-Disposition': `inline; filename="${invoiceNumber}.pdf"`, 'Content-Length': pdf.length });
   return res.send(pdf);
 }
