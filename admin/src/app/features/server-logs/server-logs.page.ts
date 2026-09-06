@@ -65,7 +65,7 @@ import { YaModalPortalDirective } from '../../shared/ya-modal-portal.directive';
           <p class="ya-confirm__text">This removes the server-side file. The API will not delete any other files.</p>
           <div class="ya-confirm__footer">
             <button mat-stroked-button class="ya-btn-ghost" type="button" (click)="closeDelete()">Cancel</button>
-            <button mat-flat-button class="ya-action-btn ya-action-btn--delete" type="button" (click)="deleteLog()" [disabled]="deleting()">
+            <button mat-flat-button class="ya-action-btn ya-action-btn--delete ya-confirm__danger" type="button" (click)="deleteLog()" [disabled]="deleting()">
               {{ deleting() ? 'Deleting…' : 'Delete log' }}
             </button>
           </div>
