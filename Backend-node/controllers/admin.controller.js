@@ -11,12 +11,29 @@ const { deliverAdminNotification } = require('../services/fcm.service');
 const MAX_LOG_BYTES = 100_000;
 const MAX_LOG_LINES = 1_000;
 
-function stderrLogPath() {
+function stderrLogPaths() {
   const configuredPath = process.env.STDERR_LOG_PATH || 'Backend-node/stderr.log';
   const relativePath = configuredPath.replace(/^Backend-node[\\/]/, '');
-  return path.isAbsolute(configuredPath)
+  const configured = path.isAbsolute(configuredPath)
     ? configuredPath
     : path.resolve(__dirname, '..', relativePath);
+  return [...new Set([
+    configured,
+    path.resolve(__dirname, '..', 'stderr.log'),
+    path.resolve(process.cwd(), 'stderr.log'),
+    path.resolve(process.cwd(), 'Backend-node/stderr.log'),
+  ])];
+}
+
+async function existingStderrLogPath() {
+  for (const candidate of stderrLogPaths()) {
+    try {
+      await fs.access(candidate);
+      return candidate;
+    } catch (_error) {
+    }
+  }
+  return stderrLogPaths()[0];
 }
 
 function sanitizeLogLine(line) {
@@ -29,7 +46,7 @@ function sanitizeLogLine(line) {
 }
 
 async function readStderrTail() {
-  const filePath = stderrLogPath();
+  const filePath = await existingStderrLogPath();
   let handle;
   try {
     handle = await fs.open(filePath, 'r');
@@ -65,7 +82,7 @@ async function getStderrLog(req, res) {
 
 async function deleteStderrLog(req, res) {
   try {
-    await fs.unlink(stderrLogPath());
+    await fs.unlink(await existingStderrLogPath());
   } catch (error) {
     if (error.code !== 'ENOENT') throw error;
   }
