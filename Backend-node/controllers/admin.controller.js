@@ -133,6 +133,63 @@ async function dashboard(req, res) {
   });
 }
 
+async function liveTracking(req, res) {
+  const [rows] = await pool.execute(
+    `SELECT b.id, b.booking_reference, b.status, b.customer_name, b.pickup_location, b.drop_location,
+      b.pickup_latitude, b.pickup_longitude, b.drop_latitude, b.drop_longitude,
+      b.estimated_duration_minutes, b.pickup_at,
+      d.id AS driver_id, d.name AS driver_name, d.phone AS driver_phone, d.profile_image_url AS driver_photo_url,
+      v.vehicle_name, v.registration_no,
+      dl.latitude AS location_latitude, dl.longitude AS location_longitude, dl.heading AS location_heading,
+      dl.speed_kmph AS location_speed_kmph, dl.recorded_at AS location_recorded_at
+     FROM bookings b
+     LEFT JOIN drivers d ON d.id = b.assigned_driver_id
+     LEFT JOIN vehicles v ON v.id = b.assigned_vehicle_id
+     LEFT JOIN driver_locations dl ON dl.id = (
+       SELECT latest.id FROM driver_locations latest
+       WHERE latest.booking_id = b.id OR (latest.booking_id IS NULL AND latest.driver_id = b.assigned_driver_id)
+       ORDER BY latest.recorded_at DESC, latest.id DESC LIMIT 1
+     )
+     WHERE b.status IN ('driver_notified', 'driver_accepted', 'driver_assigned', 'on_the_way', 'arrived', 'trip_started')
+     ORDER BY b.pickup_at ASC, b.id DESC LIMIT 100`
+  );
+  const progressByStatus = {
+    driver_notified: 10,
+    driver_accepted: 20,
+    driver_assigned: 25,
+    on_the_way: 50,
+    arrived: 70,
+    trip_started: 85,
+  };
+  const now = Date.now();
+  return success(res, rows.map((row) => {
+    const recordedAt = row.location_recorded_at ? new Date(row.location_recorded_at) : null;
+    const stale = !recordedAt || now - recordedAt.getTime() > 5 * 60 * 1000;
+    return {
+      id: String(row.id),
+      booking_reference: row.booking_reference,
+      status: row.status,
+      customer_name: row.customer_name,
+      pickup_location: row.pickup_location,
+      drop_location: row.drop_location,
+      pickup_latitude: row.pickup_latitude == null ? null : Number(row.pickup_latitude),
+      pickup_longitude: row.pickup_longitude == null ? null : Number(row.pickup_longitude),
+      drop_latitude: row.drop_latitude == null ? null : Number(row.drop_latitude),
+      drop_longitude: row.drop_longitude == null ? null : Number(row.drop_longitude),
+      progress: progressByStatus[row.status] || 0,
+      eta_min: row.estimated_duration_minutes == null ? null : Math.max(0, Number(row.estimated_duration_minutes) - Math.round((now - new Date(row.pickup_at).getTime()) / 60000)),
+      driver: row.driver_id == null ? null : { id: String(row.driver_id), name: row.driver_name, phone: row.driver_phone, photo_url: row.driver_photo_url },
+      vehicle: row.vehicle_name == null ? null : { name: row.vehicle_name, registration: row.registration_no },
+      location: row.location_latitude == null ? null : {
+        latitude: Number(row.location_latitude), longitude: Number(row.location_longitude),
+        heading: row.location_heading == null ? null : Number(row.location_heading),
+        speed_kmph: row.location_speed_kmph == null ? null : Number(row.location_speed_kmph),
+        recorded_at: row.location_recorded_at, stale,
+      },
+    };
+  }));
+}
+
 async function updateSetting(req, res) {
   const key = String(req.params.key || '').trim();
   if (!key || req.body.value === undefined) { const error = new Error('setting key and value are required.'); error.statusCode = 422; throw error; }
@@ -1189,4 +1246,4 @@ async function endAssignment(req, res) {
   return success(res, { id: String(id), is_current: false }, 'Assignment ended.');
 }
 
-module.exports = { profile, updateProfile, settings, updateSetting, dashboard, listBookings, getBooking, getBookingPayment, recordBookingPayment, setBookingPaymentStatus, downloadBookingInvoice, resendBookingInvoice, confirmBooking, rejectBooking, cancelBooking, completeBooking, assignDriver, listCustomers, getCustomer, listDrivers, getDriver, saveDriver, deleteDriver, listVehicleCategories, getVehicleCategory, saveVehicleCategory, deleteVehicleCategory, registerAdminDevice, reports, listReviews, listEnquiries, getEnquiry, updateEnquiry, listNotifications, sendNotification, deleteNotification, listAdminUsers, getAdminUser, saveAdminUser, activateAdminUser, deactivateAdminUser, uploadMedia, uploadDriverPhoto, listRemoteConfig, createRemoteConfig, updateRemoteConfig, listAuditLogs, getAuditLog, listAdminRoles, getAdminRole, listPermissions, listRoutes, listAdminCities, getRoute, saveRoute, deleteRoute, listTariffs, getTariff, saveTariff, deleteTariff, listFaqs, getFaq, saveFaq, deleteFaq, listGallery, createGalleryGroup, createGalleryImage, updateGalleryImage, deleteGalleryRecord, listReviewsAdmin, saveReview, getReview, moderateReview, deleteReview, listVehicles, getVehicle, saveVehicle, deleteVehicle, listAssignments, createAssignment, endAssignment };
+module.exports = { profile, updateProfile, settings, updateSetting, dashboard, liveTracking, listBookings, getBooking, getBookingPayment, recordBookingPayment, setBookingPaymentStatus, downloadBookingInvoice, resendBookingInvoice, confirmBooking, rejectBooking, cancelBooking, completeBooking, assignDriver, listCustomers, getCustomer, listDrivers, getDriver, saveDriver, deleteDriver, listVehicleCategories, getVehicleCategory, saveVehicleCategory, deleteVehicleCategory, registerAdminDevice, reports, listReviews, listEnquiries, getEnquiry, updateEnquiry, listNotifications, sendNotification, deleteNotification, listAdminUsers, getAdminUser, saveAdminUser, activateAdminUser, deactivateAdminUser, uploadMedia, uploadDriverPhoto, listRemoteConfig, createRemoteConfig, updateRemoteConfig, listAuditLogs, getAuditLog, listAdminRoles, getAdminRole, listPermissions, listRoutes, listAdminCities, getRoute, saveRoute, deleteRoute, listTariffs, getTariff, saveTariff, deleteTariff, listFaqs, getFaq, saveFaq, deleteFaq, listGallery, createGalleryGroup, createGalleryImage, updateGalleryImage, deleteGalleryRecord, listReviewsAdmin, saveReview, getReview, moderateReview, deleteReview, listVehicles, getVehicle, saveVehicle, deleteVehicle, listAssignments, createAssignment, endAssignment };

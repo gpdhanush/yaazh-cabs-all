@@ -47,7 +47,7 @@ cPanel → SSL/TLS Status → AutoSSL, then uncomment HTTPS redirect in `.htacce
 
 ## 4. API (bookings + track)
 
-For the `Backend-node` API on cPanel, upload `package.json` and `package-lock.json`, run `npm ci --omit=dev` in the `Backend-node` directory using Node Selector/SSH, and restart the application. This is required after adding dependencies such as `nodemailer`, `multer`, and `pdfkit`.
+For the `Backend-node` API on cPanel, upload the current source plus `package.json` and `package-lock.json`, run `npm ci --omit=dev` in the `Backend-node` directory using Node Selector/SSH, and restart the application. This is required after adding dependencies such as `firebase-admin`, `nodemailer`, `multer`, and `pdfkit`; otherwise the Node process will fail with `Cannot find module 'firebase-admin'` before the API can respond.
 
 Set the Node application environment variable `CORS_ORIGIN` or `CORS_ORIGINS` to `https://yaazhcabsudumalpet.in,https://www.yaazhcabsudumalpet.in,https://admin.yaazhcabsudumalpet.in`. Both variable names are merged, and trailing slashes are normalized. Do not leave only localhost origins in production.
 

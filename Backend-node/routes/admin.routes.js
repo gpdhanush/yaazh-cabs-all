@@ -12,6 +12,7 @@ router.post('/uploads', imageUpload.single('file'), asyncHandler(controller.uplo
 router.get('/profile', asyncHandler(controller.profile));
 router.put('/profile', asyncHandler(controller.updateProfile));
 router.get('/dashboard', requirePermission('dashboard.view'), asyncHandler(controller.dashboard));
+router.get('/live-tracking', requirePermission('bookings.view'), asyncHandler(controller.liveTracking));
 router.get('/settings', requirePermission('settings.manage'), asyncHandler(controller.settings));
 router.put('/settings/:key', requirePermission('settings.manage'), asyncHandler(controller.updateSetting));
 router.get('/seo-meta', requirePermission('seo.manage'), asyncHandler(controller.listSeoMeta));
