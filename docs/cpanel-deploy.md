@@ -53,6 +53,10 @@ Set the Node application environment variable `CORS_ORIGIN` or `CORS_ORIGINS` to
 
 For SMTP, use the full mailbox address as `MAIL_USERNAME`, the current mailbox password as `MAIL_PASSWORD` without surrounding quote characters, port `465`, `MAIL_SECURE=true`, and `MAIL_AUTH_METHOD=LOGIN`. If the server rejects authentication with `535`, reset the mailbox password in cPanel Email Accounts and update the Node application environment before restarting it.
 
+To enable admin push notifications, create a Firebase service account and set `FCM_ENABLED=true`, `FCM_PROJECT_ID`, `FCM_CLIENT_EMAIL`, and `FCM_PRIVATE_KEY` in the Node application environment. Store the private key with escaped newlines (`\\n`). Leave `FCM_ENABLED=false` when push is not configured; notifications will still be stored as in-app queued records.
+
+The Android `google-services.json` is only for the mobile client and is already used by `yaazh_admin`. Do not use it as the Node server credential. Download the server key from Firebase Console -> Project settings -> Service accounts -> Generate new private key, then copy its `project_id`, `client_email`, and `private_key` into the backend environment variables.
+
 The website calls the Fastify API for:
 
 - `GET /api/v1/public/vehicle-categories` — fleet + booking vehicle picker

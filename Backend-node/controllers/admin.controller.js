@@ -3,6 +3,7 @@ const { success } = require('../utils/response');
 const bcrypt = require('bcryptjs');
 const { createInvoicePdf } = require('../utils/invoice-pdf');
 const { sendBookingInvoice, isSmtpAuthError } = require('../utils/mailer');
+const { deliverAdminNotification } = require('../services/fcm.service');
 
 function adminId(req) {
   return Number(req.user.sub);
@@ -652,6 +653,22 @@ async function listNotifications(req, res) {
   return success(res, rows.map((row) => ({ ...row, id: String(row.id) })));
 }
 
+async function sendNotification(req, res) {
+  const title = String(req.body.title || '').trim();
+  const body = String(req.body.body || '').trim();
+  const audience = String(req.body.audience || '').trim();
+  const validAudiences = ['all_customers', 'all_drivers', 'customer', 'driver'];
+  if (!title || title.length > 180 || !body || body.length > 2000 || !validAudiences.includes(audience)) {
+    const error = new Error('title, body, and a valid audience are required.'); error.statusCode = 422; throw error;
+  }
+  const customerId = audience === 'customer' ? positiveId(req.body.customer_id, 'customer_id') : null;
+  const driverId = audience === 'driver' ? positiveId(req.body.driver_id, 'driver_id') : null;
+  const result = await deliverAdminNotification({ audience, customerId, driverId, title, body, senderAdminId: adminId(req) });
+  if (!result.recipient_count) { const error = new Error('No active recipients found.'); error.statusCode = 422; throw error; }
+  const label = audience === 'all_customers' ? 'customers' : audience === 'all_drivers' ? 'drivers' : 'recipient';
+  return success(res, result, `Notification sent to ${result.recipient_count} ${label}.`);
+}
+
 async function deleteNotification(req, res) {
   const id = positiveId(req.params.notificationId, 'notificationId');
   const [result] = await pool.execute("UPDATE notification_logs SET delivery_status = 'cancelled' WHERE id = ?", [id]);
@@ -1119,4 +1136,4 @@ async function endAssignment(req, res) {
   return success(res, { id: String(id), is_current: false }, 'Assignment ended.');
 }
 
-module.exports = { profile, updateProfile, settings, updateSetting, dashboard, listBookings, getBooking, getBookingPayment, recordBookingPayment, setBookingPaymentStatus, downloadBookingInvoice, resendBookingInvoice, confirmBooking, rejectBooking, cancelBooking, assignDriver, listCustomers, getCustomer, listDrivers, getDriver, saveDriver, deleteDriver, listVehicleCategories, getVehicleCategory, saveVehicleCategory, deleteVehicleCategory, registerAdminDevice, reports, listReviews, listEnquiries, getEnquiry, updateEnquiry, listNotifications, deleteNotification, listAdminUsers, getAdminUser, saveAdminUser, activateAdminUser, deactivateAdminUser, uploadMedia, uploadDriverPhoto, listRemoteConfig, createRemoteConfig, updateRemoteConfig, listAuditLogs, getAuditLog, listAdminRoles, getAdminRole, listPermissions, listRoutes, listAdminCities, getRoute, saveRoute, deleteRoute, listTariffs, getTariff, saveTariff, deleteTariff, listFaqs, getFaq, saveFaq, deleteFaq, listGallery, createGalleryGroup, createGalleryImage, updateGalleryImage, deleteGalleryRecord, listReviewsAdmin, saveReview, getReview, moderateReview, deleteReview, listVehicles, getVehicle, saveVehicle, deleteVehicle, listAssignments, createAssignment, endAssignment };
+module.exports = { profile, updateProfile, settings, updateSetting, dashboard, listBookings, getBooking, getBookingPayment, recordBookingPayment, setBookingPaymentStatus, downloadBookingInvoice, resendBookingInvoice, confirmBooking, rejectBooking, cancelBooking, assignDriver, listCustomers, getCustomer, listDrivers, getDriver, saveDriver, deleteDriver, listVehicleCategories, getVehicleCategory, saveVehicleCategory, deleteVehicleCategory, registerAdminDevice, reports, listReviews, listEnquiries, getEnquiry, updateEnquiry, listNotifications, sendNotification, deleteNotification, listAdminUsers, getAdminUser, saveAdminUser, activateAdminUser, deactivateAdminUser, uploadMedia, uploadDriverPhoto, listRemoteConfig, createRemoteConfig, updateRemoteConfig, listAuditLogs, getAuditLog, listAdminRoles, getAdminRole, listPermissions, listRoutes, listAdminCities, getRoute, saveRoute, deleteRoute, listTariffs, getTariff, saveTariff, deleteTariff, listFaqs, getFaq, saveFaq, deleteFaq, listGallery, createGalleryGroup, createGalleryImage, updateGalleryImage, deleteGalleryRecord, listReviewsAdmin, saveReview, getReview, moderateReview, deleteReview, listVehicles, getVehicle, saveVehicle, deleteVehicle, listAssignments, createAssignment, endAssignment };

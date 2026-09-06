@@ -37,6 +37,7 @@ router.get('/enquiries', requirePermission('customers.manage'), asyncHandler(con
 router.get('/enquiries/:enquiryId', requirePermission('customers.manage'), asyncHandler(controller.getEnquiry));
 router.put('/enquiries/:enquiryId', requirePermission('customers.manage'), asyncHandler(controller.updateEnquiry));
 router.get('/notifications', requirePermission('notifications.send'), asyncHandler(controller.listNotifications));
+router.post('/notifications/send', requirePermission('notifications.send'), asyncHandler(controller.sendNotification));
 router.delete('/notifications/:notificationId', requirePermission('notifications.send'), asyncHandler(controller.deleteNotification));
 router.get('/admin-users', requirePermission('admin_users.view'), asyncHandler(controller.listAdminUsers));
 router.get('/admin-users/:adminUserId', requirePermission('admin_users.view'), asyncHandler(controller.getAdminUser));

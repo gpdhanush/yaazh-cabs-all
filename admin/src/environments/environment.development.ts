@@ -1,7 +1,7 @@
 export const environment = {
   production: false,
-  apiUrl: 'http://localhost:3000',
-  // apiUrl: 'https://api.yaazhcabsudumalpet.in',
+  // apiUrl: 'http://localhost:3000',
+  apiUrl: 'https://api.yaazhcabsudumalpet.in',
   appName: 'Yaazh Admin',
   appVersion: '1.0.0-dev',
   firebase: {

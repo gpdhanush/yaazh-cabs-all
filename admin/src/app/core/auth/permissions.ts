@@ -35,6 +35,7 @@ export const ADMIN_NAV_ITEMS: NavItem[] = [
   { label: 'Roles', path: '/roles', icon: 'verified_user', permission: 'admin_users.view' },
   { label: 'Audit logs', path: '/audit-logs', icon: 'history', permission: 'audit_logs.view' },
   { label: 'Remote config', path: '/remote-config', icon: 'tune', permission: 'remote_config.manage' },
+  { label: 'SEO', path: '/seo', icon: 'language', permission: 'seo.manage' },
   { label: 'Settings', path: '/settings', icon: 'settings', permission: 'settings.manage' },
   { label: 'Appearance', path: '/appearance', icon: 'palette', permission: 'settings.manage' },
 ];

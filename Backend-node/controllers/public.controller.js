@@ -1,6 +1,7 @@
 const pool = require('../config/database');
 const { success } = require('../utils/response');
 const crypto = require('crypto');
+const { notifyAdmins } = require('../services/fcm.service');
 
 function pageParams(query, defaultLimit = 20) {
   const page = Math.max(1, Number.parseInt(query.page, 10) || 1);
@@ -391,6 +392,12 @@ async function createGuestBooking(req, res) {
        VALUES (?, 'pending', 'system', 'Guest booking created')`, [result.insertId]
     );
     await connection.commit();
+    await notifyAdmins({
+      bookingId: result.insertId,
+      bookingReference: reference,
+      title: 'New booking received',
+      body: `${req.body.customer_name} requested a ${req.body.trip_type.replace('_', ' ')} trip.`,
+    }).catch((error) => console.error('[ERROR] Booking admin notification skipped:', error.message));
     return success(res, { id: result.insertId, booking_reference: reference, estimated_total: baseFare, status: 'pending' }, 'Booking created.', 201);
   } catch (error) {
     await connection.rollback();
