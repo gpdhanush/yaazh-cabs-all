@@ -20,12 +20,12 @@ export class AuthService {
   readonly permissions = computed(() => this.user()?.permissions);
 
   readonly visibleNavItems = computed(() =>
-    filterNavByPermissions(ADMIN_NAV_ITEMS, this.permissions()),
+    filterNavByPermissions(ADMIN_NAV_ITEMS, this.permissions(), this.user()?.role_name),
   );
   readonly isAuthenticated = computed(() => Boolean(this.tokensSignal()?.access_token));
 
   hasPermission(key: string): boolean {
-    return hasAccess(this.permissions(), key);
+    return hasAccess(this.permissions(), key, this.user()?.role_name);
   }
 
   ensurePermissionsLoaded(): Observable<AdminUser | null> {

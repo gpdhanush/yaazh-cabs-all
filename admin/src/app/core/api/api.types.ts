@@ -32,6 +32,7 @@ export type AdminUser = {
   email: string;
   role_id?: string;
   permissions?: string[];
+  role_name?: string;
 };
 
 export type AdminRole = {

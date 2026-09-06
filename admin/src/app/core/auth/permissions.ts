@@ -48,8 +48,9 @@ export function permissionForPath(path: string): string | undefined {
   return hit?.permission;
 }
 
-export function hasAccess(permissions: string[] | undefined, needed?: string): boolean {
+export function hasAccess(permissions: string[] | undefined, needed?: string, roleName?: string): boolean {
   if (!needed) return true;
+  if (needed.startsWith('server_logs.') && roleName === 'Super Admin') return true;
   if (permissions === undefined) return true;
   if (permissions.includes(needed)) return true;
   if (needed === 'gallery.view' || needed === 'gallery.manage') {
@@ -66,7 +67,8 @@ export function hasAccess(permissions: string[] | undefined, needed?: string): b
 export function filterNavByPermissions(
   items: NavItem[],
   permissions: string[] | undefined,
+  roleName?: string,
 ): NavItem[] {
   if (permissions === undefined) return items;
-  return items.filter((item) => hasAccess(permissions, item.permission));
+  return items.filter((item) => hasAccess(permissions, item.permission, roleName));
 }

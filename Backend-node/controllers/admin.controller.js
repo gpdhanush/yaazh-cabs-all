@@ -13,9 +13,10 @@ const MAX_LOG_LINES = 1_000;
 
 function stderrLogPath() {
   const configuredPath = process.env.STDERR_LOG_PATH || 'Backend-node/stderr.log';
+  const relativePath = configuredPath.replace(/^Backend-node[\\/]/, '');
   return path.isAbsolute(configuredPath)
     ? configuredPath
-    : path.resolve(__dirname, '..', configuredPath.replace(/^Backend-node[\\/]/, 'Backend-node/'));
+    : path.resolve(__dirname, '..', relativePath);
 }
 
 function sanitizeLogLine(line) {

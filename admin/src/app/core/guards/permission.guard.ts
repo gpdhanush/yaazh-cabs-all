@@ -17,6 +17,6 @@ export const routePermissionGuard: CanActivateFn = (_route, state) => {
   const router = inject(Router);
   const path = state.url.split('?')[0];
   const needed = permissionForPath(path);
-  if (!needed || hasAccess(auth.permissions(), needed)) return true;
+  if (!needed || hasAccess(auth.permissions(), needed, auth.user()?.role_name)) return true;
   return router.createUrlTree(['/dashboard']);
 };
