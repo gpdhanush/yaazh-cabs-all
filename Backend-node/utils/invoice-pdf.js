@@ -284,17 +284,17 @@ function createInvoicePdf({ booking, invoice }) {
      */
     const customerCardY = infoY + 28;
 
-    document.roundedRect(marginX, customerCardY, 250, 116, 10).fill(COLORS.pale);
+    document.roundedRect(marginX, customerCardY, 250, 92, 10).fill(COLORS.pale);
 
-    document.rect(marginX, customerCardY, 4, 116).fill(COLORS.gold);
+    document.rect(marginX, customerCardY, 4, 92).fill(COLORS.gold);
 
-    label(document, "Customer", marginX + 18, customerCardY + 17, 210, fonts);
+    label(document, "Customer", marginX + 18, customerCardY + 12, 210, fonts);
 
     value(
       document,
       String(booking.customer_name || "").toUpperCase(),
       marginX + 18,
-      customerCardY + 34,
+      customerCardY + 28,
       210,
       fonts,
       {
@@ -303,13 +303,13 @@ function createInvoicePdf({ booking, invoice }) {
       },
     );
 
-    value(document, booking.customer_phone, marginX + 18, customerCardY + 59, 210, fonts);
+    value(document, booking.customer_phone, marginX + 18, customerCardY + 48, 210, fonts);
 
     value(
       document,
       String(booking.customer_email || "").toLowerCase(),
       marginX + 18,
-      customerCardY + 79,
+      customerCardY + 67,
       210,
       fonts,
       {
@@ -320,20 +320,20 @@ function createInvoicePdf({ booking, invoice }) {
     /*
      * Trip card
      */
-    document.roundedRect(314, customerCardY, 237, 116, 10).fill(COLORS.pale);
+    document.roundedRect(314, customerCardY, 237, 92, 10).fill(COLORS.pale);
 
-    document.rect(314, customerCardY, 4, 116).fill(COLORS.gold);
+    document.rect(314, customerCardY, 4, 92).fill(COLORS.gold);
 
-    label(document, "Pickup", 332, customerCardY + 17, 200, fonts);
+    label(document, "Pickup", 332, customerCardY + 12, 200, fonts);
 
-    value(document, booking.pickup_location, 332, customerCardY + 34, 201, fonts, {
+    value(document, booking.pickup_location, 332, customerCardY + 28, 201, fonts, {
       bold: true,
       size: 9,
     });
 
-    label(document, "Drop", 332, customerCardY + 61, 200, fonts);
+    label(document, "Drop", 332, customerCardY + 49, 200, fonts);
 
-    value(document, booking.drop_location, 332, customerCardY + 78, 201, fonts, {
+    value(document, booking.drop_location, 332, customerCardY + 65, 201, fonts, {
       bold: true,
       size: 9,
     });
@@ -342,7 +342,7 @@ function createInvoicePdf({ booking, invoice }) {
       document,
       `Pickup time: ${dateText(booking.pickup_at)}`,
       332,
-      customerCardY + 98,
+      customerCardY + 79,
       201,
       fonts,
       {
@@ -357,7 +357,7 @@ function createInvoicePdf({ booking, invoice }) {
      * ============================================================
      */
 
-    const tableY = 430;
+    const tableY = 406;
 
     document.roundedRect(marginX, tableY, contentWidth, 40, 8).fill(COLORS.navy);
 
@@ -459,9 +459,9 @@ function createInvoicePdf({ booking, invoice }) {
       /*
        * Header
        */
-      label(document, "Date / Method", marginX, paymentSectionY, 210, fonts);
+      label(document, "Date / Method", marginX, paymentSectionY, 175, fonts);
 
-      label(document, "Amount", 420, paymentSectionY, 115, fonts);
+      label(document, "Amount", 230, paymentSectionY, 80, fonts);
 
       paymentSectionY += 19;
 
@@ -477,15 +477,15 @@ function createInvoicePdf({ booking, invoice }) {
           .font(fonts.regular)
           .fontSize(8.5)
           .text(`${paymentDate}  ·  ${method}`, marginX, paymentSectionY, {
-            width: 300,
+            width: 175,
           });
 
         document
           .fillColor(COLORS.ink)
           .font(fonts.semibold)
           .fontSize(8.5)
-          .text(money(payment.amount), 420, paymentSectionY, {
-            width: 115,
+          .text(money(payment.amount), 230, paymentSectionY, {
+            width: 80,
             align: "right",
           });
 
