@@ -43,10 +43,9 @@ final reportRepositoryProvider = Provider<ReportRepository>((ref) {
 final reportsProvider = FutureProvider.autoDispose<ReportsPayload>((ref) {
   final period = ref.watch(reportPeriodProvider);
   final range = ref.watch(reportDateRangeProvider);
-  return ref.watch(reportRepositoryProvider).fetch(
-        period: period,
-        range: range,
-      );
+  return ref
+      .watch(reportRepositoryProvider)
+      .fetch(period: period, range: range);
 });
 
 class ReportRepository {
@@ -59,11 +58,14 @@ class ReportRepository {
     required ReportDateRange range,
   }) async {
     var payload = _payloadFrom(
-      await _api.get('/admin/reports', queryParameters: {
-        'period': period,
-        'from': range.fromParam,
-        'to': range.toParam,
-      }),
+      await _api.get(
+        '/admin/reports',
+        queryParameters: {
+          'period': period,
+          'from': range.fromParam,
+          'to': range.toParam,
+        },
+      ),
       period,
       range,
     );
@@ -71,19 +73,29 @@ class ReportRepository {
     var bookings = payload.bookings;
     try {
       final fromList = _bookingsFromList(
-        await _api.get('/admin/bookings', queryParameters: {
-          'page': 1,
-          'per_page': 500,
-          'from': range.fromParam,
-          'to': range.toParam,
-        }),
+        await _api.get(
+          '/admin/bookings',
+          queryParameters: {
+            'page': 1,
+            'per_page': 500,
+            'from': range.fromParam,
+            'to': range.toParam,
+          },
+        ),
         range,
       );
       if (fromList.isNotEmpty) bookings = fromList;
     } catch (_) {}
 
     final counts = bookings.isNotEmpty ? _countsFrom(bookings) : payload.counts;
-    return payload.copyWith(counts: counts, bookings: bookings);
+    final byStatus = bookings.isNotEmpty
+        ? _statusCountsFrom(bookings)
+        : payload.byStatus;
+    return payload.copyWith(
+      counts: counts,
+      byStatus: byStatus,
+      bookings: bookings,
+    );
   }
 
   ReportsPayload _payloadFrom(
@@ -115,7 +127,8 @@ class ReportRepository {
   List<ReportBooking> _bookingsFromList(dynamic data, ReportDateRange range) {
     return asMapList(data)
         .where((json) {
-          final raw = json['created_at']?.toString() ??
+          final raw =
+              json['created_at']?.toString() ??
               json['pickup_at']?.toString() ??
               '';
           final parsed = DateTime.tryParse(raw);
@@ -151,5 +164,17 @@ class ReportRepository {
       pending: pending,
       revenue: revenue,
     );
+  }
+
+  List<ReportStatusCount> _statusCountsFrom(List<ReportBooking> bookings) {
+    final counts = <String, int>{};
+    for (final booking in bookings) {
+      counts.update(booking.status, (value) => value + 1, ifAbsent: () => 1);
+    }
+    return counts.entries
+        .map(
+          (entry) => ReportStatusCount(status: entry.key, count: entry.value),
+        )
+        .toList();
   }
 }

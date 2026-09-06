@@ -124,8 +124,5 @@ String? adminPhotoUrl({String? id, String? avatarUrl}) {
   final stored = avatarUrl?.trim();
   final hasPhoto = stored != null && stored.isNotEmpty && stored != 'null';
   if (!hasPhoto) return null;
-  if (id != null && id.isNotEmpty) {
-    return resolveMediaUrl('/api/v1/public/admins/$id/photo');
-  }
   return resolveMediaUrl(stored);
 }

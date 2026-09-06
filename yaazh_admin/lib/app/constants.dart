@@ -80,7 +80,7 @@ class AppConstants {
   static const double tabletBreakpoint = 840;
 
   static const LatLng defaultCenter = LatLng(10.5847, 77.2514);
-  static const String osmUserAgent = 'com.yaazh.admin';
+  static const String osmUserAgent = 'com.yaazhcabs.admin';
 }
 
 class Breakpoints {

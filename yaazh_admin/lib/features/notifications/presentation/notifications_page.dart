@@ -26,23 +26,30 @@ class NotificationsPage extends ConsumerWidget {
       child: KeyboardDismiss(
         child: Scaffold(
           appBar: AppBar(
-            title: const Text('Push alerts'),
-            bottom: const TabBar(
-              isScrollable: true,
-              tabAlignment: TabAlignment.start,
-              tabs: [
-                Tab(text: 'All'),
-                Tab(text: 'Customers'),
-                Tab(text: 'Drivers'),
-              ],
+            title: const Text('Notification'),
+            bottom: const PreferredSize(
+              preferredSize: Size.zero,
+              child: Visibility(
+                visible: false,
+                child: TabBar(
+                  tabs: [
+                    Tab(text: 'All'),
+                    Tab(text: 'Customers'),
+                    Tab(text: 'Drivers'),
+                  ],
+                ),
+              ),
             ),
           ),
-          floatingActionButton: FloatingActionButton(
-            onPressed: () {
-              hideKeyboard();
-              context.push('/notifications/new');
-            },
-            child: const Icon(Icons.campaign_rounded),
+          floatingActionButton: Visibility(
+            visible: false,
+            child: FloatingActionButton(
+              onPressed: () {
+                hideKeyboard();
+                context.push('/notifications/new');
+              },
+              child: const Icon(Icons.campaign_rounded),
+            ),
           ),
           body: Column(
             children: [
@@ -51,7 +58,8 @@ class NotificationsPage extends ConsumerWidget {
                 child: TextField(
                   textInputAction: TextInputAction.search,
                   onChanged: (value) =>
-                      ref.read(notificationSearchProvider.notifier).state = value,
+                      ref.read(notificationSearchProvider.notifier).state =
+                          value,
                   decoration: const InputDecoration(
                     hintText: 'Search title, recipient…',
                     prefixIcon: Icon(Icons.search_rounded),
@@ -60,6 +68,7 @@ class NotificationsPage extends ConsumerWidget {
               ),
               const Expanded(
                 child: TabBarView(
+                  physics: NeverScrollableScrollPhysics(),
                   children: [
                     _NotificationList(tab: _NotifyTab.all),
                     _NotificationList(tab: _NotifyTab.customers),
@@ -234,12 +243,16 @@ class _NotificationCard extends ConsumerWidget {
                       Text(
                         [
                           n.recipientName ?? capitalizeWords(n.recipientType),
-                          if (n.recipientPhone?.isNotEmpty == true) n.recipientPhone,
+                          if (n.recipientPhone?.isNotEmpty == true)
+                            n.recipientPhone,
                         ].join(' · '),
                         style: theme.textTheme.bodySmall,
                       ),
                       const SizedBox(height: 4),
-                      Text(formatDateTime(n.createdAt), style: theme.textTheme.bodySmall),
+                      Text(
+                        formatDateTime(n.createdAt),
+                        style: theme.textTheme.bodySmall,
+                      ),
                     ],
                   ),
                 ),

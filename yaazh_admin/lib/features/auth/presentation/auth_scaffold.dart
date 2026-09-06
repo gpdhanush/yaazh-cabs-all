@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:yaazh_admin/app/constants.dart';
 import 'package:yaazh_admin/core/widgets/app_logo.dart';
 import 'package:yaazh_admin/core/widgets/keyboard_dismiss.dart';
+
+final Future<PackageInfo> _packageInfo = PackageInfo.fromPlatform();
 
 class AuthScaffold extends StatelessWidget {
   final String title;
@@ -85,12 +88,25 @@ class AuthScaffold extends StatelessWidget {
                   ),
                   Padding(
                     padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
-                    child: Text(
-                      'Version ${AppConstants.appVersion}',
-                      textAlign: TextAlign.center,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
+                    child: FutureBuilder<PackageInfo>(
+                      future: _packageInfo,
+                      builder: (context, snapshot) {
+                        final version = snapshot.data == null
+                            ? AppConstants.appVersion
+                            : snapshot
+                                  .data!
+                                  .version; // +${snapshot.data!.buildNumber}
+                        return Text(
+                          'Version $version',
+                          textAlign: TextAlign.center,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 12,
+                            color: theme.textTheme.bodySmall?.color,
+                            letterSpacing: 0.4,
+                          ),
+                        );
+                      },
                     ),
                   ),
                 ],

@@ -19,7 +19,7 @@ class DefaultFirebaseOptions {
     }
   }
 
-  /// Matches `com.yaazh.admin` in android/app/google-services.json.
+  /// Matches `com.yaazhcabs.admin` in android/app/google-services.json.
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyDgTAbUWEfhbb-6JKPDDDnPCoHC0eg4AFA',
     appId: '1:771197506607:android:5835bb94abd0803af022da',

@@ -17,7 +17,7 @@ class SplashPage extends ConsumerStatefulWidget {
 
 class _SplashPageState extends ConsumerState<SplashPage> {
   String _version = AppConstants.appVersion;
-  String _build = '1';
+  // String _build = '1';
   @override
   void initState() {
     super.initState();
@@ -30,7 +30,7 @@ class _SplashPageState extends ConsumerState<SplashPage> {
       if (mounted) {
         setState(() {
           _version = info.version;
-          _build = info.buildNumber;
+          // _build = info.buildNumber;
         });
       }
     } catch (_) {}
@@ -97,7 +97,7 @@ class _SplashPageState extends ConsumerState<SplashPage> {
                 ),
                 const Spacer(flex: 4),
                 Text(
-                  'Version $_version+$_build',
+                  'Version $_version', // +$_build
                   style: TextStyle(
                     color: header,
                     fontSize: 12,

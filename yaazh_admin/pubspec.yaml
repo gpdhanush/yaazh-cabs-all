@@ -53,6 +53,7 @@ flutter:
     - .env.example
     - .env
     - assets/img/app-logo-admin.png
-    - assets/
+    - assets/img/
     - assets/img/logo-light.png
     - assets/img/driver-default.png
+    - assets/img/logo.png

@@ -45,7 +45,8 @@ class BookingsPage extends ConsumerWidget {
                     child: TextField(
                       textInputAction: TextInputAction.search,
                       onChanged: (value) =>
-                          ref.read(bookingSearchProvider.notifier).state = value,
+                          ref.read(bookingSearchProvider.notifier).state =
+                              value,
                       decoration: const InputDecoration(
                         hintText: 'Search reference, customer, route…',
                         prefixIcon: Icon(Icons.search_rounded),
@@ -71,7 +72,8 @@ class _MonthDropdown extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final selected = ref.watch(bookingMonthProvider);
-    final bookings = ref.watch(bookingsProvider).valueOrNull ?? const <Booking>[];
+    final bookings =
+        ref.watch(bookingsProvider).valueOrNull ?? const <Booking>[];
     final keys = <String>{};
     for (final b in bookings) {
       final dt = DateTime.tryParse(b.pickupAt)?.toLocal();
@@ -213,7 +215,10 @@ class _BookingCard extends ConsumerWidget {
                 ],
               ),
               const SizedBox(height: 6),
-              Text(b.customerName, style: theme.textTheme.titleSmall),
+              Text(
+                b.customerName.toUpperCase(),
+                style: theme.textTheme.titleSmall,
+              ),
               const SizedBox(height: 2),
               Text(
                 route,
@@ -230,10 +235,14 @@ class _BookingCard extends ConsumerWidget {
                       style: theme.textTheme.bodySmall,
                     ),
                   ),
-                  Text(formatInr(b.estimatedTotal), style: theme.textTheme.titleSmall),
+                  Text(
+                    formatInr(b.estimatedTotal),
+                    style: theme.textTheme.titleSmall,
+                  ),
                 ],
               ),
-              if (BookingStatus.canConfirm(b.status) || BookingStatus.canAssign(b.status)) ...[
+              if (BookingStatus.canConfirm(b.status) ||
+                  BookingStatus.canAssign(b.status)) ...[
                 const SizedBox(height: 10),
                 Row(
                   children: [

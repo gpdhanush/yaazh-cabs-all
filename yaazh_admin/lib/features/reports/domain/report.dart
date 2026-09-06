@@ -102,18 +102,32 @@ class ReportBooking {
     }
 
     return ReportBooking(
-      reference: json['reference']?.toString() ?? json['booking_reference']?.toString() ?? '',
-      customerName: json['customer_name']?.toString() ?? json['customer']?.toString() ?? '',
-      driverName: json['driver_name']?.toString() ?? asMap(json['driver'])?['name']?.toString() ?? '',
-      pickup: json['pickup']?.toString() ?? json['pickup_location']?.toString() ?? '',
+      reference:
+          json['reference']?.toString() ??
+          json['booking_reference']?.toString() ??
+          '',
+      customerName:
+          json['customer_name']?.toString() ??
+          json['customer']?.toString() ??
+          '',
+      driverName:
+          json['driver_name']?.toString() ??
+          asMap(json['driver'])?['name']?.toString() ??
+          '',
+      pickup:
+          json['pickup']?.toString() ??
+          json['pickup_location']?.toString() ??
+          '',
       drop: json['drop']?.toString() ?? json['drop_location']?.toString() ?? '',
       status: json['status']?.toString() ?? 'pending',
-      amount: parseDouble(json['amount']) ??
+      amount:
+          parseDouble(json['amount']) ??
           parseDouble(json['final_total']) ??
           parseDouble(json['estimated_total']) ??
           0,
       km: () {
-        final actual = parseDouble(json['km']) ??
+        final actual =
+            parseDouble(json['km']) ??
             parseDouble(json['actual_distance_km']) ??
             parseDouble(json['odometer_difference_km']);
         if (actual != null && actual > 0) return actual;
@@ -155,14 +169,21 @@ class ReportsPayload {
             ? Map<String, dynamic>.from(json['counts'] as Map)
             : <String, dynamic>{},
       ),
-      series: asMapList(json['series']).map(ReportSeriesPoint.fromJson).toList(),
-      byStatus: asMapList(json['bookings_by_status']).map(ReportStatusCount.fromJson).toList(),
-      bookings: asMapList(json['bookings']).map(ReportBooking.fromJson).toList(),
+      series: asMapList(
+        json['series'],
+      ).map(ReportSeriesPoint.fromJson).toList(),
+      byStatus: asMapList(
+        json['bookings_by_status'],
+      ).map(ReportStatusCount.fromJson).toList(),
+      bookings: asMapList(
+        json['bookings'],
+      ).map(ReportBooking.fromJson).toList(),
     );
   }
 
   ReportsPayload copyWith({
     ReportCounts? counts,
+    List<ReportStatusCount>? byStatus,
     List<ReportBooking>? bookings,
   }) {
     return ReportsPayload(
@@ -171,7 +192,7 @@ class ReportsPayload {
       to: to,
       counts: counts ?? this.counts,
       series: series,
-      byStatus: byStatus,
+      byStatus: byStatus ?? this.byStatus,
       bookings: bookings ?? this.bookings,
     );
   }

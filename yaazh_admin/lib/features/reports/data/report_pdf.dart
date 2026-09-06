@@ -1,7 +1,7 @@
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:file_saver/file_saver.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:path_provider/path_provider.dart';
@@ -12,8 +12,16 @@ import 'package:yaazh_admin/core/widgets/status_chip.dart';
 import 'package:yaazh_admin/features/reports/data/report_repository.dart';
 import 'package:yaazh_admin/features/reports/domain/report.dart';
 
-final _inr = NumberFormat.currency(locale: 'en_IN', symbol: 'Rs ', decimalDigits: 0);
-final _inrDec = NumberFormat.currency(locale: 'en_IN', symbol: 'Rs ', decimalDigits: 2);
+final _inr = NumberFormat.currency(
+  locale: 'en_IN',
+  symbol: 'Rs ',
+  decimalDigits: 0,
+);
+final _inrDec = NumberFormat.currency(
+  locale: 'en_IN',
+  symbol: 'Rs ',
+  decimalDigits: 2,
+);
 final _pretty = DateFormat('dd MMM yyyy');
 final _stamp = DateFormat('yyyyMMdd_HHmm');
 
@@ -143,9 +151,7 @@ pw.Widget _gridCell(
       decoration: last
           ? null
           : pw.BoxDecoration(
-              border: pw.Border(
-                right: pw.BorderSide(color: _line, width: 0.6),
-              ),
+              border: pw.Border(right: pw.BorderSide(color: _line, width: 0.6)),
             ),
       child: child,
     ),
@@ -195,6 +201,8 @@ Future<String> exportReportPdf({
   final filename = 'Yaazh_Report_${_stamp.format(DateTime.now())}.pdf';
   final bookings = data.bookings;
   final counts = data.counts;
+  final logoData = await rootBundle.load('assets/img/app-logo-admin.png');
+  final logo = pw.MemoryImage(logoData.buffer.asUint8List());
 
   doc.addPage(
     pw.MultiPage(
@@ -221,30 +229,48 @@ Future<String> exportReportPdf({
           width: double.infinity,
           color: _brand,
           padding: const pw.EdgeInsets.fromLTRB(16, 14, 16, 14),
-          child: pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
+          child: pw.Row(
+            crossAxisAlignment: pw.CrossAxisAlignment.center,
             children: [
-              pw.Text(
-                'YAAZH CABS',
-                style: pw.TextStyle(
-                  fontSize: 9,
-                  fontWeight: pw.FontWeight.bold,
-                  color: PdfColors.white,
-                ),
+              pw.Container(
+                width: 54,
+                height: 54,
+                padding: const pw.EdgeInsets.all(4),
+                color: PdfColors.white,
+                child: pw.Image(logo, fit: pw.BoxFit.contain),
               ),
-              pw.SizedBox(height: 4),
-              pw.Text(
-                'Booking report',
-                style: pw.TextStyle(
-                  fontSize: 18,
-                  fontWeight: pw.FontWeight.bold,
-                  color: PdfColors.white,
+              pw.SizedBox(width: 12),
+              pw.Expanded(
+                child: pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Text(
+                      'YAAZH CABS',
+                      style: pw.TextStyle(
+                        fontSize: 9,
+                        fontWeight: pw.FontWeight.bold,
+                        color: PdfColors.white,
+                      ),
+                    ),
+                    pw.SizedBox(height: 4),
+                    pw.Text(
+                      'Booking report',
+                      style: pw.TextStyle(
+                        fontSize: 18,
+                        fontWeight: pw.FontWeight.bold,
+                        color: PdfColors.white,
+                      ),
+                    ),
+                    pw.SizedBox(height: 4),
+                    pw.Text(
+                      '$rangeLabel  |  Generated ${_pretty.format(DateTime.now())}',
+                      style: const pw.TextStyle(
+                        fontSize: 10,
+                        color: PdfColors.white,
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-              pw.SizedBox(height: 4),
-              pw.Text(
-                '$rangeLabel  |  Generated ${_pretty.format(DateTime.now())}',
-                style: const pw.TextStyle(fontSize: 10, color: PdfColors.white),
               ),
             ],
           ),
@@ -275,9 +301,24 @@ Future<String> exportReportPdf({
           flex: const [1, 1, 1, 1, 1],
           cells: [
             _cellText('${counts.bookings}', bold: true, size: 11),
-            _cellText('${counts.completed}', bold: true, size: 11, color: _completed),
-            _cellText('${counts.pending}', bold: true, size: 11, color: _pending),
-            _cellText('${counts.cancelled}', bold: true, size: 11, color: _cancelled),
+            _cellText(
+              '${counts.completed}',
+              bold: true,
+              size: 11,
+              color: _completed,
+            ),
+            _cellText(
+              '${counts.pending}',
+              bold: true,
+              size: 11,
+              color: _pending,
+            ),
+            _cellText(
+              '${counts.cancelled}',
+              bold: true,
+              size: 11,
+              color: _cancelled,
+            ),
             _cellText(_money(counts.revenue), bold: true, size: 11),
           ],
         ),
@@ -353,14 +394,8 @@ Future<String> exportReportPdf({
                   bold: true,
                   color: _statusColor(booking.status),
                 ),
-                _cellText(
-                  _money(booking.amount),
-                  align: pw.TextAlign.right,
-                ),
-                _cellText(
-                  _km(booking.km),
-                  align: pw.TextAlign.right,
-                ),
+                _cellText(_money(booking.amount), align: pw.TextAlign.right),
+                _cellText(_km(booking.km), align: pw.TextAlign.right),
               ],
             ),
         ],
