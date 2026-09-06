@@ -1106,6 +1106,82 @@ async function getAdminRole(req, res) {
   return success(res, { ...rows[0], id: String(rows[0].id), permissions: permissions.map((row) => ({ ...row, id: String(row.id) })) });
 }
 
+async function saveAdminRole(req, res) {
+  const name = String(req.body.name || '').trim();
+  const description = req.body.description == null ? null : String(req.body.description).trim() || null;
+  const permissionIds = Array.isArray(req.body.permission_ids)
+    ? [...new Set(req.body.permission_ids.map((value) => Number(value)).filter((value) => Number.isInteger(value) && value > 0))]
+    : [];
+  if (name.length < 2) { const error = new Error('Role name must be at least 2 characters.'); error.statusCode = 422; throw error; }
+  const id = req.params.roleId ? positiveId(req.params.roleId, 'roleId') : null;
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+    let isSuperAdmin = false;
+    if (id) {
+      const [existingRows] = await connection.execute('SELECT id, name FROM admin_roles WHERE id = ? LIMIT 1 FOR UPDATE', [id]);
+      if (!existingRows[0]) { const error = new Error('Admin role not found.'); error.statusCode = 404; throw error; }
+      isSuperAdmin = existingRows[0].name === 'Super Admin';
+      if (isSuperAdmin) {
+        await connection.execute('UPDATE admin_roles SET description = ? WHERE id = ?', [description, id]);
+      } else {
+        const [clashes] = await connection.execute('SELECT id FROM admin_roles WHERE name = ? AND id <> ? LIMIT 1', [name, id]);
+        if (clashes[0]) { const error = new Error('A role with this name already exists.'); error.statusCode = 409; throw error; }
+        await connection.execute('UPDATE admin_roles SET name = ?, description = ? WHERE id = ?', [name, description, id]);
+      }
+    } else {
+      const [clashes] = await connection.execute('SELECT id FROM admin_roles WHERE name = ? LIMIT 1', [name]);
+      if (clashes[0]) { const error = new Error('A role with this name already exists.'); error.statusCode = 409; throw error; }
+      const [result] = await connection.execute('INSERT INTO admin_roles (name, description, is_active) VALUES (?, ?, 1)', [name, description]);
+      req.params.roleId = result.insertId;
+    }
+    const roleId = id || Number(req.params.roleId);
+    if (isSuperAdmin) {
+      await connection.execute('DELETE FROM role_permissions WHERE role_id = ?', [roleId]);
+      const [allPermissions] = await connection.execute('SELECT id FROM permissions');
+      permissionIds.splice(0, permissionIds.length, ...allPermissions.map((row) => Number(row.id)));
+    } else {
+      const [validPermissions] = await connection.execute(
+        `SELECT id FROM permissions WHERE id IN (${permissionIds.length ? permissionIds.map(() => '?').join(',') : 'NULL'})`, permissionIds
+      );
+      if (validPermissions.length !== permissionIds.length) { const error = new Error('One or more permissions are invalid.'); error.statusCode = 422; throw error; }
+      await connection.execute('DELETE FROM role_permissions WHERE role_id = ?', [roleId]);
+    }
+    if (permissionIds.length) {
+      await connection.query(
+        `INSERT INTO role_permissions (role_id, permission_id) VALUES ${permissionIds.map(() => '(?, ?)').join(', ')}`,
+        permissionIds.flatMap((permissionId) => [roleId, permissionId])
+      );
+    }
+    await connection.commit();
+    return getAdminRole({ ...req, params: { ...req.params, roleId } }, res);
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
+}
+
+async function activateAdminRole(req, res) {
+  const id = positiveId(req.params.roleId, 'roleId');
+  const [result] = await pool.execute('UPDATE admin_roles SET is_active = 1 WHERE id = ?', [id]);
+  if (!result.affectedRows) { const error = new Error('Admin role not found.'); error.statusCode = 404; throw error; }
+  return getAdminRole(req, res);
+}
+
+async function deactivateAdminRole(req, res) {
+  const id = positiveId(req.params.roleId, 'roleId');
+  const [roles] = await pool.execute('SELECT name FROM admin_roles WHERE id = ? LIMIT 1', [id]);
+  if (!roles[0]) { const error = new Error('Admin role not found.'); error.statusCode = 404; throw error; }
+  if (roles[0].name === 'Super Admin') { const error = new Error('Cannot deactivate the Super Admin role.'); error.statusCode = 403; throw error; }
+  const [assigned] = await pool.execute('SELECT COUNT(*) AS total FROM admin_users WHERE role_id = ? AND is_active = 1', [id]);
+  if (Number(assigned[0].total) > 0) { const error = new Error('Reassign or deactivate staff on this role before deactivating it.'); error.statusCode = 403; throw error; }
+  await pool.execute('UPDATE admin_roles SET is_active = 0 WHERE id = ?', [id]);
+  return getAdminRole(req, res);
+}
+module.exports = { profile, updateProfile, uploadProfilePhoto, removeProfilePhoto, settings, updateSetting, listSeoMeta, saveSeoMeta, dashboard, liveTracking, listBookings, getBooking, getBookingPayment, recordBookingPayment, setBookingPaymentStatus, applyBookingFare, downloadBookingInvoice, sendBookingInvoiceWhatsApp, resendBookingInvoice, sendFeedbackLink, confirmBooking, rejectBooking, cancelBooking, completeBooking, assignDriver, listCustomers, getCustomer, listDrivers, getDriver, saveDriver, deleteDriver, listVehicleCategories, getVehicleCategory, saveVehicleCategory, deleteVehicleCategory, registerAdminDevice, reports, listReviews, listEnquiries, getEnquiry, updateEnquiry, listNotifications, sendNotification, deleteNotification, listAdminUsers, getAdminUser, saveAdminUser, activateAdminUser, deactivateAdminUser, uploadMedia, uploadDriverPhoto, listRemoteConfig, createRemoteConfig, updateRemoteConfig, listAuditLogs, getAuditLog, listAdminRoles, getAdminRole, saveAdminRole, activateAdminRole, deactivateAdminRole, listPermissions, listRoutes, listAdminCities, getRoute, saveRoute, deleteRoute, listTariffs, getTariff, deleteTariff, listFaqs, getFaq, saveFaq, deleteFaq, listGallery, createGalleryGroup, createGalleryImage, updateGalleryImage, deleteGalleryRecord, listReviewsAdmin, saveReview, getReview, moderateReview, deleteReview, listVehicles, getVehicle, saveVehicle, deleteVehicle, listAssignments, createAssignment, endAssignment };
+
 async function listPermissions(req, res) {
   const [rows] = await pool.execute('SELECT id, module, action, label FROM permissions ORDER BY module, action');
   return success(res, rows.map((row) => ({ ...row, id: String(row.id) })));

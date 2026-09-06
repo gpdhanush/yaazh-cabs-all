@@ -183,6 +183,8 @@ class _AdminDrawer extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final onHeader = AppTheme.onPrimaryOf(theme.colorScheme.primary);
+    // final isDark = theme.brightness == Brightness.dark;
+    // final accent = isDark ? AppColors.primaryLight : theme.colorScheme.primary;
     final location = GoRouterState.of(context).uri.path;
     final user = ref.watch(authNotifierProvider).user;
     final operations = visibleDrawerItems(user);
@@ -273,6 +275,15 @@ class _AdminDrawer extends ConsumerWidget {
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
               child: OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.redAccent,
+                  side: BorderSide(color: Colors.redAccent),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(
+                      AppConstants.radiusField,
+                    ),
+                  ),
+                ),
                 onPressed: () async {
                   final auth = ref.read(authNotifierProvider.notifier);
                   _close();
@@ -280,8 +291,18 @@ class _AdminDrawer extends ConsumerWidget {
                   if (!ok) return;
                   await auth.logout();
                 },
-                icon: const Icon(LineAwesomeIcons.sign_out_alt_solid),
-                label: const Text('Sign out'),
+                icon: Icon(
+                  LineAwesomeIcons.sign_out_alt_solid,
+                  color: Colors.redAccent,
+                ),
+                label: Text(
+                  'Sign out',
+                  style: theme.textTheme.labelLarge?.copyWith(
+                    // color: accent,
+                    color: Colors.redAccent,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
               ),
             ),
           ],
@@ -340,12 +361,12 @@ class _AdminDrawer extends ConsumerWidget {
       padding: const EdgeInsets.only(bottom: 4),
       child: ListTile(
         selected: selected,
-        leading: Icon(icon, color: selected ? accent : null),
+        leading: Icon(icon, color: accent),
         title: Text(
           label,
           style: theme.textTheme.titleSmall?.copyWith(
             color: selected ? accent : theme.colorScheme.onSurface,
-            fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
+            fontWeight: FontWeight.w700,
           ),
         ),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),

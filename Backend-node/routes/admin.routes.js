@@ -27,6 +27,10 @@ router.get('/audit-logs', requirePermission('audit_logs.view'), asyncHandler(con
 router.get('/audit-logs/:auditLogId', requirePermission('audit_logs.view'), asyncHandler(controller.getAuditLog));
 router.get('/admin-roles', requirePermission('admin_users.view'), asyncHandler(controller.listAdminRoles));
 router.get('/admin-roles/:roleId', requirePermission('admin_users.view'), asyncHandler(controller.getAdminRole));
+router.post('/admin-roles', requirePermission('admin_users.manage'), asyncHandler(controller.saveAdminRole));
+router.put('/admin-roles/:roleId', requirePermission('admin_users.manage'), asyncHandler(controller.saveAdminRole));
+router.post('/admin-roles/:roleId/activate', requirePermission('admin_users.manage'), asyncHandler(controller.activateAdminRole));
+router.post('/admin-roles/:roleId/deactivate', requirePermission('admin_users.manage'), asyncHandler(controller.deactivateAdminRole));
 router.get('/permissions', requirePermission('admin_users.view'), asyncHandler(controller.listPermissions));
 router.get('/vehicle-categories', requirePermission('vehicle_categories.manage'), asyncHandler(controller.listVehicleCategories));
 router.get('/vehicle-categories/:categoryId', requirePermission('vehicle_categories.manage'), asyncHandler(controller.getVehicleCategory));

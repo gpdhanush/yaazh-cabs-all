@@ -35,7 +35,7 @@ class HomePage extends ConsumerWidget {
     return KeyboardDismiss(
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Home'),
+          // title: const Text(''),
           leading: const YaDrawerButton(),
           automaticallyImplyLeading: false,
           actions: [
