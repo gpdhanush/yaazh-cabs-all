@@ -2,6 +2,7 @@ const pool = require('../config/database');
 const { success } = require('../utils/response');
 const crypto = require('crypto');
 const { notifyAdmins } = require('../services/fcm.service');
+const { createInvoicePdf } = require('../utils/invoice-pdf');
 
 function pageParams(query, defaultLimit = 20) {
   const page = Math.max(1, Number.parseInt(query.page, 10) || 1);
@@ -407,4 +408,21 @@ async function createGuestBooking(req, res) {
   }
 }
 
-module.exports = { listCities, listRoutes, getRoute, listVehicleCategories, listTariffs, listFaqs, getCmsPage, listBlog, getBlog, listTestimonials, appConfig, contact, routeEstimate, fareEstimate, trackBooking, getFeedback, submitFeedback, gallery, createGuestBooking };
+async function publicInvoice(req, res) {
+  const invoiceNumber = String(req.params.invoiceNumber || '').replace(/\.pdf$/, '').trim();
+  if (!invoiceNumber) { const error = new Error('Invoice number is required.'); error.statusCode = 422; throw error; }
+  const [rows] = await pool.execute(
+    `SELECT b.id, b.booking_reference, b.customer_name, b.customer_phone, b.customer_email,
+      b.pickup_location, b.drop_location, b.pickup_at, b.estimated_total, b.final_total,
+      i.* FROM booking_invoices i INNER JOIN bookings b ON b.id = i.booking_id
+      WHERE i.invoice_number = ? LIMIT 1`, [invoiceNumber]
+  );
+  if (!rows[0]) { const error = new Error('Invoice not found.'); error.statusCode = 404; throw error; }
+  const row = rows[0];
+  const [payments] = await pool.execute('SELECT amount, status FROM payments WHERE booking_id = ? ORDER BY created_at DESC', [row.id]);
+  const pdf = await createInvoicePdf({ booking: row, invoice: { ...row, payments } });
+  res.set({ 'Content-Type': 'application/pdf', 'Content-Disposition': `inline; filename="${invoiceNumber}.pdf"`, 'Content-Length': pdf.length });
+  return res.send(pdf);
+}
+
+module.exports = { listCities, listRoutes, getRoute, listVehicleCategories, listTariffs, listFaqs, getCmsPage, listBlog, getBlog, listTestimonials, appConfig, contact, routeEstimate, fareEstimate, trackBooking, getFeedback, submitFeedback, gallery, createGuestBooking, publicInvoice };

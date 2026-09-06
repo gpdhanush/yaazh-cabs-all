@@ -119,7 +119,7 @@ async function dashboard(req, res) {
       SUM(status = 'pending') AS pending_bookings,
       SUM(DATE(created_at) = CURRENT_DATE) AS bookings_today
       FROM bookings`),
-    pool.execute("SELECT COUNT(*) AS active_drivers FROM drivers WHERE is_active = 1 AND verification_status = 'approved' AND online_status <> 'offline'"),
+    pool.execute("SELECT COUNT(*) AS active_drivers FROM drivers WHERE is_active = 1 AND verification_status = 'approved'"),
     pool.execute('SELECT COUNT(*) AS customers FROM customers WHERE is_active = 1'),
     pool.execute("SELECT COUNT(*) AS enquiries FROM contact_enquiries WHERE status IN ('new', 'in_progress')")
   ]);
@@ -436,6 +436,37 @@ async function resendBookingInvoice(req, res) {
     throw error;
   }
   return success(res, { email, booking_reference: data.booking.booking_reference }, 'Invoice sent.');
+}
+
+function publicInvoiceUrl(req, invoiceNumber) {
+  const origin = String(process.env.PUBLIC_API_URL || `${req.protocol}://${req.get('host')}`).replace(/\/$/, '');
+  return `${origin}/api/v1/public/invoices/${encodeURIComponent(invoiceNumber)}.pdf`;
+}
+
+function whatsappUrl(phone, message) {
+  const digits = String(phone || '').replace(/\D/g, '');
+  return `https://wa.me/${digits}?text=${encodeURIComponent(message)}`;
+}
+
+async function sendBookingInvoiceWhatsApp(req, res) {
+  const id = positiveId(req.params.bookingId, 'bookingId');
+  const data = await invoiceData(id);
+  const invoiceNumber = data.invoice?.invoice_number || `INV-${data.booking.booking_reference || id}`;
+  const pdfUrl = publicInvoiceUrl(req, invoiceNumber);
+  const message = [
+    `Yaazh Cabs invoice ${invoiceNumber}`,
+    `Booking ${data.booking.booking_reference}`,
+    `${data.booking.pickup_location} -> ${data.booking.drop_location}`,
+    '',
+    'Download your invoice PDF:',
+    pdfUrl,
+  ].join('\n');
+  return success(res, {
+    whatsapp_url: whatsappUrl(data.booking.customer_phone, message),
+    pdf_url: pdfUrl,
+    phone: data.booking.customer_phone,
+    message,
+  }, 'Invoice ready to send on WhatsApp.');
 }
 
 async function transitionBooking(req, res, nextStatus, message, reason = null) {

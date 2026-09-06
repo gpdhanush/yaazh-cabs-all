@@ -89,6 +89,7 @@ router.get('/bookings/:bookingId/payment', requirePermission('bookings.view'), a
 router.post('/bookings/:bookingId/payment', requirePermission('bookings.update'), asyncHandler(controller.recordBookingPayment));
 router.put('/bookings/:bookingId/payment-status', requirePermission('bookings.update'), asyncHandler(controller.setBookingPaymentStatus));
 router.get('/bookings/:bookingId/invoice/pdf', requirePermission('bookings.view'), asyncHandler(controller.downloadBookingInvoice));
+router.post('/bookings/:bookingId/invoice/whatsapp', requirePermission('bookings.view'), asyncHandler(controller.sendBookingInvoiceWhatsApp));
 router.post('/bookings/:bookingId/invoice/resend', requirePermission('bookings.view'), asyncHandler(controller.resendBookingInvoice));
 router.post('/bookings/:bookingId/confirm', requirePermission('bookings.update'), asyncHandler(controller.confirmBooking));
 router.post('/bookings/:bookingId/reject', requirePermission('bookings.update'), asyncHandler(controller.rejectBooking));

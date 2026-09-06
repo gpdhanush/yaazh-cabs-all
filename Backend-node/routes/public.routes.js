@@ -21,6 +21,7 @@ router.post('/route/estimate', asyncHandler(controller.routeEstimate));
 router.get('/route/estimate', asyncHandler(controller.routeEstimate));
 router.post('/fare/estimate', asyncHandler(controller.fareEstimate));
 router.post('/bookings/track', asyncHandler(controller.trackBooking));
+router.get('/invoices/:invoiceNumber.pdf', asyncHandler(controller.publicInvoice));
 router.get('/feedback/:token', asyncHandler(controller.getFeedback));
 router.post('/feedback/:token', asyncHandler(controller.submitFeedback));
 router.post('/bookings', asyncHandler(controller.createGuestBooking));
