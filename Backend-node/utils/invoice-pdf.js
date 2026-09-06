@@ -841,7 +841,7 @@ function createInvoicePdf({ booking, invoice }) {
     */
 
     document
-      .strokeColor(colors.HexColor("#eadfba"))
+      .strokeColor("#eadfba")
       .lineWidth(0.7)
       .moveTo(summaryX + 18, summaryTop - 68)
       .lineTo(summaryX + summaryWidth - 18, summaryTop - 68)
