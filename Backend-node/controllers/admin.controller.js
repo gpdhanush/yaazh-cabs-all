@@ -65,12 +65,12 @@ async function updateProfile(req, res) {
 async function uploadProfilePhoto(req, res) {
   if (!req.file) { const error = new Error('An image file is required.'); error.statusCode = 422; throw error; }
   const publicPath = `/api/v1/public/media/admin/${req.file.filename}`;
-  await pool.execute('UPDATE admin_users SET avatar_url = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND is_active = 1', [publicPath, adminId(req)]);
+  await pool.execute('UPDATE admin_users SET avatar_url = ? WHERE id = ? AND is_active = 1', [publicPath, adminId(req)]);
   return profile(req, res);
 }
 
 async function removeProfilePhoto(req, res) {
-  await pool.execute('UPDATE admin_users SET avatar_url = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND is_active = 1', [adminId(req)]);
+  await pool.execute('UPDATE admin_users SET avatar_url = NULL WHERE id = ? AND is_active = 1', [adminId(req)]);
   return profile(req, res);
 }
 
