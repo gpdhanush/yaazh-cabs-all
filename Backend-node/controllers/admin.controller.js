@@ -1,6 +1,7 @@
 const pool = require('../config/database');
 const { success } = require('../utils/response');
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 const { createInvoicePdf } = require('../utils/invoice-pdf');
 const { sendBookingInvoice, isSmtpAuthError } = require('../utils/mailer');
 const { deliverAdminNotification } = require('../services/fcm.service');
@@ -444,8 +445,17 @@ function publicInvoiceUrl(req, invoiceNumber) {
 }
 
 function whatsappUrl(phone, message) {
-  const digits = String(phone || '').replace(/\D/g, '');
+  let digits = String(phone || '').replace(/\D/g, '');
+  if (digits.length === 10) digits = `91${digits}`;
+  if (digits.length === 11 && digits.startsWith('0')) digits = `91${digits.slice(1)}`;
   return `https://wa.me/${digits}?text=${encodeURIComponent(message)}`;
+}
+
+function feedbackPageUrl(bookingId) {
+  const id = String(bookingId);
+  const signature = crypto.createHmac('sha256', process.env.JWT_SECRET || '').update(`feedback:${id}`).digest('hex').slice(0, 24);
+  const origin = String(process.env.PUBLIC_WEB_URL || 'https://yaazhcabsudumalpet.in').replace(/\/$/, '');
+  return `${origin}/feedback/${id}.${signature}`;
 }
 
 async function sendBookingInvoiceWhatsApp(req, res) {
@@ -467,6 +477,27 @@ async function sendBookingInvoiceWhatsApp(req, res) {
     phone: data.booking.customer_phone,
     message,
   }, 'Invoice ready to send on WhatsApp.');
+}
+
+async function sendFeedbackLink(req, res) {
+  const id = positiveId(req.params.bookingId, 'bookingId');
+  const [rows] = await pool.execute('SELECT booking_reference, customer_name, customer_phone FROM bookings WHERE id = ? LIMIT 1', [id]);
+  if (!rows[0]) { const error = new Error('Booking not found.'); error.statusCode = 404; throw error; }
+  const booking = rows[0];
+  const feedbackUrl = feedbackPageUrl(id);
+  const message = [
+    `Hi ${booking.customer_name},`,
+    `Thank you for riding with Yaazh Cabs (${booking.booking_reference}).`,
+    '',
+    'Please rate your trip and share a short review:',
+    feedbackUrl,
+  ].join('\n');
+  return success(res, {
+    feedback_url: feedbackUrl,
+    whatsapp_url: whatsappUrl(booking.customer_phone, message),
+    phone: booking.customer_phone,
+    message,
+  }, 'Feedback link ready to send on WhatsApp.');
 }
 
 async function transitionBooking(req, res, nextStatus, message, reason = null) {
@@ -1278,4 +1309,4 @@ async function endAssignment(req, res) {
   return success(res, { id: String(id), is_current: false }, 'Assignment ended.');
 }
 
-module.exports = { profile, updateProfile, settings, updateSetting, listSeoMeta, saveSeoMeta, dashboard, liveTracking, listBookings, getBooking, getBookingPayment, recordBookingPayment, setBookingPaymentStatus, downloadBookingInvoice, resendBookingInvoice, confirmBooking, rejectBooking, cancelBooking, completeBooking, assignDriver, listCustomers, getCustomer, listDrivers, getDriver, saveDriver, deleteDriver, listVehicleCategories, getVehicleCategory, saveVehicleCategory, deleteVehicleCategory, registerAdminDevice, reports, listReviews, listEnquiries, getEnquiry, updateEnquiry, listNotifications, sendNotification, deleteNotification, listAdminUsers, getAdminUser, saveAdminUser, activateAdminUser, deactivateAdminUser, uploadMedia, uploadDriverPhoto, listRemoteConfig, createRemoteConfig, updateRemoteConfig, listAuditLogs, getAuditLog, listAdminRoles, getAdminRole, listPermissions, listRoutes, listAdminCities, getRoute, saveRoute, deleteRoute, listTariffs, getTariff, saveTariff, deleteTariff, listFaqs, getFaq, saveFaq, deleteFaq, listGallery, createGalleryGroup, createGalleryImage, updateGalleryImage, deleteGalleryRecord, listReviewsAdmin, saveReview, getReview, moderateReview, deleteReview, listVehicles, getVehicle, saveVehicle, deleteVehicle, listAssignments, createAssignment, endAssignment };
+module.exports = { profile, updateProfile, settings, updateSetting, listSeoMeta, saveSeoMeta, dashboard, liveTracking, listBookings, getBooking, getBookingPayment, recordBookingPayment, setBookingPaymentStatus, downloadBookingInvoice, sendBookingInvoiceWhatsApp, resendBookingInvoice, sendFeedbackLink, confirmBooking, rejectBooking, cancelBooking, completeBooking, assignDriver, listCustomers, getCustomer, listDrivers, getDriver, saveDriver, deleteDriver, listVehicleCategories, getVehicleCategory, saveVehicleCategory, deleteVehicleCategory, registerAdminDevice, reports, listReviews, listEnquiries, getEnquiry, updateEnquiry, listNotifications, sendNotification, deleteNotification, listAdminUsers, getAdminUser, saveAdminUser, activateAdminUser, deactivateAdminUser, uploadMedia, uploadDriverPhoto, listRemoteConfig, createRemoteConfig, updateRemoteConfig, listAuditLogs, getAuditLog, listAdminRoles, getAdminRole, listPermissions, listRoutes, listAdminCities, getRoute, saveRoute, deleteRoute, listTariffs, getTariff, saveTariff, deleteTariff, listFaqs, getFaq, saveFaq, deleteFaq, listGallery, createGalleryGroup, createGalleryImage, updateGalleryImage, deleteGalleryRecord, listReviewsAdmin, saveReview, getReview, moderateReview, deleteReview, listVehicles, getVehicle, saveVehicle, deleteVehicle, listAssignments, createAssignment, endAssignment };
