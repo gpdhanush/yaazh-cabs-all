@@ -401,7 +401,24 @@ export const faqsResource: ResourceConfig = {
 
 export const seoResource: ResourceConfig = {
   title: 'SEO',
-  path: '/seo',
+  description: 'Manage titles, descriptions, canonical URLs and social metadata for public pages.',
+  path: '/seo-meta',
+  createFields: [
+    { key: 'entity_type', label: 'Entity type', type: 'select', required: true, options: [
+      { label: 'Home', value: 'home' }, { label: 'CMS page', value: 'cms_page' },
+      { label: 'Blog post', value: 'blog_post' }, { label: 'Route', value: 'route' },
+      { label: 'Vehicle category', value: 'vehicle_category' }, { label: 'Custom', value: 'custom' },
+    ] },
+    { key: 'url_path', label: 'URL path', required: true },
+    { key: 'meta_title', label: 'Meta title', nullable: true },
+    { key: 'meta_description', label: 'Meta description', type: 'textarea', nullable: true },
+    { key: 'canonical_url', label: 'Canonical URL', nullable: true },
+    { key: 'og_title', label: 'OG title', nullable: true },
+    { key: 'og_description', label: 'OG description', type: 'textarea', nullable: true },
+    { key: 'og_image_url', label: 'OG image URL', nullable: true },
+    { key: 'schema_json', label: 'Schema JSON', type: 'textarea', nullable: true },
+  ],
+  updatePathTemplate: '/seo-meta',
   columns: [
     { key: 'id', label: 'ID' },
     { key: 'url_path', label: 'Path' },
@@ -409,6 +426,12 @@ export const seoResource: ResourceConfig = {
     { key: 'meta_description', label: 'Description' },
   ],
   editFields: [
+    { key: 'entity_type', label: 'Entity type', type: 'select', required: true, options: [
+      { label: 'Home', value: 'home' }, { label: 'CMS page', value: 'cms_page' },
+      { label: 'Blog post', value: 'blog_post' }, { label: 'Route', value: 'route' },
+      { label: 'Vehicle category', value: 'vehicle_category' }, { label: 'Custom', value: 'custom' },
+    ] },
+    { key: 'url_path', label: 'URL path', required: true },
     { key: 'meta_title', label: 'Meta title', nullable: true },
     { key: 'meta_description', label: 'Meta description', type: 'textarea', nullable: true },
     { key: 'canonical_url', label: 'Canonical URL', nullable: true },

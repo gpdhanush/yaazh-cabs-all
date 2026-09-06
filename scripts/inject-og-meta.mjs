@@ -27,16 +27,13 @@ const block = `${start}
 <link rel="image_src" href="${image}" />
 ${end}`;
 
-const files = [".output/public/_shell.html", ".output/public/index.html"];
+const files = ["dist/index.html"];
 const strip = /<!-- yaazh-og -->[\s\S]*?<!-- \/yaazh-og -->\s*/g;
 
 for (const file of files) {
   if (!existsSync(file)) {
-    if (file.endsWith("_shell.html")) {
-      console.error(`Missing ${file} — SPA shell was not built.`);
-      process.exit(1);
-    }
-    continue;
+    console.error(`Missing ${file} — frontend build was not created.`);
+    process.exit(1);
   }
 
   let html = readFileSync(file, "utf8");
@@ -54,7 +51,7 @@ for (const file of files) {
   console.log(`Injected Open Graph tags into ${file}`);
 }
 
-if (!existsSync(".output/public/og-cover.jpg")) {
-  console.error("Missing .output/public/og-cover.jpg — share image will not work.");
+if (!existsSync("dist/og-cover.jpg")) {
+  console.error("Missing dist/og-cover.jpg — share image will not work.");
   process.exit(1);
 }

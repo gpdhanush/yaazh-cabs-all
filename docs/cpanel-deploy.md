@@ -21,13 +21,14 @@ npm ci
 npm run build:cpanel
 ```
 
-SPA mode is enabled in `vite.config.ts` (`spa.enabled: true`).  
-`build:cpanel` emits `_shell.html`, copies it to `index.html`, and includes `.htaccess`.
+The Vite build emits the SPA and `.htaccess` into `dist/`.
 
-Upload the contents of **`.output/public`**.
+Upload the contents of **`dist/`**.
+
+Replace the existing `public_html/.htaccess` when redeploying. If cPanel or LiteSpeed has a separate custom `Content-Security-Policy` or `Permissions-Policy` header, update or remove that duplicate header too; it must include `https://api.yaazhcabsudumalpet.in` in `connect-src`, `https://www.google.com` in `frame-src`, and must not contain the obsolete `interest-cohort` feature.
 
 ```bash
-ls .output/public/index.html .output/public/_shell.html .output/public/.htaccess
+ls dist/index.html dist/.htaccess
 ```
 
 ## 2. Upload to cPanel
@@ -48,7 +49,7 @@ cPanel → SSL/TLS Status → AutoSSL, then uncomment HTTPS redirect in `.htacce
 
 For the `Backend-node` API on cPanel, upload `package.json` and `package-lock.json`, run `npm ci --omit=dev` in the `Backend-node` directory using Node Selector/SSH, and restart the application. This is required after adding dependencies such as `nodemailer`, `multer`, and `pdfkit`.
 
-Set the Node application environment variable `CORS_ORIGIN` or `CORS_ORIGINS` to `https://yaazhcabsudumalpet.in,https://admin.yaazhcabsudumalpet.in`. Both variable names are merged, and trailing slashes are normalized. Do not leave only localhost origins in production.
+Set the Node application environment variable `CORS_ORIGIN` or `CORS_ORIGINS` to `https://yaazhcabsudumalpet.in,https://www.yaazhcabsudumalpet.in,https://admin.yaazhcabsudumalpet.in`. Both variable names are merged, and trailing slashes are normalized. Do not leave only localhost origins in production.
 
 For SMTP, use the full mailbox address as `MAIL_USERNAME`, the current mailbox password as `MAIL_PASSWORD` without surrounding quote characters, port `465`, `MAIL_SECURE=true`, and `MAIL_AUTH_METHOD=LOGIN`. If the server rejects authentication with `535`, reset the mailbox password in cPanel Email Accounts and update the Node application environment before restarting it.
 
@@ -71,7 +72,7 @@ After DB migrate, run `bash scripts/seed.sh` in `backend/` so FAQs, testimonials
 2. Set API CORS allowlist (comma-separated):
 
 ```env
-CORS_ORIGINS=https://yaazhcabsudumalpet.in,https://admin.yaazhcabsudumalpet.in,http://localhost:4000
+CORS_ORIGINS=https://yaazhcabsudumalpet.in,https://www.yaazhcabsudumalpet.in,https://admin.yaazhcabsudumalpet.in,http://localhost:4000
 ```
 
 3. Set site env **before** building the SPA (Vite bakes `VITE_*` at build time):

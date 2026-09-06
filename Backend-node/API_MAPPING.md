@@ -26,6 +26,7 @@ The collection contains 135 requests. All JSON endpoints use the response envelo
 | `GET /api/v1/public/blog/:slug` | public router | public controller | `blog_posts` |
 | `GET /api/v1/public/testimonials` | public router | public controller | `testimonials` |
 | `GET /api/v1/public/app-config` | public router | public controller | `app_settings` |
+| `GET /api/v1/public/seo-meta?path=/` | public router | public controller | `seo_meta` |
 | `POST /api/v1/public/contact` | public router | public controller | `contact_enquiries` |
 | `POST /api/v1/public/route/estimate` | public router | public controller | in-process Haversine estimate |
 | `GET /api/v1/public/route/estimate` | public router | public controller | in-process Haversine estimate |

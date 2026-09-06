@@ -157,6 +157,17 @@ async function listTestimonials(req, res) {
 }
 
 async function appConfig(req, res) {
+  async function getSeoMeta(req, res) {
+    const urlPath = String(req.query.path || '/').trim();
+    if (!urlPath.startsWith('/')) { const error = new Error('path must begin with /.'); error.statusCode = 422; throw error; }
+    const [rows] = await pool.execute(
+      `SELECT entity_type, entity_id, url_path, meta_title, meta_description, canonical_url,
+        og_title, og_description, og_image_url, schema_json, robots_index, robots_follow
+       FROM seo_meta WHERE url_path = ? AND robots_index = 1 LIMIT 1`, [urlPath]
+    );
+    return success(res, rows[0] || null);
+  }
+  module.exports = { listCities, listRoutes, getRoute, listVehicleCategories, listTariffs, listFaqs, getCmsPage, listBlog, getBlog, listTestimonials, gallery, appConfig, getSeoMeta, contact, routeEstimate, fareEstimate, trackBooking, getFeedback, submitFeedback, createGuestBooking };
   const [rows] = await pool.execute(
     `SELECT setting_key, setting_value, value_type FROM app_settings WHERE is_public = 1 ORDER BY id`
   );

@@ -15,6 +15,7 @@ router.get('/blog/:slug', asyncHandler(controller.getBlog));
 router.get('/testimonials', asyncHandler(controller.listTestimonials));
 router.get('/gallery', asyncHandler(controller.gallery));
 router.get('/app-config', asyncHandler(controller.appConfig));
+router.get('/seo-meta', asyncHandler(controller.getSeoMeta));
 router.post('/contact', asyncHandler(controller.contact));
 router.post('/route/estimate', asyncHandler(controller.routeEstimate));
 router.get('/route/estimate', asyncHandler(controller.routeEstimate));

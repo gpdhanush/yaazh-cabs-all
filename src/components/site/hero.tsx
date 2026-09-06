@@ -9,7 +9,7 @@ import { Magnetic, Reveal, StaggerGroup, StaggerItem } from "./motion-primitives
 import { PHONE_PRIMARY } from "@/lib/site-data";
 
 const headlines = [
-  { line1: "Travel safe.", line2: "Reach happy." },
+  { line1: "Taxi in Udumalpet.", line2: "Travel happy." },
   { line1: "Book in minutes.", line2: "Ride in comfort." },
   { line1: "Hills or highways.", line2: "We take you there." },
 ] as const;

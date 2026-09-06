@@ -12,6 +12,66 @@ This note is an audit of the current public site plus a step-by-step plan (Searc
 - Share image: [`public/og-cover.jpg`](../public/og-cover.jpg) (`og:image` / `twitter:image`, 1200×630 JPEG).
 - Static sitemap: [`public/sitemap.xml`](../public/sitemap.xml) (works on cPanel SPA). Env: see [`.env.example`](../.env.example). Rebuild after setting `VITE_*`.
 
+## Recommended SEO Content
+
+Use this copy as the canonical website content for the home page and Google Business Profile. Keep the business name and location consistent across the site, directory listings, and structured data.
+
+| Field | Recommended content |
+|------|---------------------|
+| Page title | Yaazh Cabs - Taxi in Udumalpet - Airport and Outstation Cabs |
+| Meta description | Book reliable taxis in Udumalpet for Coimbatore Airport, Ooty, Kodaikanal, one-way and round trips. Yaazh Cabs offers clean cars, experienced drivers and 24x7 booking support. |
+| H1 | Taxi in Udumalpet for Airport, One-Way and Outstation Travel |
+| Intro copy | Yaazh Cabs provides dependable taxi service from Udumalpet for local rides, Coimbatore Airport transfers, one-way trips, round trips and outstation travel across Tamil Nadu. Choose a comfortable car, get clear fare guidance and travel with an experienced driver. |
+| Primary CTA | Book a taxi from Udumalpet |
+| Service keywords | taxi in Udumalpet, Udumalpet to Coimbatore taxi, Coimbatore Airport taxi from Udumalpet, Udumalpet to Ooty cab, one-way taxi, outstation cab |
+| Image alt pattern | `Yaazh Cabs {vehicle/service} taxi in Udumalpet` |
+
+Avoid keyword stuffing. Each future route page should use its own title, description, H1 and 300-500 words of useful local travel information.
+
+## Backend SEO Settings Check
+
+Run these checks against the production database after deployment. The public API reads only `app_settings` rows where `is_public = 1`; `seo_meta` is available in the schema for page-level metadata but is not currently exposed by a Backend-node admin route.
+
+| Check | Table/key or endpoint | Expected value/status |
+|------|----------------------|------------------------|
+| Business name | `app_settings.company_name` | `Yaazh Cabs` |
+| Support phone | `app_settings.support_phone` | `9360055761` |
+| Support email | `app_settings.support_email` | `hello@yaazhcabs.in` |
+| Business address | `app_settings.business_address` | Includes `Udumalpet` and `Tamil Nadu 642126` |
+| Business hours | `app_settings.business_hours` | `Open 24x7` |
+| Map coordinates | `app_settings.map_lat`, `app_settings.map_lng` | `10.551642`, `77.306707` |
+| Public config | `GET /api/v1/public/app-config?app=user_website&platform=web` | Returns public settings without a 5xx or CORS error |
+| Home metadata | `seo_meta.url_path = '/'` | `robots_index = 1`, `robots_follow = 1`, canonical uses `https://yaazhcabsudumalpet.in/` |
+| Route metadata | `seo_meta.entity_type = 'route'` | Each published route has a unique title, description and canonical URL |
+| Sitemap | `/sitemap.xml` | HTTP 200 and contains canonical public URLs only |
+| Robots | `/robots.txt` | HTTP 200 and points to `/sitemap.xml` |
+
+Useful SQL checks:
+
+```sql
+SELECT setting_key, setting_value, is_public
+FROM app_settings
+WHERE setting_key IN (
+   'company_name', 'support_phone', 'support_email', 'business_address',
+   'business_hours', 'map_lat', 'map_lng'
+)
+ORDER BY setting_key;
+
+SELECT entity_type, url_path, meta_title, meta_description, canonical_url,
+          robots_index, robots_follow
+FROM seo_meta
+ORDER BY url_path;
+```
+
+For settings that are already present, update them through the authenticated admin endpoint rather than inserting duplicates:
+
+```http
+PUT /api/v1/admin/settings/{setting_key}
+Content-Type: application/json
+
+{"value":"..."}
+```
+
 ---
 
 ## What is already in good shape

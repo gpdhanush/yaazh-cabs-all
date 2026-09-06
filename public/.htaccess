@@ -2,7 +2,7 @@
 # Copied into the build public output on `npm run build`.
 
 Options -MultiViews
-DirectoryIndex index.html _shell.html
+DirectoryIndex index.html
 RewriteEngine On
 
 # Uploaded images and invoice PDFs live on the API, not this static site
@@ -30,18 +30,18 @@ RewriteCond %{REQUEST_FILENAME} -f [OR]
 RewriteCond %{REQUEST_FILENAME} -d
 RewriteRule ^ - [L]
 
-# TanStack Start SPA shell (generated when spa.enabled = true)
-RewriteRule ^ _shell.html [L]
+# Static SPA fallback for client-side routes such as /status?ref=...
+RewriteRule ^ index.html [L]
 
 # Security headers
 <IfModule mod_headers.c>
   Header always set X-Content-Type-Options "nosniff"
   Header always set X-Frame-Options "SAMEORIGIN"
   Header always set Referrer-Policy "strict-origin-when-cross-origin"
-  Header always set Permissions-Policy "camera=(), microphone=(), geolocation=(self), interest-cohort=()"
+  Header always set Permissions-Policy "camera=(), microphone=(), geolocation=(self)"
   Header always set X-DNS-Prefetch-Control "on"
   # Update api host to your live API subdomain
-  Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://www.google-analytics.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https://api.yaazhcabs.in https://*.yaazhcabs.in https://api.yaazhcabsudumalpet.in https://nominatim.openstreetmap.org https://www.google-analytics.com; frame-ancestors 'self'; base-uri 'self'; form-action 'self' https://wa.me mailto: tel:"
+  Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://www.google-analytics.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https://api.yaazhcabs.in https://*.yaazhcabs.in https://api.yaazhcabsudumalpet.in https://nominatim.openstreetmap.org https://www.google-analytics.com; frame-src 'self' https://www.google.com https://maps.google.com; frame-ancestors 'self'; base-uri 'self'; form-action 'self' https://wa.me mailto: tel:"
 </IfModule>
 
 # Cache hashed assets

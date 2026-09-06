@@ -15,9 +15,9 @@ import { SiteFooter } from "@/components/site/footer";
 import { Toaster } from "@/components/ui/sonner";
 import { defaultOgMeta } from "@/lib/analytics";
 
-const title = "Yaazh Cabs Udumalpet | Airport, Outstation & Tour Taxi";
+const title = "Yaazh Cabs - Taxi in Udumalpet - Airport and Outstation Cabs";
 const description =
-  "Book chauffeur-driven sedans, Ertiga, Innova, SUV and tempo traveller cabs in Udumalpet. Airport transfers, one-way, round trip and Ooty–Kodaikanal tour packages, 24×7.";
+  "Book reliable taxis in Udumalpet for Coimbatore Airport, Ooty, Kodaikanal, one-way and round trips. Yaazh Cabs offers clean cars, experienced drivers and 24x7 booking support.";
 const url = "https://yaazhcabsudumalpet.in/";
 
 export const Route = createFileRoute("/")({

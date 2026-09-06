@@ -7,6 +7,7 @@ import {
   enquiriesResource,
   faqsResource,
   reviewsResource,
+  seoResource,
   routesResource,
   tariffsResource,
   vehicleCategoriesResource,
@@ -238,6 +239,12 @@ export const routes: Routes = [
       {
         path: 'settings',
         loadComponent: () => import('./features/settings/settings.page').then((m) => m.SettingsPage),
+      },
+      {
+        path: 'seo',
+        canActivate: [permissionGuard('seo.manage')],
+        loadComponent: () => import('./features/resource/resource-list.page').then((m) => m.ResourceListPage),
+        data: { resource: seoResource },
       },
       {
         path: 'appearance',
