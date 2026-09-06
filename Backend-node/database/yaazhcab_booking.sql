@@ -1049,6 +1049,10 @@ INSERT INTO `permissions` (`id`, `module`, `action`, `label`, `created_at`) VALU
 (38, 'gallery', 'view', 'View Gallery', '2026-09-01 09:19:45'),
 (39, 'gallery', 'manage', 'Manage Gallery', '2026-09-01 09:19:45');
 
+INSERT INTO `permissions` (`id`, `module`, `action`, `label`, `created_at`) VALUES
+(40, 'server_logs', 'view', 'View Server Logs', '2026-09-06 00:00:00'),
+(41, 'server_logs', 'delete', 'Delete Server Logs', '2026-09-06 00:00:00');
+
 -- --------------------------------------------------------
 
 --
@@ -1178,7 +1182,9 @@ INSERT INTO `role_permissions` (`role_id`, `permission_id`) VALUES
 (1, 38),
 (3, 38),
 (1, 39),
-(3, 39);
+(3, 39),
+(1, 40),
+(1, 41);
 
 -- --------------------------------------------------------
 

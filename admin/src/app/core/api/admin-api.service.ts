@@ -11,6 +11,7 @@ import {
   BookingPayment,
   DashboardStats,
   LiveTrackingTrip,
+  ServerLog,
 } from './api.types';
 
 const ADMIN = '/api/v1/admin';
@@ -197,5 +198,13 @@ export class AdminApiService {
 
   getAuditLog(id: string): Observable<AuditLog> {
     return this.api.get<AuditLog>(`${ADMIN}/audit-logs/${id}`).pipe(map((r) => r.data));
+  }
+
+  getStderrLog(): Observable<ServerLog> {
+    return this.api.get<ServerLog>(`${ADMIN}/server-logs/stderr`).pipe(map((r) => r.data));
+  }
+
+  deleteStderrLog() {
+    return this.api.delete<{ path: string; deleted: boolean }>(`${ADMIN}/server-logs/stderr`).pipe(map((r) => r.data));
   }
 }

@@ -260,6 +260,12 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/audit-logs/audit-logs.page').then((m) => m.AuditLogsPage),
       },
+      {
+        path: 'server-logs',
+        canActivate: [permissionGuard('server_logs.view')],
+        loadComponent: () =>
+          import('./features/server-logs/server-logs.page').then((m) => m.ServerLogsPage),
+      },
     ],
   },
   { path: '**', redirectTo: 'dashboard' },

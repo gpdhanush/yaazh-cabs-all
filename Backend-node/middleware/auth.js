@@ -50,4 +50,11 @@ function requireAnyPermission(...permissions) {
   return requirePermission(...permissions);
 }
 
-module.exports = { requireAuth, requirePermission, requireAnyPermission };
+function requireSuperAdmin(req, res, next) {
+  if (req.user?.typ !== 'admin' || req.account?.role_name !== 'Super Admin') {
+    return res.status(403).json({ success: false, message: 'Super Admin access required.' });
+  }
+  return next();
+}
+
+module.exports = { requireAuth, requirePermission, requireAnyPermission, requireSuperAdmin };

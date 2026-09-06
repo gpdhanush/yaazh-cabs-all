@@ -1,10 +1,75 @@
 const pool = require('../config/database');
+const fs = require('fs/promises');
+const path = require('path');
 const { success } = require('../utils/response');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const { createInvoicePdf } = require('../utils/invoice-pdf');
 const { sendBookingInvoice, isSmtpAuthError } = require('../utils/mailer');
 const { deliverAdminNotification } = require('../services/fcm.service');
+
+const MAX_LOG_BYTES = 100_000;
+const MAX_LOG_LINES = 1_000;
+
+function stderrLogPath() {
+  const configuredPath = process.env.STDERR_LOG_PATH || 'Backend-node/stderr.log';
+  return path.isAbsolute(configuredPath)
+    ? configuredPath
+    : path.resolve(__dirname, '..', configuredPath.replace(/^Backend-node[\\/]/, 'Backend-node/'));
+}
+
+function sanitizeLogLine(line) {
+  return line
+    .replace(/(authorization\s*[:=]\s*bearer\s+)[^\s,]+/gi, '$1[REDACTED]')
+    .replace(/((?:password|passwd|pwd|token|refresh_token|access_token|api[_-]?key|secret|otp|cookie)\s*[:=]\s*)[^\s,;]+/gi, '$1[REDACTED]')
+    .replace(/(Bearer\s+)[^\s]+/gi, '$1[REDACTED]')
+    .replace(/\b(?:sk|pk)_(?:live|test)_[A-Za-z0-9_-]+\b/g, '[REDACTED]')
+    .replace(/\b\d{12,19}\b/g, '[REDACTED_PAYMENT_VALUE]');
+}
+
+async function readStderrTail() {
+  const filePath = stderrLogPath();
+  let handle;
+  try {
+    handle = await fs.open(filePath, 'r');
+    const stats = await handle.stat();
+    const bytesToRead = Math.min(stats.size, MAX_LOG_BYTES);
+    const buffer = Buffer.alloc(bytesToRead);
+    if (bytesToRead) await handle.read(buffer, 0, bytesToRead, Math.max(0, stats.size - bytesToRead));
+    let text = buffer.toString('utf8');
+    if (stats.size > bytesToRead) text = text.slice(text.indexOf('\n') + 1);
+    const lines = text.split(/\r?\n/);
+    return {
+      available: true,
+      path: 'stderr.log',
+      size_bytes: stats.size,
+      truncated: stats.size > bytesToRead || lines.length > MAX_LOG_LINES,
+      content: lines.slice(-MAX_LOG_LINES).map(sanitizeLogLine).join('\n').trimEnd(),
+    };
+  } catch (error) {
+    if (error.code === 'ENOENT') return { available: false, path: 'stderr.log', size_bytes: 0, truncated: false, content: '' };
+    if (error.code === 'EACCES' || error.code === 'EPERM') {
+      error.statusCode = 503;
+      error.message = 'The server log is not readable by the API process.';
+    }
+    throw error;
+  } finally {
+    await handle?.close();
+  }
+}
+
+async function getStderrLog(req, res) {
+  return success(res, await readStderrTail());
+}
+
+async function deleteStderrLog(req, res) {
+  try {
+    await fs.unlink(stderrLogPath());
+  } catch (error) {
+    if (error.code !== 'ENOENT') throw error;
+  }
+  return success(res, { path: 'stderr.log', deleted: true }, 'Server log deleted.');
+}
 
 function adminId(req) {
   return Number(req.user.sub);
@@ -1466,4 +1531,4 @@ async function endAssignment(req, res) {
   return success(res, { id: String(id), is_current: false }, 'Assignment ended.');
 }
 
-module.exports = { profile, updateProfile, uploadProfilePhoto, removeProfilePhoto, settings, updateSetting, listSeoMeta, saveSeoMeta, dashboard, liveTracking, listBookings, getBooking, getBookingPayment, recordBookingPayment, setBookingPaymentStatus, applyBookingFare, downloadBookingInvoice, sendBookingInvoiceWhatsApp, resendBookingInvoice, sendFeedbackLink, confirmBooking, rejectBooking, cancelBooking, completeBooking, assignDriver, listCustomers, getCustomer, listDrivers, getDriver, saveDriver, deleteDriver, listVehicleCategories, getVehicleCategory, saveVehicleCategory, deleteVehicleCategory, registerAdminDevice, reports, listReviews, listEnquiries, getEnquiry, updateEnquiry, listNotifications, sendNotification, deleteNotification, listAdminUsers, getAdminUser, saveAdminUser, activateAdminUser, deactivateAdminUser, uploadMedia, uploadDriverPhoto, listRemoteConfig, createRemoteConfig, updateRemoteConfig, listAuditLogs, getAuditLog, listAdminRoles, getAdminRole, saveAdminRole, activateAdminRole, deactivateAdminRole, listPermissions, listRoutes, listAdminCities, getRoute, saveRoute, deleteRoute, listTariffs, getTariff, saveTariff, deleteTariff, listFaqs, getFaq, saveFaq, deleteFaq, listGallery, createGalleryGroup, createGalleryImage, updateGalleryImage, deleteGalleryRecord, listReviewsAdmin, saveReview, getReview, moderateReview, deleteReview, listVehicles, getVehicle, saveVehicle, deleteVehicle, listAssignments, createAssignment, endAssignment };
+module.exports = { profile, updateProfile, uploadProfilePhoto, removeProfilePhoto, settings, updateSetting, listSeoMeta, saveSeoMeta, dashboard, liveTracking, listBookings, getBooking, getBookingPayment, recordBookingPayment, setBookingPaymentStatus, applyBookingFare, downloadBookingInvoice, sendBookingInvoiceWhatsApp, resendBookingInvoice, sendFeedbackLink, confirmBooking, rejectBooking, cancelBooking, completeBooking, assignDriver, listCustomers, getCustomer, listDrivers, getDriver, saveDriver, deleteDriver, listVehicleCategories, getVehicleCategory, saveVehicleCategory, deleteVehicleCategory, registerAdminDevice, reports, listReviews, listEnquiries, getEnquiry, updateEnquiry, listNotifications, sendNotification, deleteNotification, listAdminUsers, getAdminUser, saveAdminUser, activateAdminUser, deactivateAdminUser, uploadMedia, uploadDriverPhoto, listRemoteConfig, createRemoteConfig, updateRemoteConfig, listAuditLogs, getAuditLog, getStderrLog, deleteStderrLog, listAdminRoles, getAdminRole, saveAdminRole, activateAdminRole, deactivateAdminRole, listPermissions, listRoutes, listAdminCities, getRoute, saveRoute, deleteRoute, listTariffs, getTariff, saveTariff, deleteTariff, listFaqs, getFaq, saveFaq, deleteFaq, listGallery, createGalleryGroup, createGalleryImage, updateGalleryImage, deleteGalleryRecord, listReviewsAdmin, saveReview, getReview, moderateReview, deleteReview, listVehicles, getVehicle, saveVehicle, deleteVehicle, listAssignments, createAssignment, endAssignment };

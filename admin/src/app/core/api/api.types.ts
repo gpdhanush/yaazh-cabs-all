@@ -243,3 +243,11 @@ export type AuditLog = {
   new_values?: unknown;
   created_at: string;
 };
+
+export type ServerLog = {
+  available: boolean;
+  path: string;
+  size_bytes: number;
+  truncated: boolean;
+  content: string;
+};

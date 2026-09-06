@@ -1,6 +1,6 @@
 const express = require('express');
 const asyncHandler = require('../middleware/asyncHandler');
-const { requireAuth, requirePermission } = require('../middleware/auth');
+const { requireAuth, requirePermission, requireSuperAdmin } = require('../middleware/auth');
 const auditLogger = require('../middleware/auditLogger');
 const { imageUpload } = require('../middleware/upload');
 const controller = require('../controllers/admin.controller');
@@ -25,6 +25,8 @@ router.post('/remote-config', requirePermission('remote_config.manage'), asyncHa
 router.put('/remote-config/:configId', requirePermission('remote_config.manage'), asyncHandler(controller.updateRemoteConfig));
 router.get('/audit-logs', requirePermission('audit_logs.view'), asyncHandler(controller.listAuditLogs));
 router.get('/audit-logs/:auditLogId', requirePermission('audit_logs.view'), asyncHandler(controller.getAuditLog));
+router.get('/server-logs/stderr', requirePermission('server_logs.view'), requireSuperAdmin, asyncHandler(controller.getStderrLog));
+router.delete('/server-logs/stderr', requirePermission('server_logs.delete'), requireSuperAdmin, asyncHandler(controller.deleteStderrLog));
 router.get('/admin-roles', requirePermission('admin_users.view'), asyncHandler(controller.listAdminRoles));
 router.get('/admin-roles/:roleId', requirePermission('admin_users.view'), asyncHandler(controller.getAdminRole));
 router.post('/admin-roles', requirePermission('admin_users.manage'), asyncHandler(controller.saveAdminRole));
